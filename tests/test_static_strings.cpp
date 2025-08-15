@@ -1,0 +1,227 @@
+#include "../src/static_string.h"
+
+#include <gtest/gtest.h>
+
+TEST(types, static_asserts) {
+    using cs4_t = ss::cstring<4>;
+    static_assert(ss::CString<cs4_t>);
+    constexpr auto cs4 = cs4_t{'a', 'b', 'c', 'd'};
+    static_assert(cs4.size() == 4);
+    static_assert(cs4.data()[4] == 0);
+    using s4_t = ss::string_valuetype<cs4>;
+    static_assert(ss::StringValueType<s4_t>);
+    static_assert(s4_t::value == cs4);
+
+    constexpr size_t n123 = 123;
+    using n123_t = ss::size_valuetype<n123>;
+    static_assert(ss::SizeValueType<n123_t>);
+    static_assert(n123_t::value == n123);
+}
+
+///
+
+TEST(make, empty_string) {
+    constexpr auto s = ss::value<ss::make_cstring("")>;
+    static_assert(s.value.size() == 0);
+    EXPECT_STREQ(s.value.data(), "");
+}
+
+TEST(make, some_string) {
+    constexpr auto s = ss::value<ss::make_cstring("alfa")>;
+    static_assert(s.value.size() == 4);
+    EXPECT_STREQ(s.value.data(), "alfa");
+}
+
+TEST(compare, same) {
+    constexpr auto x = ss::value<ss::make_cstring("alfa")>;
+    constexpr auto y = ss::value<ss::make_cstring("alfa")>;
+    static_assert(x == y);
+    static_assert(x.value == y.value);
+}
+
+TEST(compare, different_body) {
+    constexpr auto x = ss::value<ss::make_cstring("alfa")>;
+    constexpr auto y = ss::value<ss::make_cstring("beta")>;
+    static_assert(x != y);
+    static_assert(x.value != y.value);
+}
+
+TEST(compare, different_size) {
+    constexpr auto x = ss::value<ss::make_cstring("alfa")>;
+    constexpr auto y = ss::value<ss::make_cstring("bravo")>;
+    static_assert(x != y);
+    static_assert(x.value != y.value);
+}
+
+///
+
+TEST(concat, empty_empty) {
+    constexpr auto cx = ss::make_cstring("");
+    constexpr auto vx = ss::value<cx>;
+
+    constexpr auto cy = ss::make_cstring("");
+    constexpr auto vy = ss::value<cy>;
+
+    constexpr auto cz = cx + cy;
+    static_assert(cz == ss::make_cstring(""));
+
+    constexpr auto vz = vx + vy;
+    static_assert(vz == ss::value<cz>);
+}
+
+TEST(concat, empty_busy) {
+    constexpr auto cx = ss::make_cstring("");
+    constexpr auto vx = ss::value<cx>;
+
+    constexpr auto cy = ss::make_cstring("beta");
+    constexpr auto vy = ss::value<cy>;
+
+    constexpr auto cz = cx + cy;
+    static_assert(cz == ss::make_cstring("beta"));
+
+    constexpr auto vz = vx + vy;
+    static_assert(vz == ss::value<cz>);
+}
+
+TEST(concat, busy_busy) {
+    constexpr auto cx = ss::make_cstring("alfa");
+    constexpr auto vx = ss::value<cx>;
+
+    constexpr auto cy = ss::make_cstring("beta");
+    constexpr auto vy = ss::value<cy>;
+
+    constexpr auto cz = cx + cy;
+    static_assert(cz == ss::make_cstring("alfabeta"));
+
+    constexpr auto vz = vx + vy;
+    static_assert(vz == ss::value<cz>);
+}
+
+TEST(concat, three) {
+    constexpr auto cx = ss::make_cstring("alfa");
+    constexpr auto cy = ss::make_cstring("beta");
+    constexpr auto cz = ss::make_cstring("gamma");
+    
+    constexpr auto cxyz = cx + cy + cz;
+    static_assert(cxyz == ss::make_cstring("alfabetagamma"));
+
+    constexpr auto vxyz = ss::value<cx> + ss::value<cy> + ss::value<cz>;
+    static_assert(vxyz == ss::value<cxyz>);
+}
+
+///
+
+TEST(find, empty_empty) {
+    constexpr auto cx = ss::make_cstring("");
+    constexpr auto cy = ss::make_cstring("");
+
+    constexpr auto p = ss::find(cx, cy);
+    static_assert(p == 0);
+}
+
+TEST(find, same) {
+    constexpr auto cx = ss::make_cstring("alfa");
+    constexpr auto cy = ss::make_cstring("alfa");
+
+    constexpr auto p = ss::find(cx, cy);
+    static_assert(p == 0);
+
+    constexpr auto vp = ss::find(ss::value<cx>, ss::value<cy>);
+    static_assert(vp == ss::value<p>);
+}
+
+TEST(find, smaller) {
+    constexpr auto cx = ss::make_cstring("alfa");
+    constexpr auto cy = ss::make_cstring("alfabeta");
+
+    constexpr auto p = ss::find(cx, cy);
+    static_assert(p == cx.size());
+
+    constexpr auto vp = ss::find(ss::value<cx>, ss::value<cy>);
+    static_assert(vp == ss::value<p>);
+}
+
+TEST(find, inside) {
+    constexpr auto cx1 = ss::make_cstring("alfa");
+    constexpr auto cy = ss::make_cstring("beta");
+    constexpr auto cx3 = ss::make_cstring("gamma");
+    constexpr auto cx = cx1 + cy + cx3;
+
+    constexpr auto p = ss::find(cx, cy);
+    static_assert(p == cx1.size());
+
+    constexpr auto vp = ss::find(ss::value<cx>, ss::value<cy>);
+    static_assert(vp == ss::value<p>);
+}
+
+TEST(find, inside_many) {
+    constexpr auto cx1 = ss::make_cstring("alfa");
+    constexpr auto cy = ss::make_cstring("beta");
+    constexpr auto cx3 = ss::make_cstring("gamma");
+    constexpr auto cx = cx1 + cy + cx3 + cy + cx1;
+
+    constexpr auto p = ss::find(cx, cy);
+    static_assert(p == cx1.size());
+
+    constexpr auto vp = ss::find(ss::value<cx>, ss::value<cy>);
+    static_assert(vp == ss::value<p>);
+}
+
+///
+
+TEST(substr, empty) {
+    constexpr auto cx = ss::make_cstring("");
+    constexpr auto vp = ss::size_value<0>;
+    constexpr auto vn = ss::size_value<0>;
+
+    constexpr auto cy = ss::substr(cx, vp, vn);
+    static_assert(cy == ss::make_cstring(""));
+    
+    constexpr auto vy = ss::substr(ss::value<cx>, vp, vn);
+    static_assert(vy == ss::value<cy>);
+
+    constexpr auto cz = ss::substr(cx, vp);
+    static_assert(cz == ss::make_cstring(""));
+
+    constexpr auto vz = ss::substr(ss::value<cx>, vp);
+    static_assert(vz == ss::value<cz>);
+}
+
+TEST(substr, whole) {
+    constexpr auto cx = ss::make_cstring("alfa");
+    constexpr auto vp = ss::size_value<0>;
+    constexpr auto vn = ss::size_value<cx.size()>;
+
+    constexpr auto cy = ss::substr(cx, vp, vn);
+    static_assert(cy == cx);
+    
+    constexpr auto vy = ss::substr(ss::value<cx>, vp, vn);
+    static_assert(vy == ss::value<cy>);
+
+    constexpr auto cz = ss::substr(cx, vp);
+    static_assert(cz == cx);
+
+    constexpr auto vz = ss::substr(ss::value<cx>, vp);
+    static_assert(vz == ss::value<cz>);
+}
+
+TEST(substr, part) {
+    constexpr auto cx1 = ss::make_cstring("alfa");
+    constexpr auto cx2 = ss::make_cstring("beta");
+    constexpr auto cx3 = ss::make_cstring("gamma");
+    constexpr auto cx = cx1 + cx2 + cx3;
+    constexpr auto vp = ss::size_value<cx1.size()>;
+    constexpr auto vn = ss::size_value<cx2.size()>;
+
+    constexpr auto cy = ss::substr(cx, vp, vn);
+    static_assert(cy == cx2);
+    
+    constexpr auto vy = ss::substr(ss::value<cx>, vp, vn);
+    static_assert(vy == ss::value<cy>);
+
+    constexpr auto cz = ss::substr(cx, vp);
+    static_assert(cz == cx2 + cx3);
+
+    constexpr auto vz = ss::substr(ss::value<cx>, vp);
+    static_assert(vz == ss::value<cz>);
+}
