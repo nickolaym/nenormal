@@ -12,6 +12,7 @@ namespace ss {
     template<auto V> struct valuetype {
         using type = decltype(V);
         static constexpr auto value = V;
+        constexpr auto operator()() const { return value; }
     };
 
     template<auto V> constexpr auto value = valuetype<V>{};
@@ -71,7 +72,7 @@ namespace ss {
     }
 
     constexpr StringValueType auto operator + (StringValueType auto x, StringValueType auto y) {
-        return value<x.value + y.value>;
+        return value<x() + y()>;
     }
 
     constexpr size_t find(CString auto x, CString auto y) {
@@ -80,15 +81,15 @@ namespace ss {
     }
 
     constexpr SizeValueType auto find(StringValueType auto x, StringValueType auto y) {
-        return ss::value<find(x.value, y.value)>;
+        return ss::value<find(x(), y())>;
     }
 
     // substr returns a string of new unknown size
     // that's why we must pass integral arg as value_type
     
     constexpr CString auto substr(CString auto x, SizeValueType auto vp, SizeValueType auto vn) {
-        constexpr size_t p = vp.value;
-        constexpr size_t n = vn.value;
+        constexpr size_t p = vp();
+        constexpr size_t n = vn();
         static_assert(x.size() >= p + n);  // or crop
         
         ss::cstring<n> y;
@@ -96,13 +97,13 @@ namespace ss {
         return y;
     }
     constexpr CString auto substr(CString auto x, SizeValueType auto vp) {
-        return substr(x, vp, ss::size_value<x.size() - vp.value>);
+        return substr(x, vp, ss::size_value<x.size() - vp()>);
     }
     constexpr StringValueType auto substr(StringValueType auto vx, SizeValueType auto vp, SizeValueType auto vn) {
-        return value<substr(vx.value, vp, vn)>;
+        return value<substr(vx(), vp, vn)>;
     }
     constexpr StringValueType auto substr(StringValueType auto vx, SizeValueType auto vp) {
-        return value<substr(vx.value, vp)>;
+        return value<substr(vx(), vp)>;
     }
 
     // replace returns a string of unknown size
@@ -111,13 +112,13 @@ namespace ss {
 
     constexpr auto replace(StringValueType auto vx, StringValueType auto vy, StringValueType auto vz) {
         constexpr auto vp = find(vx, vy);
-        if constexpr (vp.value == vx.value.size()) {
+        if constexpr (vp() == vx().size()) {
             return vx;
         } else {
             return (
                 substr(vx, size_value<0>, vp) +
                 vz +
-                substr(vx, size_value<vp + vy.value.size()>)
+                substr(vx, size_value<vp + vy().size()>)
             );
         }
     }

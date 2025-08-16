@@ -16,41 +16,44 @@ TEST(types, static_asserts) {
     using n123_t = ss::size_valuetype<n123>;
     static_assert(ss::SizeValueType<n123_t>);
     static_assert(n123_t::value == n123);
+
+    constexpr auto n123v = ss::size_value<n123>;
+    static_assert(n123v() == n123);
 }
 
 ///
 
 TEST(make, empty_string) {
     constexpr auto s = ss::value<ss::make_cstring("")>;
-    static_assert(s.value.size() == 0);
-    EXPECT_STREQ(s.value.data(), "");
+    static_assert(s().size() == 0);
+    EXPECT_STREQ(s().data(), "");
 }
 
 TEST(make, some_string) {
     constexpr auto s = ss::value<ss::make_cstring("alfa")>;
-    static_assert(s.value.size() == 4);
-    EXPECT_STREQ(s.value.data(), "alfa");
+    static_assert(s().size() == 4);
+    EXPECT_STREQ(s().data(), "alfa");
 }
 
 TEST(compare, same) {
     constexpr auto x = ss::value<ss::make_cstring("alfa")>;
     constexpr auto y = ss::value<ss::make_cstring("alfa")>;
     static_assert(x == y);
-    static_assert(x.value == y.value);
+    static_assert(x() == y());
 }
 
 TEST(compare, different_body) {
     constexpr auto x = ss::value<ss::make_cstring("alfa")>;
     constexpr auto y = ss::value<ss::make_cstring("beta")>;
     static_assert(x != y);
-    static_assert(x.value != y.value);
+    static_assert(x() != y());
 }
 
 TEST(compare, different_size) {
     constexpr auto x = ss::value<ss::make_cstring("alfa")>;
     constexpr auto y = ss::value<ss::make_cstring("bravo")>;
     static_assert(x != y);
-    static_assert(x.value != y.value);
+    static_assert(x() != y());
 }
 
 ///
