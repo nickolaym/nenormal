@@ -24,7 +24,7 @@ namespace ss {
     // c-string - ad-hoc array
     template<size_t N> struct cstring {
         char data_[N + 1] = {};
-        constexpr size_t size() const { return N; }
+        constexpr static size_t size() { return N; }
         constexpr auto& data() { return data_; }
         constexpr const auto& data() const { return data_; }
         constexpr auto begin() { return data_; }
@@ -58,11 +58,11 @@ namespace ss {
         return v;
     }
 
-    constexpr bool operator == (ValueType auto x, ValueType auto y) {
+    constexpr bool operator == (const ValueType auto& x, const ValueType auto& y) {
         return std::is_same_v<decltype(x), decltype(y)>;
     }
 
-    constexpr CString auto operator + (CString auto x, CString auto y) {
+    constexpr CString auto operator + (const CString auto& x, const CString auto& y) {
         constexpr auto nx = x.size();
         constexpr auto ny = y.size();
         cstring<nx + ny> z;
@@ -75,7 +75,7 @@ namespace ss {
         return value<x() + y()>;
     }
 
-    constexpr size_t find(CString auto x, CString auto y) {
+    constexpr size_t find(const CString auto& x, const CString auto& y) {
         if (x.size() < y.size()) return x.size();
         return std::distance(x.begin(), std::search(x.begin(), x.end(), y.begin(), y.end()));
     }
@@ -87,7 +87,7 @@ namespace ss {
     // substr returns a string of new unknown size
     // that's why we must pass integral arg as value_type
     
-    constexpr CString auto substr(CString auto x, SizeValueType auto vp, SizeValueType auto vn) {
+    constexpr CString auto substr(const CString auto& x, SizeValueType auto vp, SizeValueType auto vn) {
         constexpr size_t p = vp();
         constexpr size_t n = vn();
         static_assert(x.size() >= p + n);  // or crop
@@ -96,7 +96,7 @@ namespace ss {
         std::copy_n(x.begin() + p, n, y.begin());
         return y;
     }
-    constexpr CString auto substr(CString auto x, SizeValueType auto vp) {
+    constexpr CString auto substr(const CString auto& x, SizeValueType auto vp) {
         return substr(x, vp, ss::size_value<x.size() - vp()>);
     }
     constexpr StringValueType auto substr(StringValueType auto vx, SizeValueType auto vp, SizeValueType auto vn) {
