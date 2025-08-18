@@ -24,6 +24,14 @@ namespace ss {
     // c-string - ad-hoc array
     template<size_t N> struct cstring {
         char data_[N + 1] = {};
+
+        constexpr cstring() = default;
+
+        constexpr cstring(const char(&s)[N+1]) {
+            assert(s[N] == 0);
+            std::copy_n(s, N, data_);
+        }
+
         constexpr static size_t size() { return N; }
         constexpr auto& data() { return data_; }
         constexpr const auto& data() const { return data_; }
@@ -34,6 +42,8 @@ namespace ss {
         constexpr bool operator == (const cstring&) const = default;
         template<size_t M> constexpr bool operator == (const cstring<M>&) const { return false; }
     };
+    // CTAD: nul-terminated string literals
+    template<size_t N1> cstring(const char(&s)[N1]) -> cstring<N1 - 1>;
 
     template<class T> constexpr bool is_cstring_v = false;
     template<size_t N> constexpr bool is_cstring_v<cstring<N>> = true;
@@ -48,19 +58,23 @@ namespace ss {
     template<size_t N> constexpr auto size_value = value<N>;
     template<class T> concept SizeValueType = ValueType<T> && std::same_as<size_t, typename T::type>;
 
-    ///////////////////
-    // construct string
+    ///////////
+    // literals
 
-    template<size_t N>
-    constexpr CString auto make_cstring(const char(&s)[N]) {
-        cstring<N-1> v;
-        std::copy_n(s, N-1, v.begin());
-        return v;
-    }
+    namespace literals {
+        
+        template<cstring V> constexpr auto operator""_ss() { return V; }
+        template<cstring V> constexpr auto operator ""_ssv() { return string_value<V>; }
+
+    }  // namespace literals
+
+    // comparison
 
     constexpr bool operator == (const ValueType auto& x, const ValueType auto& y) {
         return std::is_same_v<decltype(x), decltype(y)>;
     }
+
+    // concatenation
 
     constexpr CString auto operator + (const CString auto& x, const CString auto& y) {
         constexpr auto nx = x.size();
@@ -74,6 +88,8 @@ namespace ss {
     constexpr StringValueType auto operator + (StringValueType auto x, StringValueType auto y) {
         return value<x() + y()>;
     }
+
+    // find
 
     constexpr size_t find(const CString auto& x, const CString auto& y) {
         if (x.size() < y.size()) return x.size();
