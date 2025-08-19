@@ -111,15 +111,15 @@ namespace ss {
     // depending on input strings
     // that's why all of them are of value_type
 
-    constexpr auto replace(StringValueType auto vx, StringValueType auto vy, StringValueType auto vz) {
-        constexpr auto vp = find(vx, vy);
-        if constexpr (vp() == vx().size()) {
+    constexpr StringValueType auto replace(StringValueType auto vx, StringValueType auto vy, StringValueType auto vz) {
+        constexpr size_t p = find(vx(), vy());
+        if constexpr (p == vx().size()) {
             return vx;
         } else {
             return (
-                substr(vx, size_value<0>, vp) +
+                substr(vx, size_value<0>, size_value<p>) +
                 vz +
-                substr(vx, size_value<vp + vy().size()>)
+                substr(vx, size_value<p + vy().size()>)
             );
         }
     }

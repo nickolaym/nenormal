@@ -268,3 +268,104 @@ TEST(substr, part) {
     constexpr auto vz = ss::substr(ss::value<cx>, vp);
     static_assert(vz == ss::value<cz>);
 }
+
+///
+
+TEST(replace, empty_all) {
+    constexpr auto vx = ""_ssv;
+    constexpr auto vy = ""_ssv;
+    constexpr auto vz = ""_ssv;
+
+    constexpr auto ve = ""_ssv;  // expected
+
+    constexpr auto vt = ss::replace(vx, vy, vz);
+    static_assert(vt == ve);
+}
+
+TEST(replace, empty_text) {
+    constexpr auto vx = ""_ssv;
+    constexpr auto vy = "alfa"_ssv;
+    constexpr auto vz = "bravo"_ssv;
+
+    constexpr auto ve = ""_ssv;  // expected
+
+    constexpr auto vt = ss::replace(vx, vy, vz);
+    static_assert(vt == ve);
+}
+
+TEST(replace, mismatched) {
+    constexpr auto vx = "hello world"_ssv;
+    constexpr auto vy = "alfa"_ssv;
+    constexpr auto vz = "bravo"_ssv;
+
+    constexpr auto ve = vx;  // expected
+
+    constexpr auto vt = ss::replace(vx, vy, vz);
+    static_assert(vt == ve);
+}
+
+TEST(replace, full_match) {
+    constexpr auto vx = "hello world"_ssv;
+    constexpr auto vy = vx;
+    constexpr auto vz = "privet mir"_ssv;
+
+    constexpr auto ve = vz;  // expected
+
+    constexpr auto vt = ss::replace(vx, vy, vz);
+    static_assert(vt == ve);
+}
+
+TEST(replace, match_head) {
+    constexpr auto vx1 = "hello"_ssv;
+    constexpr auto vx2 = " world"_ssv;
+    constexpr auto vx = vx1 + vx2;
+    constexpr auto vy = vx1;
+    constexpr auto vz = "privet"_ssv;
+
+    constexpr auto ve = vz + vx2;  // expected
+
+    constexpr auto vt = ss::replace(vx, vy, vz);
+    static_assert(vt == ve);
+}
+
+TEST(replace, match_tail) {
+    constexpr auto vx1 = "hello "_ssv;
+    constexpr auto vx2 = "world"_ssv;
+    constexpr auto vx = vx1 + vx2;
+    constexpr auto vy = vx2;
+    constexpr auto vz = "mir"_ssv;
+
+    constexpr auto ve = vx1 + vz;  // expected
+
+    constexpr auto vt = ss::replace(vx, vy, vz);
+    static_assert(vt == ve);
+}
+
+TEST(replace, match_middle) {
+    constexpr auto vx1 = "hello "_ssv;
+    constexpr auto vx2 = "this"_ssv;
+    constexpr auto vx3 = " world"_ssv;
+    constexpr auto vx = vx1 + vx2 + vx3;
+    constexpr auto vy = vx2;
+    constexpr auto vz = "other"_ssv;
+
+    constexpr auto ve = vx1 + vz + vx3;  // expected
+
+    constexpr auto vt = ss::replace(vx, vy, vz);
+    static_assert(vt == ve);
+}
+
+TEST(replace, match_first_occurence) {
+    constexpr auto vx1 = "hello "_ssv;
+    constexpr auto vx2 = "this"_ssv;
+    constexpr auto vx3 = " world and "_ssv;
+    constexpr auto vx4 = " universe"_ssv;
+    constexpr auto vx = vx1 + vx2 + vx3 + vx2 + vx4;
+    constexpr auto vy = vx2;
+    constexpr auto vz = "other"_ssv;
+
+    constexpr auto ve = vx1 + vz + vx3 + vx2 + vx4;  // expected
+
+    constexpr auto vt = ss::replace(vx, vy, vz);
+    static_assert(vt == ve);
+}
