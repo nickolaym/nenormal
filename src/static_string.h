@@ -6,20 +6,9 @@
 #include <array>
 #include <type_traits>
 
+#include "value_type.h"
+
 namespace ss {
-
-    // true compile time constant
-    template<auto V> struct valuetype {
-        using type = decltype(V);
-        static constexpr auto value = V;
-        constexpr auto operator()() const { return value; }
-    };
-
-    template<auto V> constexpr auto value = valuetype<V>{};
-
-    template<class T> constexpr bool is_valuetype_v = false;
-    template<auto V> constexpr bool is_valuetype_v<valuetype<V>> = true;
-    template<class T> concept ValueType = is_valuetype_v<T>;
 
     // c-string - ad-hoc array
     template<size_t N> struct cstring {
@@ -64,15 +53,11 @@ namespace ss {
     namespace literals {
         
         template<cstring V> constexpr auto operator""_ss() { return V; }
-        template<cstring V> constexpr auto operator ""_ssv() { return string_value<V>; }
+        template<cstring V> constexpr auto operator ""_ssv() { return value<V>; }
+
+        inline constexpr auto operator""_sz(unsigned long long n) { return size_t(n); }
 
     }  // namespace literals
-
-    // comparison
-
-    constexpr bool operator == (const ValueType auto& x, const ValueType auto& y) {
-        return std::is_same_v<decltype(x), decltype(y)>;
-    }
 
     // concatenation
 

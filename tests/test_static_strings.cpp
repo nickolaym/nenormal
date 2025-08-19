@@ -14,13 +14,37 @@ TEST(types, static_asserts) {
     static_assert(ss::StringValueType<s4_t>);
     static_assert(s4_t::value == cs4);
 
-    constexpr size_t n123 = 123;
+    constexpr auto n123 = 123_sz;
+    static_assert(std::is_same_v<decltype(+n123), size_t>);
     using n123_t = ss::size_valuetype<n123>;
     static_assert(ss::SizeValueType<n123_t>);
     static_assert(n123_t::value == n123);
 
     constexpr auto n123v = ss::size_value<n123>;
     static_assert(n123v() == n123);
+}
+
+TEST(comparable, right_and_wrong) {
+    constexpr auto x1 = "alfa"_ssv;
+    constexpr auto x2 = "bravo"_ssv;
+    constexpr auto y1 = ss::value<123_sz>;
+    constexpr auto y2 = ss::value<456_sz>;
+    constexpr auto z1 = ss::value<123>;  // int
+
+    // cannot test requires out of template,
+    // because it would lead to compile error;
+    // that's why we indirect it with a template lambda
+    auto can_compare = [](auto p, auto q) { return requires{p == q;}; };
+    
+    static_assert(can_compare(x1, x2));
+    static_assert(x1 != x2);
+    
+    static_assert(can_compare(y1, y2));
+    static_assert(can_compare(y1, z1));
+    static_assert(y1 != y2);
+    static_assert(y1 == z1);
+
+    static_assert(!can_compare(x1, y1));
 }
 
 ///
