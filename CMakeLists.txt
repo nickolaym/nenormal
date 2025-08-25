@@ -8,10 +8,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 enable_testing()
 find_package(GTest)
 
-# add_executable(nenormal
-#     src/static_string.h
-#     src/nenormal.cpp
-# )
+#####
+
+add_executable(nenormal
+    src/static_string.h
+    src/nenormal.cpp
+)
+
+#####
 
 add_executable(test_static_strings
     tests/test_static_strings.cpp
@@ -22,3 +26,17 @@ target_link_libraries(test_static_strings
 )
 
 gtest_discover_tests(test_static_strings)
+
+######
+
+add_executable(test_func_compose
+    tests/test_func_compose.cpp
+)
+target_link_libraries(test_func_compose
+    gtest
+    gtest_main
+)
+
+gtest_discover_tests(test_func_compose)
+
+
