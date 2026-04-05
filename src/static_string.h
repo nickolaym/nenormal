@@ -7,6 +7,7 @@
 #include <type_traits>
 
 #include "value_type.h"
+#include "size.h"
 
 namespace ss {
 
@@ -42,16 +43,10 @@ namespace ss {
     template<CString auto V> constexpr auto string_value = value<V>;
     template<class T> concept StringValueType = ValueType<T> && is_cstring_v<typename T::type>;
 
-    // size_t as a compile time constant
-    template<size_t N> using size_valuetype = valuetype<N>;
-    template<size_t N> constexpr auto size_value = value<N>;
-    template<class T> concept SizeValueType = ValueType<T> && std::same_as<size_t, typename T::type>;
-
     ///////////
     // literals
-
     namespace literals {
-        
+
         template<cstring V> constexpr auto operator""_ss() { return V; }
         template<cstring V> constexpr auto operator ""_ssv() { return value<V>; }
 
@@ -87,12 +82,12 @@ namespace ss {
 
     // substr returns a string of new unknown size
     // that's why we must pass integral arg as value_type
-    
+
     constexpr CString auto substr(const CString auto& x, SizeValueType auto vp, SizeValueType auto vn) {
         constexpr size_t p = vp();
         constexpr size_t n = vn();
         static_assert(x.size() >= p + n);  // or crop
-        
+
         ss::cstring<n> y;
         std::copy_n(x.begin() + p, n, y.begin());
         return y;
