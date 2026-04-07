@@ -115,26 +115,58 @@ template<Str auto s, Str auto r> struct post {
 
 // utility classes for fold expressions
 
-template<class A, class R> struct conveyor_arg { A arg; R res; };
-template<class F> struct conveyor_func { F fun; };
+template<class T> struct the_arg;
+template<class T> struct the_stop;
+template<class T> struct the_fun;
+template<class F> struct the_fun {
+    F fun;
+    constexpr auto operator()(auto a) const { return fun(a); }
+};
 
-// disjunction: a | f | g | h = f(a) or g(a) or h(a) or fail if all failed
-// (a, fail) means "not matched yet"
-template<class A, class R, class F> constexpr auto operator|(conveyor_arg<A, R> a, conveyor_func<F> f) {
-    if constexpr (failed(a.res)) {
-        return conveyor_arg{a.arg, f.fun(a.arg)};
-    } else {
-        return a;
+template<class T> struct the_arg {
+    static constexpr bool stopped = false;
+    T value;
+
+    template<class F>
+    constexpr auto operator|(the_fun<F> f) const {
+        auto r = f(value);
+        if constexpr(failed(r)) return *this; // retry
+        else return the_stop{r}; // stop with success
     }
-}
-constexpr auto start_disjunction(auto a) { return conveyor_arg{a, fail{}}; }
-template<class A, class R> constexpr auto consume_disjunction(conveyor_arg<A,R> a) { return a.res; }
+
+    template<class F>
+    constexpr auto operator^(the_fun<F> f) const {
+        auto r = f(value);
+        if constexpr(failed(r)) return the_stop{value}; // stop with failure
+        else return the_arg<decltype(r)>{r}; // continue
+    }
+
+    constexpr auto complete() const { return fail{}; } // if not stopped yet, return fail
+};
+
+
+template<class T> struct the_stop {
+    static constexpr bool stopped = true;
+    T value;
+
+    template<class F>
+    constexpr auto operator|(the_fun<F> f) const {
+        return *this; // already stopped
+    }
+
+    template<class F>
+    constexpr auto operator^(the_fun<F> f) const {
+        return *this; // already stopped
+    }
+
+    constexpr auto complete() const { return value; }
+};
 
 
 template<Post auto... ps> struct posts {
     REPRESENTS(Post)
     constexpr auto operator()(CtStr auto t) const {
-        return consume_disjunction((start_disjunction(t) | ... | conveyor_func{ps}));
+        return ((the_arg{t} | ... | the_fun{ps})).complete();
     }
 };
 template<> struct posts<> {
