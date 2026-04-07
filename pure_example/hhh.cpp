@@ -117,26 +117,18 @@ template<Str auto s, Str auto r> struct post {
 
 template<class T> struct the_arg;
 template<class T> struct the_stop;
-template<class T> struct the_fun;
-
-template<class F> struct the_fun {
-    F fun;
-    constexpr auto operator()(auto a) const { return fun(a); }
-};
 
 template<class T> struct the_arg {
     static constexpr bool stopped = false;
     T value;
 
-    template<class F>
-    constexpr auto operator|(the_fun<F> f) const {
+    constexpr auto operator|(auto f) const {
         auto r = f(value);
         if constexpr(failed(r)) return *this; // retry
         else return the_stop{r}; // stop with success
     }
 
-    template<class F>
-    constexpr auto operator^(the_fun<F> f) const {
+    constexpr auto operator^(auto f) const {
         auto r = f(value);
         if constexpr(failed(r)) return the_stop{value}; // stop with failure
         else return the_arg<decltype(r)>{r}; // continue
@@ -149,13 +141,11 @@ template<class T> struct the_stop {
     static constexpr bool stopped = true;
     T value;
 
-    template<class F>
-    constexpr auto operator|(the_fun<F> f) const {
+    constexpr auto operator|(auto f) const {
         return *this; // already stopped
     }
 
-    template<class F>
-    constexpr auto operator^(the_fun<F> f) const {
+    constexpr auto operator^(auto f) const {
         return *this; // already stopped
     }
 
@@ -165,15 +155,10 @@ template<class T> struct the_stop {
 // self unit test of folds
 
 constexpr bool test_disjunction() {
-    constexpr auto a = "a"_ss;
-    constexpr auto f = [](auto) { return fail{}; };
-    constexpr auto g = [](auto  x) { return "g"_ss; };
-    constexpr auto h = [](auto  x) { return "h"_ss; };
-
-    constexpr auto ta = the_arg{a};
-    constexpr auto tf = the_fun{f};
-    constexpr auto tg = the_fun{g};
-    constexpr auto th = the_fun{h};
+    constexpr auto ta = the_arg{"a"_ss};
+    constexpr auto tf = [](auto) { return fail{}; };
+    constexpr auto tg = [](auto  x) { return "g"_ss; };
+    constexpr auto th = [](auto  x) { return "h"_ss; };
 
     constexpr auto tfa = ta | tf;
     static_assert(!tfa.stopped);
@@ -192,15 +177,10 @@ constexpr bool test_disjunction() {
 static_assert(test_disjunction());
 
 constexpr bool test_exposing() {
-    constexpr auto a = "a"_ss;
-    constexpr auto f = [](auto) { return fail{}; };
-    constexpr auto g = [](auto  x) { return "g"_ss; };
-    constexpr auto h = [](auto  x) { return "h"_ss; };
-
-    constexpr auto ta = the_arg{a};
-    constexpr auto tf = the_fun{f};
-    constexpr auto tg = the_fun{g};
-    constexpr auto th = the_fun{h};
+    constexpr auto ta = the_arg{"a"_ss};
+    constexpr auto tf = [](auto) { return fail{}; };
+    constexpr auto tg = [](auto  x) { return "g"_ss; };
+    constexpr auto th = [](auto  x) { return "h"_ss; };
 
     constexpr auto tfa = ta ^ tf;
     static_assert(tfa.stopped);
@@ -227,7 +207,7 @@ static_assert(test_exposing());
 template<Post auto... ps> struct posts {
     REPRESENTS(Post)
     constexpr auto operator()(CtStr auto t) const {
-        return ((the_arg{t} | ... | the_fun{ps})).complete();
+        return ((the_arg{t} | ... | ps)).complete();
     }
 };
 template<> struct posts<> {
@@ -247,7 +227,7 @@ template<> struct posts<> {
 template<Post auto p> struct postloop {
     REPRESENTS(Post)
     constexpr auto operator()(CtStr auto t) const {
-        constexpr auto res = the_arg{t} ^ the_fun{p};
+        constexpr auto res = the_arg{t} ^ p ^ p ^ p ^ p ^ p ^ p ^ p ^ p ^ p ^ p;
         if constexpr (res.stopped) {
             return res.value;
         } else {
