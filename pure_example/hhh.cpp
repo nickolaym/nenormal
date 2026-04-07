@@ -118,6 +118,7 @@ template<Str auto s, Str auto r> struct post {
 template<class T> struct the_arg;
 template<class T> struct the_stop;
 template<class T> struct the_fun;
+
 template<class F> struct the_fun {
     F fun;
     constexpr auto operator()(auto a) const { return fun(a); }
@@ -234,14 +235,23 @@ template<> struct posts<> {
     constexpr auto operator()(CtStr auto t) const { return fail{}; }
 };
 
+// To hide a program from compiler output
+#define NAMED_POST(name, p) \
+(struct name { \
+    REPRESENTS(Post) \
+    constexpr auto operator()(CtStr auto t) const { return (p)(t); } \
+}){}
+
+// loop
+
 template<Post auto p> struct postloop {
     REPRESENTS(Post)
     constexpr auto operator()(CtStr auto t) const {
-        constexpr auto r = p(t);
-        if constexpr (failed(r)) {
-            return t;
+        constexpr auto res = the_arg{t} ^ the_fun{p};
+        if constexpr (res.stopped) {
+            return res.value;
         } else {
-            return postloop{}(r);
+            return postloop{}(res.value);
         }
     }
 };
@@ -522,15 +532,14 @@ constexpr auto cleanup = POSTS(
     posts<>{}
 );
 
-
-constexpr auto program = POSTS(
+constexpr auto program = NAMED_POST(program_t, POSTS(
     add_carry,
     add_digits,
     move_digit_to_the_right,
     take_digit,
     cleanup,
     posts{}
-);
+));
 
 int main() {
     constexpr auto t = CTSTR("98765+66666=");
