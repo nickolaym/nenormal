@@ -144,7 +144,6 @@ template<class T> struct the_arg {
     constexpr auto complete() const { return fail{}; } // if not stopped yet, return fail
 };
 
-
 template<class T> struct the_stop {
     static constexpr bool stopped = true;
     T value;
@@ -162,6 +161,67 @@ template<class T> struct the_stop {
     constexpr auto complete() const { return value; }
 };
 
+// self unit test of folds
+
+constexpr bool test_disjunction() {
+    constexpr auto a = "a"_ss;
+    constexpr auto f = [](auto) { return fail{}; };
+    constexpr auto g = [](auto  x) { return "g"_ss; };
+    constexpr auto h = [](auto  x) { return "h"_ss; };
+
+    constexpr auto ta = the_arg{a};
+    constexpr auto tf = the_fun{f};
+    constexpr auto tg = the_fun{g};
+    constexpr auto th = the_fun{h};
+
+    constexpr auto tfa = ta | tf;
+    static_assert(!tfa.stopped);
+    static_assert(tfa.value == "a"_ss);
+
+    constexpr auto tga = ta | tg;
+    static_assert(tga.stopped);
+    static_assert(tga.value == "g"_ss);
+
+    constexpr auto tfgha = ta | tf | tg | th;
+    static_assert(tfgha.stopped);
+    static_assert(tfgha.value == "g"_ss);
+
+    return true;
+}
+static_assert(test_disjunction());
+
+constexpr bool test_exposing() {
+    constexpr auto a = "a"_ss;
+    constexpr auto f = [](auto) { return fail{}; };
+    constexpr auto g = [](auto  x) { return "g"_ss; };
+    constexpr auto h = [](auto  x) { return "h"_ss; };
+
+    constexpr auto ta = the_arg{a};
+    constexpr auto tf = the_fun{f};
+    constexpr auto tg = the_fun{g};
+    constexpr auto th = the_fun{h};
+
+    constexpr auto tfa = ta ^ tf;
+    static_assert(tfa.stopped);
+    static_assert(tfa.value == "a"_ss);
+
+    constexpr auto tga = ta ^ tg;
+    static_assert(!tga.stopped);
+    static_assert(tga.value == "g"_ss);
+
+    constexpr auto tgha = ta ^ tg ^ th;
+    static_assert(!tgha.stopped);
+    static_assert(tgha.value == "h"_ss);
+
+    constexpr auto tgfa = ta ^ tg ^ tf;
+    static_assert(tgfa.stopped);
+    static_assert(tgfa.value == "g"_ss);
+
+    return true;
+}
+static_assert(test_exposing());
+
+// subroutine
 
 template<Post auto... ps> struct posts {
     REPRESENTS(Post)
