@@ -20,3 +20,12 @@ link_libraries(nenormal_headers)
 add_executable(hhh
     pure_example/hhh.cpp
 )
+
+add_executable(test_compose
+    tests/compose.cpp
+)
+target_link_libraries(test_compose
+    GTest::gtest_main
+)
+include(GoogleTest)
+gtest_discover_tests(test_compose)
