@@ -10,6 +10,13 @@ find_package(GTest)
 
 #####
 
+# Interface library for global includes
+add_library(nenormal_headers INTERFACE)
+target_include_directories(nenormal_headers INTERFACE ${CMAKE_SOURCE_DIR}/include)
+
+# Link to all executables automatically (must be before add_executable)
+link_libraries(nenormal_headers)
+
 add_executable(hhh
     pure_example/hhh.cpp
 )
