@@ -152,10 +152,37 @@ static_assert(test_exposing());
 
 // subroutine
 
-template<Rule auto... ps> struct rules {
+namespace rules_helper {
+    // implements disjunction on text >> rule1 >> rule2 >> ...
+    
+    constexpr auto make_arg(CtStr auto text) { return arg{text}; }
+    constexpr auto make_fun(Rule auto rule) {
+        // rule : CtStr -> CtStr | fail
+        // fun  : arg<CtStr> -> arg<CtStr> | stop<CtStr>
+        return [rule]<CtStr T>(arg<T> a) {
+            auto r = rule(a.value);
+            if constexpr (failed(r)) // not matched yet
+                return a;            // continue...
+            else
+                return stop{r};      // success
+        };
+    }
+    template<CtStr T> constexpr fail make_res(arg<T> a) {
+        // still not resolved
+        return fail{};
+    }
+    template<CtStr T> constexpr T make_res(stop<T> a) {
+        return a.value;
+    }
+
+} // namespace rules_helper
+
+template<Rule auto... rs> struct rules {
     REPRESENTS(Rule)
+
+    static constexpr auto the_chain = chain(rules_helper::make_fun(rs)...);
     constexpr auto operator()(CtStr auto t) const {
-        return ((the_arg{t} | ... | ps)).complete();
+        return rules_helper::make_res(the_chain(rules_helper::make_arg(t)));
     }
 };
 template<> struct rules<> {
