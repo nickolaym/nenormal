@@ -75,23 +75,31 @@ template<size_t N> struct repeat_t {
     }
 };
 
-// another strategy: nearly endless loop, extended on demand
-template<size_t Limit> struct endless_t {
-    constexpr auto operator()(auto f) const {
-        constexpr size_t Factor = 10;
-        if constexpr (Limit <= Factor)
-            return repeat<Limit>(f);
-        else {
-            constexpr size_t N = (Limit - 1) % Factor + 1; // 1..10
-            constexpr size_t R = (Limit - N) / Factor;
-            static_assert(1 <= N && N <= Factor);
-            static_assert(1 <= R);
-            static_assert(N + R * Factor == Limit);
-            return chain(
-                repeat<N>(f),
-                [f](auto a) { return a >> endless_t<R>{}(repeat<Factor>(f)); }
-            );
+// simple endless loop with natural limitation of recursion
+// possible usage: endless_loop{repeat<100>(f)}
+
+template<class F>
+struct endless_loop {
+    F f;
+    constexpr auto operator()(auto a) const { return a >> f >> *this; }
+};
+
+// extending endless loop with nearly-fibonaccy grow factor
+// possible usage: extending_endless_loop{f}
+
+template<class F>
+struct extending_endless_loop {
+    F f;
+
+    template<size_t N> struct impl {
+        F f;
+        constexpr auto operator()(auto a) const {
+            constexpr size_t Next = (N == 1) ? 20 : (N * 1.5);
+            return a >> repeat<N>(f) >> impl<Next>{f};
         }
+    };
+
+    constexpr auto operator()(auto a) const {
+        return a >> impl<1>{f};
     }
 };
-template<size_t Limit> constexpr auto endless = endless_t<Limit>{};
