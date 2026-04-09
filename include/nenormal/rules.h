@@ -19,7 +19,7 @@ struct fail {
 constexpr bool failed(const auto& a) { return fail{} == a; }
 
 template<class T> concept Fail = std::same_as<T, fail>;
-template<class T> concept StrOrFail = Str<T> || Fail<T>;
+template<class T> concept CtStrOrFail = CtStr<T> || Fail<T>;
 
 
 // single search-and-replace function
@@ -34,12 +34,12 @@ template<Str auto s, Str auto r> struct rule {
         return os;
     }
 
-    constexpr auto operator()(CtStr auto t) const {
+    constexpr CtStrOrFail auto operator()(CtStr auto t) const {
         constexpr auto& src = t.value;
         if constexpr (src.size() < s.size()) {
             return fail{};
         } else if constexpr (src == s) {
-            return r;
+            return ct<r>{};
         } else {
             constexpr auto fbegin = std::search(src.begin(), src.end(), s.begin(), s.end());
             if constexpr (fbegin == src.end()) {
@@ -94,13 +94,13 @@ template<Rule auto... rs> struct rules {
     REPRESENTS(Rule)
 
     static constexpr auto the_chain = chain(rules_helper::make_fun(rs)...);
-    constexpr auto operator()(CtStr auto t) const {
+    constexpr CtStrOrFail auto operator()(CtStr auto t) const {
         return rules_helper::make_res(the_chain(rules_helper::make_arg(t)));
     }
 };
 template<> struct rules<> {
     REPRESENTS(Rule)
-    constexpr auto operator()(CtStr auto t) const { return fail{}; }
+    constexpr CtStrOrFail auto operator()(CtStr auto t) const { return fail{}; }
 };
 
 // loop
@@ -132,7 +132,7 @@ template<Rule auto p> struct rule_loop {
 
     static constexpr auto the_loop = endless_loop{repeat<10>(loop_helper::make_fun(p))};
 
-    constexpr auto operator()(CtStr auto t) const {
+    constexpr CtStr auto operator()(CtStr auto t) const {
         return loop_helper::make_res(the_loop(loop_helper::make_arg(t)));
     }
 };
@@ -146,6 +146,6 @@ template<Rule auto p> struct rule_loop {
 #define NAMED_RULE(name, p) \
 (struct name { \
     REPRESENTS(Rule) \
-    constexpr auto operator()(CtStr auto t) const { return (p)(t); } \
+    constexpr CtStrOrFail auto operator()(CtStr auto t) const { return (p)(t); } \
 }){}
 
