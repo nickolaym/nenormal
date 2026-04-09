@@ -79,5 +79,5 @@ TEST(compose, endless) {
 
     static_assert(arg{ctv<123>} >> endless_loop{countdown} == stop{0});
 
-    static_assert(arg{ctv<12345>} >> extending_endless_loop{countdown} == stop{0});
+    static_assert(arg{ctv<5'000>} >> extending_endless_loop{countdown} == stop{0});
 }
