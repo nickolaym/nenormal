@@ -199,15 +199,36 @@ template<> struct rules<> {
 
 // loop
 
+namespace loop_helper {
+    // implements endless loop on text >> rule >> rule >> ...
+
+    constexpr auto make_arg(CtStr auto text) { return arg{text}; }
+    constexpr auto make_fun(Rule auto rule) {
+        // rule : CtStr -> CtStr | fail
+        // fun  : arg<CtStr> -> arg<CtStr> | stop<CtStr>
+        return [rule]<CtStr T>(arg<T> a) {
+            auto r = rule(a.value);
+            if constexpr (failed(r))  // not matched anymore
+                return stop{a.value}; // stop with current value
+            else
+                return arg{r};        // success, continue
+        };
+    }
+    template<CtStr T> constexpr fail make_res(arg<T> a) = delete;
+    template<CtStr T> constexpr T make_res(stop<T> a) {
+        return a.value;
+    }
+
+} // namespace loop_helper
+
+
 template<Rule auto p> struct rule_loop {
     REPRESENTS(Rule)
+
+    static constexpr auto the_loop = endless_loop{repeat<10>(loop_helper::make_fun(p))};
+
     constexpr auto operator()(CtStr auto t) const {
-        constexpr auto res = the_arg{t} ^ p ^ p ^ p ^ p ^ p ^ p ^ p ^ p ^ p ^ p;
-        if constexpr (res.stopped) {
-            return res.value;
-        } else {
-            return rule_loop{}(res.value);
-        }
+        return loop_helper::make_res(the_loop(loop_helper::make_arg(t)));
     }
 };
 
