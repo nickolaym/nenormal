@@ -6,7 +6,7 @@
 #include "nenormal/nenormal.h"
 
 
-// post function types
+// rule function types
 
 struct fail {
     friend std::ostream& operator << (std::ostream& os, fail const& v) { os << "fail"; return os; }
@@ -21,14 +21,14 @@ template<class T> concept StrOrFail = Str<T> || Fail<T>;
 
 
 // single search-and-replace function
-CONCEPT(Post)
+CONCEPT(Rule)
 
-template<Str auto s, Str auto r> struct post {
-    REPRESENTS(Post)
+template<Str auto s, Str auto r> struct rule {
+    REPRESENTS(Rule)
     static_assert(s != str{""}, "empty search string results in an endless loop");
     static_assert(s != r, "same search and replace results in an endless loop");
-    friend std::ostream& operator << (std::ostream& os, post const& v) {
-        os << "post(" << v.s << " -> " << v.r << ")";
+    friend std::ostream& operator << (std::ostream& os, rule const& v) {
+        os << "rule(" << v.s << " -> " << v.r << ")";
         return os;
     }
 
@@ -152,39 +152,39 @@ static_assert(test_exposing());
 
 // subroutine
 
-template<Post auto... ps> struct posts {
-    REPRESENTS(Post)
+template<Rule auto... ps> struct rules {
+    REPRESENTS(Rule)
     constexpr auto operator()(CtStr auto t) const {
         return ((the_arg{t} | ... | ps)).complete();
     }
 };
-template<> struct posts<> {
-    REPRESENTS(Post)
+template<> struct rules<> {
+    REPRESENTS(Rule)
     constexpr auto operator()(CtStr auto t) const { return fail{}; }
 };
 
 // To hide a program from compiler output
-#define NAMED_POST(name, p) \
+#define NAMED_RULE(name, p) \
 (struct name { \
-    REPRESENTS(Post) \
+    REPRESENTS(Rule) \
     constexpr auto operator()(CtStr auto t) const { return (p)(t); } \
 }){}
 
 // loop
 
-template<Post auto p> struct postloop {
-    REPRESENTS(Post)
+template<Rule auto p> struct rule_loop {
+    REPRESENTS(Rule)
     constexpr auto operator()(CtStr auto t) const {
         constexpr auto res = the_arg{t} ^ p ^ p ^ p ^ p ^ p ^ p ^ p ^ p ^ p ^ p;
         if constexpr (res.stopped) {
             return res.value;
         } else {
-            return postloop{}(res.value);
+            return rule_loop{}(res.value);
         }
     }
 };
 
-// arithmetics over the Post's machine
+// arithmetics over the Markov machine
 // 123+45=
 //
 // move digit to the left
@@ -193,285 +193,285 @@ template<Post auto p> struct postloop {
 
 #define STR(s) (str{s}) // s##_ss
 #define CTSTR(s) (ct<STR(s)>{}) // s##_cts
-#define POST(s, r) (post<STR(s), STR(r)>{})
-#define POSTS(...) posts<__VA_ARGS__>{}
+#define RULE(s, r) (rule<STR(s), STR(r)>{})
+#define RULES(...) rules<__VA_ARGS__>{}
 
-constexpr auto take_digit = POSTS(
-    POST("0+", "+[0]"),
-    POST("1+", "+[1]"),
-    POST("2+", "+[2]"),
-    POST("3+", "+[3]"),
-    POST("4+", "+[4]"),
-    POST("5+", "+[5]"),
-    POST("6+", "+[6]"),
-    POST("7+", "+[7]"),
-    POST("8+", "+[8]"),
-    POST("9+", "+[9]"),
-    posts<>{}
+constexpr auto take_digit = RULES(
+    RULE("0+", "+[0]"),
+    RULE("1+", "+[1]"),
+    RULE("2+", "+[2]"),
+    RULE("3+", "+[3]"),
+    RULE("4+", "+[4]"),
+    RULE("5+", "+[5]"),
+    RULE("6+", "+[6]"),
+    RULE("7+", "+[7]"),
+    RULE("8+", "+[8]"),
+    RULE("9+", "+[9]"),
+    rules<>{}
 );
 
-constexpr auto move_digit_to_the_right = POSTS(
-    POST("[0]0", "0[0]"),
-    POST("[0]1", "1[0]"),
-    POST("[0]2", "2[0]"),
-    POST("[0]3", "3[0]"),
-    POST("[0]4", "4[0]"),
-    POST("[0]5", "5[0]"),
-    POST("[0]6", "6[0]"),
-    POST("[0]7", "7[0]"),
-    POST("[0]8", "8[0]"),
-    POST("[0]9", "9[0]"),
+constexpr auto move_digit_to_the_right = RULES(
+    RULE("[0]0", "0[0]"),
+    RULE("[0]1", "1[0]"),
+    RULE("[0]2", "2[0]"),
+    RULE("[0]3", "3[0]"),
+    RULE("[0]4", "4[0]"),
+    RULE("[0]5", "5[0]"),
+    RULE("[0]6", "6[0]"),
+    RULE("[0]7", "7[0]"),
+    RULE("[0]8", "8[0]"),
+    RULE("[0]9", "9[0]"),
 
-    POST("[1]0", "0[1]"),
-    POST("[1]1", "1[1]"),
-    POST("[1]2", "2[1]"),
-    POST("[1]3", "3[1]"),
-    POST("[1]4", "4[1]"),
-    POST("[1]5", "5[1]"),
-    POST("[1]6", "6[1]"),
-    POST("[1]7", "7[1]"),
-    POST("[1]8", "8[1]"),
-    POST("[1]9", "9[1]"),
+    RULE("[1]0", "0[1]"),
+    RULE("[1]1", "1[1]"),
+    RULE("[1]2", "2[1]"),
+    RULE("[1]3", "3[1]"),
+    RULE("[1]4", "4[1]"),
+    RULE("[1]5", "5[1]"),
+    RULE("[1]6", "6[1]"),
+    RULE("[1]7", "7[1]"),
+    RULE("[1]8", "8[1]"),
+    RULE("[1]9", "9[1]"),
 
-    POST("[2]0", "0[2]"),
-    POST("[2]1", "1[2]"),
-    POST("[2]2", "2[2]"),
-    POST("[2]3", "3[2]"),
-    POST("[2]4", "4[2]"),
-    POST("[2]5", "5[2]"),
-    POST("[2]6", "6[2]"),
-    POST("[2]7", "7[2]"),
-    POST("[2]8", "8[2]"),
-    POST("[2]9", "9[2]"),
+    RULE("[2]0", "0[2]"),
+    RULE("[2]1", "1[2]"),
+    RULE("[2]2", "2[2]"),
+    RULE("[2]3", "3[2]"),
+    RULE("[2]4", "4[2]"),
+    RULE("[2]5", "5[2]"),
+    RULE("[2]6", "6[2]"),
+    RULE("[2]7", "7[2]"),
+    RULE("[2]8", "8[2]"),
+    RULE("[2]9", "9[2]"),
 
-    POST("[3]0", "0[3]"),
-    POST("[3]1", "1[3]"),
-    POST("[3]2", "2[3]"),
-    POST("[3]3", "3[3]"),
-    POST("[3]4", "4[3]"),
-    POST("[3]5", "5[3]"),
-    POST("[3]6", "6[3]"),
-    POST("[3]7", "7[3]"),
-    POST("[3]8", "8[3]"),
-    POST("[3]9", "9[3]"),
+    RULE("[3]0", "0[3]"),
+    RULE("[3]1", "1[3]"),
+    RULE("[3]2", "2[3]"),
+    RULE("[3]3", "3[3]"),
+    RULE("[3]4", "4[3]"),
+    RULE("[3]5", "5[3]"),
+    RULE("[3]6", "6[3]"),
+    RULE("[3]7", "7[3]"),
+    RULE("[3]8", "8[3]"),
+    RULE("[3]9", "9[3]"),
 
-    POST("[4]0", "0[4]"),
-    POST("[4]1", "1[4]"),
-    POST("[4]2", "2[4]"),
-    POST("[4]3", "3[4]"),
-    POST("[4]4", "4[4]"),
-    POST("[4]5", "5[4]"),
-    POST("[4]6", "6[4]"),
-    POST("[4]7", "7[4]"),
-    POST("[4]8", "8[4]"),
-    POST("[4]9", "9[4]"),
+    RULE("[4]0", "0[4]"),
+    RULE("[4]1", "1[4]"),
+    RULE("[4]2", "2[4]"),
+    RULE("[4]3", "3[4]"),
+    RULE("[4]4", "4[4]"),
+    RULE("[4]5", "5[4]"),
+    RULE("[4]6", "6[4]"),
+    RULE("[4]7", "7[4]"),
+    RULE("[4]8", "8[4]"),
+    RULE("[4]9", "9[4]"),
 
-    POST("[5]0", "0[5]"),
-    POST("[5]1", "1[5]"),
-    POST("[5]2", "2[5]"),
-    POST("[5]3", "3[5]"),
-    POST("[5]4", "4[5]"),
-    POST("[5]5", "5[5]"),
-    POST("[5]6", "6[5]"),
-    POST("[5]7", "7[5]"),
-    POST("[5]8", "8[5]"),
-    POST("[5]9", "9[5]"),
+    RULE("[5]0", "0[5]"),
+    RULE("[5]1", "1[5]"),
+    RULE("[5]2", "2[5]"),
+    RULE("[5]3", "3[5]"),
+    RULE("[5]4", "4[5]"),
+    RULE("[5]5", "5[5]"),
+    RULE("[5]6", "6[5]"),
+    RULE("[5]7", "7[5]"),
+    RULE("[5]8", "8[5]"),
+    RULE("[5]9", "9[5]"),
 
-    POST("[6]0", "0[6]"),
-    POST("[6]1", "1[6]"),
-    POST("[6]2", "2[6]"),
-    POST("[6]3", "3[6]"),
-    POST("[6]4", "4[6]"),
-    POST("[6]5", "5[6]"),
-    POST("[6]6", "6[6]"),
-    POST("[6]7", "7[6]"),
-    POST("[6]8", "8[6]"),
-    POST("[6]9", "9[6]"),
+    RULE("[6]0", "0[6]"),
+    RULE("[6]1", "1[6]"),
+    RULE("[6]2", "2[6]"),
+    RULE("[6]3", "3[6]"),
+    RULE("[6]4", "4[6]"),
+    RULE("[6]5", "5[6]"),
+    RULE("[6]6", "6[6]"),
+    RULE("[6]7", "7[6]"),
+    RULE("[6]8", "8[6]"),
+    RULE("[6]9", "9[6]"),
 
-    POST("[7]0", "0[7]"),
-    POST("[7]1", "1[7]"),
-    POST("[7]2", "2[7]"),
-    POST("[7]3", "3[7]"),
-    POST("[7]4", "4[7]"),
-    POST("[7]5", "5[7]"),
-    POST("[7]6", "6[7]"),
-    POST("[7]7", "7[7]"),
-    POST("[7]8", "8[7]"),
-    POST("[7]9", "9[7]"),
+    RULE("[7]0", "0[7]"),
+    RULE("[7]1", "1[7]"),
+    RULE("[7]2", "2[7]"),
+    RULE("[7]3", "3[7]"),
+    RULE("[7]4", "4[7]"),
+    RULE("[7]5", "5[7]"),
+    RULE("[7]6", "6[7]"),
+    RULE("[7]7", "7[7]"),
+    RULE("[7]8", "8[7]"),
+    RULE("[7]9", "9[7]"),
 
-    POST("[8]0", "0[8]"),
-    POST("[8]1", "1[8]"),
-    POST("[8]2", "2[8]"),
-    POST("[8]3", "3[8]"),
-    POST("[8]4", "4[8]"),
-    POST("[8]5", "5[8]"),
-    POST("[8]6", "6[8]"),
-    POST("[8]7", "7[8]"),
-    POST("[8]8", "8[8]"),
-    POST("[8]9", "9[8]"),
+    RULE("[8]0", "0[8]"),
+    RULE("[8]1", "1[8]"),
+    RULE("[8]2", "2[8]"),
+    RULE("[8]3", "3[8]"),
+    RULE("[8]4", "4[8]"),
+    RULE("[8]5", "5[8]"),
+    RULE("[8]6", "6[8]"),
+    RULE("[8]7", "7[8]"),
+    RULE("[8]8", "8[8]"),
+    RULE("[8]9", "9[8]"),
 
-    POST("[9]0", "0[9]"),
-    POST("[9]1", "1[9]"),
-    POST("[9]2", "2[9]"),
-    POST("[9]3", "3[9]"),
-    POST("[9]4", "4[9]"),
-    POST("[9]5", "5[9]"),
-    POST("[9]6", "6[9]"),
-    POST("[9]7", "7[9]"),
-    POST("[9]8", "8[9]"),
-    POST("[9]9", "9[9]"),
+    RULE("[9]0", "0[9]"),
+    RULE("[9]1", "1[9]"),
+    RULE("[9]2", "2[9]"),
+    RULE("[9]3", "3[9]"),
+    RULE("[9]4", "4[9]"),
+    RULE("[9]5", "5[9]"),
+    RULE("[9]6", "6[9]"),
+    RULE("[9]7", "7[9]"),
+    RULE("[9]8", "8[9]"),
+    RULE("[9]9", "9[9]"),
 
-    posts<>{}
+    rules<>{}
 );
 
-constexpr auto add_digits = POSTS(
-    POST("0[0]=", "=0"),
-    POST("1[0]=", "=1"),
-    POST("2[0]=", "=2"),
-    POST("3[0]=", "=3"),
-    POST("4[0]=", "=4"),
-    POST("5[0]=", "=5"),
-    POST("6[0]=", "=6"),
-    POST("7[0]=", "=7"),
-    POST("8[0]=", "=8"),
-    POST("9[0]=", "=9"),
+constexpr auto add_digits = RULES(
+    RULE("0[0]=", "=0"),
+    RULE("1[0]=", "=1"),
+    RULE("2[0]=", "=2"),
+    RULE("3[0]=", "=3"),
+    RULE("4[0]=", "=4"),
+    RULE("5[0]=", "=5"),
+    RULE("6[0]=", "=6"),
+    RULE("7[0]=", "=7"),
+    RULE("8[0]=", "=8"),
+    RULE("9[0]=", "=9"),
 
-    POST("0[1]=", "=1"),
-    POST("1[1]=", "=2"),
-    POST("2[1]=", "=3"),
-    POST("3[1]=", "=4"),
-    POST("4[1]=", "=5"),
-    POST("5[1]=", "=6"),
-    POST("6[1]=", "=7"),
-    POST("7[1]=", "=8"),
-    POST("8[1]=", "=9"),
-    POST("9[1]=", "^=0"),
+    RULE("0[1]=", "=1"),
+    RULE("1[1]=", "=2"),
+    RULE("2[1]=", "=3"),
+    RULE("3[1]=", "=4"),
+    RULE("4[1]=", "=5"),
+    RULE("5[1]=", "=6"),
+    RULE("6[1]=", "=7"),
+    RULE("7[1]=", "=8"),
+    RULE("8[1]=", "=9"),
+    RULE("9[1]=", "^=0"),
 
-    POST("0[2]=", "=2"),
-    POST("1[2]=", "=3"),
-    POST("2[2]=", "=4"),
-    POST("3[2]=", "=5"),
-    POST("4[2]=", "=6"),
-    POST("5[2]=", "=7"),
-    POST("6[2]=", "=8"),
-    POST("7[2]=", "=9"),
-    POST("8[2]=", "^=0"),
-    POST("9[2]=", "^=1"),
+    RULE("0[2]=", "=2"),
+    RULE("1[2]=", "=3"),
+    RULE("2[2]=", "=4"),
+    RULE("3[2]=", "=5"),
+    RULE("4[2]=", "=6"),
+    RULE("5[2]=", "=7"),
+    RULE("6[2]=", "=8"),
+    RULE("7[2]=", "=9"),
+    RULE("8[2]=", "^=0"),
+    RULE("9[2]=", "^=1"),
 
-    POST("0[3]=", "=3"),
-    POST("1[3]=", "=4"),
-    POST("2[3]=", "=5"),
-    POST("3[3]=", "=6"),
-    POST("4[3]=", "=7"),
-    POST("5[3]=", "=8"),
-    POST("6[3]=", "=9"),
-    POST("7[3]=", "^=0"),
-    POST("8[3]=", "^=1"),
-    POST("9[3]=", "^=2"),
+    RULE("0[3]=", "=3"),
+    RULE("1[3]=", "=4"),
+    RULE("2[3]=", "=5"),
+    RULE("3[3]=", "=6"),
+    RULE("4[3]=", "=7"),
+    RULE("5[3]=", "=8"),
+    RULE("6[3]=", "=9"),
+    RULE("7[3]=", "^=0"),
+    RULE("8[3]=", "^=1"),
+    RULE("9[3]=", "^=2"),
 
-    POST("0[4]=", "=4"),
-    POST("1[4]=", "=5"),
-    POST("2[4]=", "=6"),
-    POST("3[4]=", "=7"),
-    POST("4[4]=", "=8"),
-    POST("5[4]=", "=9"),
-    POST("6[4]=", "^=0"),
-    POST("7[4]=", "^=1"),
-    POST("8[4]=", "^=2"),
-    POST("9[4]=", "^=3"),
+    RULE("0[4]=", "=4"),
+    RULE("1[4]=", "=5"),
+    RULE("2[4]=", "=6"),
+    RULE("3[4]=", "=7"),
+    RULE("4[4]=", "=8"),
+    RULE("5[4]=", "=9"),
+    RULE("6[4]=", "^=0"),
+    RULE("7[4]=", "^=1"),
+    RULE("8[4]=", "^=2"),
+    RULE("9[4]=", "^=3"),
 
-    POST("0[5]=", "=5"),
-    POST("1[5]=", "=6"),
-    POST("2[5]=", "=7"),
-    POST("3[5]=", "=8"),
-    POST("4[5]=", "=9"),
-    POST("5[5]=", "^=0"),
-    POST("6[5]=", "^=1"),
-    POST("7[5]=", "^=2"),
-    POST("8[5]=", "^=3"),
-    POST("9[5]=", "^=4"),
+    RULE("0[5]=", "=5"),
+    RULE("1[5]=", "=6"),
+    RULE("2[5]=", "=7"),
+    RULE("3[5]=", "=8"),
+    RULE("4[5]=", "=9"),
+    RULE("5[5]=", "^=0"),
+    RULE("6[5]=", "^=1"),
+    RULE("7[5]=", "^=2"),
+    RULE("8[5]=", "^=3"),
+    RULE("9[5]=", "^=4"),
 
-    POST("0[6]=", "=6"),
-    POST("1[6]=", "=7"),
-    POST("2[6]=", "=8"),
-    POST("3[6]=", "=9"),
-    POST("4[6]=", "^=0"),
-    POST("5[6]=", "^=1"),
-    POST("6[6]=", "^=2"),
-    POST("7[6]=", "^=3"),
-    POST("8[6]=", "^=4"),
-    POST("9[6]=", "^=5"),
+    RULE("0[6]=", "=6"),
+    RULE("1[6]=", "=7"),
+    RULE("2[6]=", "=8"),
+    RULE("3[6]=", "=9"),
+    RULE("4[6]=", "^=0"),
+    RULE("5[6]=", "^=1"),
+    RULE("6[6]=", "^=2"),
+    RULE("7[6]=", "^=3"),
+    RULE("8[6]=", "^=4"),
+    RULE("9[6]=", "^=5"),
 
-    POST("0[7]=", "=7"),
-    POST("1[7]=", "=8"),
-    POST("2[7]=", "=9"),
-    POST("3[7]=", "^=0"),
-    POST("4[7]=", "^=1"),
-    POST("5[7]=", "^=2"),
-    POST("6[7]=", "^=3"),
-    POST("7[7]=", "^=4"),
-    POST("8[7]=", "^=5"),
-    POST("9[7]=", "^=6"),
+    RULE("0[7]=", "=7"),
+    RULE("1[7]=", "=8"),
+    RULE("2[7]=", "=9"),
+    RULE("3[7]=", "^=0"),
+    RULE("4[7]=", "^=1"),
+    RULE("5[7]=", "^=2"),
+    RULE("6[7]=", "^=3"),
+    RULE("7[7]=", "^=4"),
+    RULE("8[7]=", "^=5"),
+    RULE("9[7]=", "^=6"),
 
-    POST("0[8]=", "=8"),
-    POST("1[8]=", "=9"),
-    POST("2[8]=", "^=0"),
-    POST("3[8]=", "^=1"),
-    POST("4[8]=", "^=2"),
-    POST("5[8]=", "^=3"),
-    POST("6[8]=", "^=4"),
-    POST("7[8]=", "^=5"),
-    POST("8[8]=", "^=6"),
-    POST("9[8]=", "^=7"),
+    RULE("0[8]=", "=8"),
+    RULE("1[8]=", "=9"),
+    RULE("2[8]=", "^=0"),
+    RULE("3[8]=", "^=1"),
+    RULE("4[8]=", "^=2"),
+    RULE("5[8]=", "^=3"),
+    RULE("6[8]=", "^=4"),
+    RULE("7[8]=", "^=5"),
+    RULE("8[8]=", "^=6"),
+    RULE("9[8]=", "^=7"),
 
-    POST("0[9]=", "=9"),
-    POST("1[9]=", "^=0"),
-    POST("2[9]=", "^=1"),
-    POST("3[9]=", "^=2"),
-    POST("4[9]=", "^=3"),
-    POST("5[9]=", "^=4"),
-    POST("6[9]=", "^=5"),
-    POST("7[9]=", "^=6"),
-    POST("8[9]=", "^=7"),
-    POST("9[9]=", "^=8"),
+    RULE("0[9]=", "=9"),
+    RULE("1[9]=", "^=0"),
+    RULE("2[9]=", "^=1"),
+    RULE("3[9]=", "^=2"),
+    RULE("4[9]=", "^=3"),
+    RULE("5[9]=", "^=4"),
+    RULE("6[9]=", "^=5"),
+    RULE("7[9]=", "^=6"),
+    RULE("8[9]=", "^=7"),
+    RULE("9[9]=", "^=8"),
 
-    posts<>{}
+    rules<>{}
 );
 
-constexpr auto add_carry = POSTS(
-    POST("0^", "1"),
-    POST("1^", "2"),
-    POST("2^", "3"),
-    POST("3^", "4"),
-    POST("4^", "5"),
-    POST("5^", "6"),
-    POST("6^", "7"),
-    POST("7^", "8"),
-    POST("8^", "9"),
-    POST("9^", "^0"),
+constexpr auto add_carry = RULES(
+    RULE("0^", "1"),
+    RULE("1^", "2"),
+    RULE("2^", "3"),
+    RULE("3^", "4"),
+    RULE("4^", "5"),
+    RULE("5^", "6"),
+    RULE("6^", "7"),
+    RULE("7^", "8"),
+    RULE("8^", "9"),
+    RULE("9^", "^0"),
 
-    POST("+^", "+1"),
-    posts<>{}
+    RULE("+^", "+1"),
+    rules<>{}
 );
 
-constexpr auto cleanup = POSTS(
-    POST("+", ""),
-    POST("=", ""),
-    posts<>{}
+constexpr auto cleanup = RULES(
+    RULE("+", ""),
+    RULE("=", ""),
+    rules<>{}
 );
 
-constexpr auto program = NAMED_POST(program_t, POSTS(
+constexpr auto program = NAMED_RULE(program_t, RULES(
     add_carry,
     add_digits,
     move_digit_to_the_right,
     take_digit,
     cleanup,
-    posts{}
+    rules{}
 ));
 
 int main() {
     constexpr auto t = CTSTR("98765+66666=");
-    constexpr auto r = postloop<program>{}(t);
+    constexpr auto r = rule_loop<program>{}(t);
     std::cout << t.value << std::endl;
     std::cout << " --> " << r.value << std::endl;
     return 0;

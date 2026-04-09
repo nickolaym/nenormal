@@ -85,7 +85,7 @@ auto bar(Foo auto f)
 
 Так как любая функция подстановки параметризована строками поиска и замены, то получаем шаблон
 ```cpp
-template<Str auto search, Str auto replace> struct post {
+template<Str auto search, Str auto replace> struct rule {
     constexpr CtStrOrFail auto operator()(CtStr auto text) const { ..... }
 };
 ```
@@ -94,7 +94,7 @@ template<Str auto search, Str auto replace> struct post {
 
 ### Подпрограммы НАМ-машины
 
-Последовательность инструкций `p1 = post<s1,r1>{}, p2 = post<s2,r2>{}, ...` можно представить как одну макро-инструкцию, или подпрограмму.
+Последовательность инструкций `p1 = rule<s1,r1>{}, p2 = rule<s2,r2>{}, ...` можно представить как одну макро-инструкцию, или подпрограмму.
 
 Логика её работы такая:
 - если подстановка dst1 = p1(src) успешна, возвращаем dst1
@@ -106,17 +106,17 @@ template<Str auto search, Str auto replace> struct post {
 
 (Если в подпрограмме нет инструкций, то она сразу возвращает fail).
 
-Поэтому структура `posts<Post auto ps...>` также является представителем концепта Post.
+Поэтому структура `rules<Rule auto ps...>` также является представителем концепта Rule.
 
 Также это значит, что подпрограммы сами можно группировать в ещё большие подпрограммы.
 
 ### Цикл исполнения (или НАМ-машина целиком)
 
-Машина является функцией `postloop`, принимающей на вход строку и возвращающей строку.
+Машина является функцией `rule_loop`, принимающей на вход строку и возвращающей строку.
 
 Из тех же соображений, типы аргумента и результата - это CtStr, а сама функция - это шаблон структуры
 ```cpp
-template<Post auto program> struct postloop {
+template<Rule auto program> struct rule_loop {
     constexpr CtStr operator()(CtStr auto src) const {.....}
 };
 ```
@@ -132,7 +132,7 @@ while (true) {
 
 но, поскольку в этом цикле типы меняются, то используется рекурсия.
 
-Формально, `postloop` также попадает под концепт Post, но с важным отличием! Инструкции и подпрограммы выполняются строго за один такт, а цикл работает до упора.
+Формально, `rule_loop` также попадает под концепт Rule, но с важным отличием! Инструкции и подпрограммы выполняются строго за один такт, а цикл работает до упора.
 
 ### Запрещённые инструкции
 
@@ -153,7 +153,7 @@ while (true) {
 - Для replace="" получим ситуацию зацикливания.
 - Для replace!="" получим замену text на replace+text - то есть, не просто зацикливание, но и разрастание текста.
 
-Поэтому `post<""_ss, r>` и `post<s, s>` явно запрещены.
+Поэтому `rule<""_ss, r>` и `rule<s, s>` явно запрещены.
 
 Другие формы зацикливания перекладываются на плечи программиста.
 
@@ -167,9 +167,9 @@ while (true) {
 ### Пример: hello world
 
 ```cpp
-constexpr auto program = posts<
-    post<"hello"_ss, "privet"_ss>{},
-    post<"world"_ss, "mir"_ss>{}
+constexpr auto program = rules<
+    rule<"hello"_ss, "privet"_ss>{},
+    rule<"world"_ss, "mir"_ss>{}
 >{};
 
 constexpr auto src = "hello, world!"_cts;
@@ -182,26 +182,26 @@ std::cout << dst.value.value << std::endl; // privet mir
 ### Пример: правильная скобочная последовательность
 
 ```cpp
-constexpr auto reduce_pairs = posts<  // сокращаем парные скобки
-    post<"()"_ss, ""_ss>{},
-    post<"[]"_ss, ""_ss>{},
-    post<"{}"_ss, ""_ss>{}
+constexpr auto reduce_pairs = rules<  // сокращаем парные скобки
+    rule<"()"_ss, ""_ss>{},
+    rule<"[]"_ss, ""_ss>{},
+    rule<"{}"_ss, ""_ss>{}
 >{};
 
-constexpr auto unify_unpaired = posts<  // замазываем непарные
-    post<"("_ss, "_"_ss>{},
-    post<")"_ss, "_"_ss>{},
-    post<"["_ss, "_"_ss>{},
-    post<"]"_ss, "_"_ss>{},
-    post<"{"_ss, "_"_ss>{},
-    post<"}"_ss, "_"_ss>{}
+constexpr auto unify_unpaired = rules<  // замазываем непарные
+    rule<"("_ss, "_"_ss>{},
+    rule<")"_ss, "_"_ss>{},
+    rule<"["_ss, "_"_ss>{},
+    rule<"]"_ss, "_"_ss>{},
+    rule<"{"_ss, "_"_ss>{},
+    rule<"}"_ss, "_"_ss>{}
 >{};
 
-constexpr auto shrink_unpaired = post<"__"_ss, "_"_ss>{};
+constexpr auto shrink_unpaired = rule<"__"_ss, "_"_ss>{};
 
-constexpr auto failure_message = post<"_"_ss, "FAILURE"_ss>{};
+constexpr auto failure_message = rule<"_"_ss, "FAILURE"_ss>{};
 
-constexpr program = posts<
+constexpr program = rules<
     reduce_pairs,
     // если дошли до этого места, то в тексте не осталось парных скобок
     unify_unpaired,
