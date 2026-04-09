@@ -29,3 +29,19 @@ target_link_libraries(test_compose
 )
 include(GoogleTest)
 gtest_discover_tests(test_compose)
+
+add_executable(test_hello_world
+    tests/hello_world.cpp
+)
+target_link_libraries(test_hello_world
+    GTest::gtest_main
+)
+gtest_discover_tests(test_hello_world)
+
+add_executable(test_correct_bracket_sequence
+    tests/correct_bracket_sequence.cpp
+)
+target_link_libraries(test_correct_bracket_sequence
+    GTest::gtest_main
+)
+gtest_discover_tests(test_correct_bracket_sequence)
