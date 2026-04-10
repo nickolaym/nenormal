@@ -24,8 +24,10 @@
 
 ## Детали реализации
 
-Подробнее о том, как устроен код - в файлах
+Подробнее о том, как устроен код - в тексте
 - [details/functional_composition.md](details/functional_composition.md)
+
+Но проще всего сразу смотреть на **[примеры](details/examples.md)**
 
 ### Концепты
 
