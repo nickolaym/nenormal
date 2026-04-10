@@ -141,6 +141,7 @@ template<Rule auto p> struct rule_loop {
 #define CTSTR(s) (ct<STR(s)>{}) // s##_cts
 #define RULE(s, r) (rule<STR(s), STR(r)>{})
 #define RULES(...) rules<__VA_ARGS__>{}
+#define MACHINE(r) rule_loop<(r)>{}
 
 // To hide a program from compiler output
 #define NAMED_RULE(name, p) \
@@ -148,4 +149,3 @@ template<Rule auto p> struct rule_loop {
     REPRESENTS(Rule) \
     constexpr CtStrOrFail auto operator()(CtStr auto t) const { return (p)(t); } \
 }){}
-

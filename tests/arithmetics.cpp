@@ -1,19 +1,28 @@
-// #include <concepts>
-#include <iostream>
-#include <iomanip>
-#include <algorithm>
+#include <gtest/gtest.h>
 
 #include "nenormal/nenormal.h"
 
+// input:  "X+Y=" where X and Y are nonnegative decimal numbers
+// output: "Z" where Z is nonnegative decimal number (their sum)
 
+// Algorithm:
+// consider "Xx+Yy="
+// 1) Move x next to y
+// 2) add them, giving z or 1z
+// 3) shift z out and propagate carry if needed
+// repeat until there were no X or no Y.
+// Single addition: "Xx+Yy=R" --> "X+U=zR"
+// where U is Y+carry, R is the rest digits from previous additions.
+// Mathematically it means
+// (X*10+x)*10^n     + (Y*10+y)*10^n     +              R
+//  X      *10^(n+1) +  Y      *10^(n+1) + (x+y)*10^n + R
+//  X      *10^(n+1) + (Y+c   )*10^(n+1) +  z   *10^n + R
+// "XXXXXx           +  YYYYYy           =              RRR" - before
+// "XXXXX            + uUUUUU            =  z           RRR" - after
 
-// arithmetics over the Markov machine
-// 123+45=
-//
-// move digit to the left
-// x+ -> +[x]
-// [x]y -> y[x]
-
+// there is empty Y (after series of elementary additions)
+// X+=Z
+constexpr auto plus_nothing = RULE("+=", "");
 
 constexpr auto take_digit = RULES(
     RULE("0+", "+[0]"),
@@ -283,15 +292,32 @@ constexpr auto program = NAMED_RULE(program_t, RULES(
     add_carry,
     add_digits,
     move_digit_to_the_right,
+    plus_nothing,
     take_digit,
     cleanup,
     rules{}
 ));
 
-int main() {
-    constexpr auto t = CTSTR("98765+66666=");
-    constexpr auto r = rule_loop<program>{}(t);
-    std::cout << t.value << std::endl;
-    std::cout << " --> " << r.value << std::endl;
-    return 0;
+constexpr auto machine = MACHINE(program);
+
+TEST(arithmetics, one_digit) {
+    static_assert(machine(CTSTR("1+1=")) == CTSTR("2"));
+    static_assert(machine(CTSTR("2+3=")) == CTSTR("5"));
+}
+TEST(arithmetics, one_digit_with_carry) {
+    static_assert(machine(CTSTR("1+9=")) == CTSTR("10"));
+    static_assert(machine(CTSTR("7+8=")) == CTSTR("15"));
+}
+TEST(arithmetics, short_plus_long) {
+    static_assert(machine(CTSTR("1+12345=")) == CTSTR("12346"));
+    static_assert(machine(CTSTR("12345+1=")) == CTSTR("12346"));
+}
+TEST(arithmetics, propagate_carry) {
+    static_assert(machine(CTSTR("1+123999=")) == CTSTR("124000")); // carry stops
+    static_assert(machine(CTSTR("1+999999=")) == CTSTR("1000000")); // carry exceeds 1 digit
+}
+
+TEST(arithmetics, big_nums) {
+    static_assert(machine(CTSTR("12345+67890=")) == CTSTR("80235"));
+    static_assert(machine(CTSTR("98765+66666=")) == CTSTR("165431"));
 }

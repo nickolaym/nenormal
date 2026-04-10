@@ -17,31 +17,15 @@ target_include_directories(nenormal_headers INTERFACE ${CMAKE_SOURCE_DIR}/includ
 # Link to all executables automatically (must be before add_executable)
 link_libraries(nenormal_headers)
 
-add_executable(hhh
-    pure_example/hhh.cpp
-)
+# Function to create test executable with gtest_discover_tests
+function(add_test_executable name source)
+    add_executable(${name} ${source})
+    target_link_libraries(${name} GTest::gtest_main)
+    include(GoogleTest)
+    gtest_discover_tests(${name})
+endfunction()
 
-add_executable(test_compose
-    tests/compose.cpp
-)
-target_link_libraries(test_compose
-    GTest::gtest_main
-)
-include(GoogleTest)
-gtest_discover_tests(test_compose)
-
-add_executable(test_hello_world
-    tests/hello_world.cpp
-)
-target_link_libraries(test_hello_world
-    GTest::gtest_main
-)
-gtest_discover_tests(test_hello_world)
-
-add_executable(test_correct_bracket_sequence
-    tests/correct_bracket_sequence.cpp
-)
-target_link_libraries(test_correct_bracket_sequence
-    GTest::gtest_main
-)
-gtest_discover_tests(test_correct_bracket_sequence)
+add_test_executable(test_compose tests/compose.cpp)
+add_test_executable(test_hello_world tests/hello_world.cpp)
+add_test_executable(test_correct_bracket_sequence tests/correct_bracket_sequence.cpp)
+add_test_executable(test_arithmetics tests/arithmetics.cpp)
