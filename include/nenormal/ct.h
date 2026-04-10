@@ -13,6 +13,7 @@ template<auto V> struct ct {
         return os;
     }
     constexpr bool operator == (ct const&) const = default;
+    template<auto U> constexpr bool operator == (ct<U> const&) const { return V == U; }
 };
 CONCEPT(Ct)
 
