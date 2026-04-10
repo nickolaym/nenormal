@@ -19,27 +19,32 @@ constexpr auto unify_unpaired = NAMED_RULE(unify_unpaired, RULES(
 
 constexpr auto shrink_unpaired = NAMED_RULE(shrink_unpaired, RULE("__", "_"));
 
-constexpr auto failure_message = NAMED_RULE(failure_message, RULE("_", "FAILURE"));
+constexpr auto error_message = NAMED_RULE(error_message, FINAL_RULE("_", "ERROR"));
+constexpr auto ok_message = NAMED_RULE(ok_message, FINAL_RULE("", "OK"));
 
 constexpr auto program = NAMED_RULE(program, RULES(
     reduce_pairs,
     unify_unpaired,
     shrink_unpaired,
-    failure_message
+    error_message,
+    FINAL_RULE("-", "-"), // for test purposes
+    ok_message,
+    rules<>{}
 ));
 
 constexpr auto machine = MACHINE(program);
 
-constexpr auto ok_str = ""_cts;
-constexpr auto not_ok_str = "FAILURE"_cts;
+constexpr auto ok_str = "OK"_cts;
+constexpr auto error_str = "ERROR"_cts;
 
-TEST(program, fails) {
-    // nothing to replace
-    static_assert(program(""_cts) == fail{});
-    static_assert(program("------"_cts) == fail{});
-    static_assert(program("FAILURE"_cts) == fail{});
+TEST(program, final_step) {
+    static_assert(program(""_cts) == success{ok_str, ct<final_state>{}});
+    static_assert(program("_"_cts) == success{error_str, ct<final_state>{}});
 }
 
+// note that '-' does not belong to the domain of the program.
+// normally it must not appear in the text (will lead to undefined behavior)
+// but in single step it shows "some substring before and after the object of replacement"
 TEST(program, single_step) {
     // reduce pairs
     static_assert(program("---()---"_cts).text == "------"_cts);
@@ -54,8 +59,8 @@ TEST(program, single_step) {
     static_assert(program("---}---"_cts).text == "---_---"_cts);
     // shrink unpaired
     static_assert(program("---__---"_cts).text == "---_---"_cts);
-    // not_ok_str message
-    static_assert(program("---_---"_cts).text == "---FAILURE---"_cts);
+    // error_str message
+    static_assert(program("---_---"_cts).text == "---ERROR---"_cts);
 }
 
 TEST(program, priority_pairs_over_unpaired) {
@@ -64,38 +69,40 @@ TEST(program, priority_pairs_over_unpaired) {
     static_assert(program("---([{+}])+[]---"_cts).text == "---([{+}])+---"_cts);
 }
 
-TEST(machine, no_steps) {
+TEST(machine, final_step) {
     // nothing to replace - machine stops immediately
-    static_assert(machine(""_cts) == ""_cts);
-    static_assert(machine("------"_cts) == "------"_cts);
-    static_assert(machine("---FAILURE---"_cts) == "---FAILURE---"_cts);
+    static_assert(machine(""_cts) == ok_str);
+    static_assert(machine("_"_cts) == error_str);
 }
 
 TEST(machine, single_step) {
     // exact single step
     // reduce pairs
+    // (note that we stop due to '-' char)
     static_assert(machine("---()---"_cts) == "------"_cts);
     static_assert(machine("---[]---"_cts) == "------"_cts);
     static_assert(machine("---{}---"_cts) == "------"_cts);
 
-    static_assert(machine("()"_cts) == ""_cts);
-
-    // message
-    static_assert(machine("---_---"_cts) == "---FAILURE---"_cts);
+    // failure message
+    static_assert(machine("---_---"_cts) == "---ERROR---"_cts);
 }
 
 TEST(machine, single_action) {
     // unpaired
-    static_assert(machine("---(---"_cts) == "---FAILURE---"_cts);
-    static_assert(machine("---[---"_cts) == "---FAILURE---"_cts);
-    static_assert(machine("---{---"_cts) == "---FAILURE---"_cts);
-    static_assert(machine("---)---"_cts) == "---FAILURE---"_cts);
-    static_assert(machine("---]---"_cts) == "---FAILURE---"_cts);
-    static_assert(machine("---}---"_cts) == "---FAILURE---"_cts);
+    static_assert(machine("---(---"_cts) == "---ERROR---"_cts);
+    static_assert(machine("---[---"_cts) == "---ERROR---"_cts);
+    static_assert(machine("---{---"_cts) == "---ERROR---"_cts);
+    static_assert(machine("---)---"_cts) == "---ERROR---"_cts);
+    static_assert(machine("---]---"_cts) == "---ERROR---"_cts);
+    static_assert(machine("---}---"_cts) == "---ERROR---"_cts);
     // unified
-    static_assert(machine("---__---"_cts) == "---FAILURE---"_cts);
-    static_assert(machine("---___---"_cts) == "---FAILURE---"_cts);
+    static_assert(machine("---__---"_cts) == "---ERROR---"_cts);
+    static_assert(machine("---___---"_cts) == "---ERROR---"_cts);
+    static_assert(machine("---____---"_cts) == "---ERROR---"_cts);
 }
+
+// following tests demonstrate normal use of the machine
+// that's why they all are called "correct_bracket_sequence"
 
 TEST(correct_bracket_sequence, empty) {
     static_assert(machine(""_cts) == ok_str);
@@ -103,30 +110,30 @@ TEST(correct_bracket_sequence, empty) {
 
 TEST(correct_bracket_sequence, just_round_brackets) {
     static_assert(machine("()"_cts) == ok_str);
-    static_assert(machine("(()"_cts) == not_ok_str);
-    static_assert(machine("())"_cts) == not_ok_str);
+    static_assert(machine("(()"_cts) == error_str);
+    static_assert(machine("())"_cts) == error_str);
     static_assert(machine("((()))"_cts) == ok_str);
     static_assert(machine("()()"_cts) == ok_str);
     static_assert(machine("(())()"_cts) == ok_str);
-    static_assert(machine("((())"_cts) == not_ok_str);
-    static_assert(machine("())("_cts) == not_ok_str);
+    static_assert(machine("((())"_cts) == error_str);
+    static_assert(machine("())("_cts) == error_str);
 }
 
 TEST(correct_bracket_sequence, just_square_brackets) {
     static_assert(machine("[]"_cts) == ok_str);
-    static_assert(machine("[["_cts) == not_ok_str);
-    static_assert(machine("]]"_cts) == not_ok_str);
+    static_assert(machine("[["_cts) == error_str);
+    static_assert(machine("]]"_cts) == error_str);
     static_assert(machine("[[]]"_cts) == ok_str);
     static_assert(machine("[][]"_cts) == ok_str);
     static_assert(machine("[[[]]]"_cts) == ok_str);
-    static_assert(machine("[]["_cts) == not_ok_str);
-    static_assert(machine("[]]"_cts) == not_ok_str);
+    static_assert(machine("[]["_cts) == error_str);
+    static_assert(machine("[]]"_cts) == error_str);
 }
 
 TEST(correct_bracket_sequence, just_curly_brackets) {
     static_assert(machine("{}"_cts) == ok_str);
-    static_assert(machine("{{"_cts) == not_ok_str);
-    static_assert(machine("}}"_cts) == not_ok_str);
+    static_assert(machine("{{"_cts) == error_str);
+    static_assert(machine("}}"_cts) == error_str);
     static_assert(machine("{{}}"_cts) == ok_str);
     static_assert(machine("{}"_cts) == ok_str);
     static_assert(machine("{}{}"_cts) == ok_str);
@@ -137,14 +144,14 @@ TEST(correct_bracket_sequence, mixed_brackets) {
     static_assert(machine("([])"_cts) == ok_str);
     static_assert(machine("[()]"_cts) == ok_str);
     static_assert(machine("({[]})"_cts) == ok_str);
-    static_assert(machine("([)]"_cts) == not_ok_str);
-    static_assert(machine("((["_cts) == not_ok_str);
-    static_assert(machine("])("_cts) == not_ok_str);
+    static_assert(machine("([)]"_cts) == error_str);
+    static_assert(machine("((["_cts) == error_str);
+    static_assert(machine("])("_cts) == error_str);
     static_assert(machine("{[()]}"_cts) == ok_str);
-    static_assert(machine("{[()]}[("_cts) == not_ok_str);
+    static_assert(machine("{[()]}[("_cts) == error_str);
     static_assert(machine("([{}])"_cts) == ok_str);
-    static_assert(machine("([{"_cts) == not_ok_str);
-    static_assert(machine(")]}"_cts) == not_ok_str);
+    static_assert(machine("([{"_cts) == error_str);
+    static_assert(machine(")]}"_cts) == error_str);
 }
 
 TEST(correct_bracket_sequence, complex_balanced) {
@@ -160,17 +167,17 @@ TEST(correct_bracket_sequence, complex_balanced) {
 }
 
 TEST(correct_bracket_sequence, complex_unbalanced) {
-    static_assert(machine("((("_cts) == not_ok_str);
-    static_assert(machine(")))"_cts) == not_ok_str);
-    static_assert(machine("[[["_cts) == not_ok_str);
-    static_assert(machine("]]]"_cts) == not_ok_str);
-    static_assert(machine("{{{"_cts) == not_ok_str);
-    static_assert(machine("}}}"_cts) == not_ok_str);
-    static_assert(machine("(()"_cts) == not_ok_str);
-    static_assert(machine("())"_cts) == not_ok_str);
-    static_assert(machine("([)"_cts) == not_ok_str);
-    static_assert(machine("([]]"_cts) == not_ok_str);
-    static_assert(machine("{[}]"_cts) == not_ok_str);
+    static_assert(machine("((("_cts) == error_str);
+    static_assert(machine(")))"_cts) == error_str);
+    static_assert(machine("[[["_cts) == error_str);
+    static_assert(machine("]]]"_cts) == error_str);
+    static_assert(machine("{{{"_cts) == error_str);
+    static_assert(machine("}}}"_cts) == error_str);
+    static_assert(machine("(()"_cts) == error_str);
+    static_assert(machine("())"_cts) == error_str);
+    static_assert(machine("([)"_cts) == error_str);
+    static_assert(machine("([]]"_cts) == error_str);
+    static_assert(machine("{[}]"_cts) == error_str);
 }
 
 TEST(correct_bracket_sequence, interleaved) {
@@ -186,19 +193,19 @@ TEST(correct_bracket_sequence, interleaved) {
 }
 
 TEST(correct_bracket_sequence, deeply_nested_same_type) {
-    static_assert(machine("("_cts) == not_ok_str);
-    static_assert(machine("((("_cts) == not_ok_str);
-    static_assert(machine("((((("_cts) == not_ok_str);
-    static_assert(machine(")"_cts) == not_ok_str);
-    static_assert(machine(")))"_cts) == not_ok_str);
-    static_assert(machine(")))))"_cts) == not_ok_str);
+    static_assert(machine("("_cts) == error_str);
+    static_assert(machine("((("_cts) == error_str);
+    static_assert(machine("((((("_cts) == error_str);
+    static_assert(machine(")"_cts) == error_str);
+    static_assert(machine(")))"_cts) == error_str);
+    static_assert(machine(")))))"_cts) == error_str);
 }
 
 TEST(correct_bracket_sequence, alternating_patterns) {
-    static_assert(machine(")(("_cts) == not_ok_str);
-    static_assert(machine("))("_cts) == not_ok_str);
-    static_assert(machine("()("_cts) == not_ok_str);
-    static_assert(machine(")()"_cts) == not_ok_str);
-    static_assert(machine(")()("_cts) == not_ok_str);
-    static_assert(machine("()())"_cts) == not_ok_str);
+    static_assert(machine(")(("_cts) == error_str);
+    static_assert(machine("))("_cts) == error_str);
+    static_assert(machine("()("_cts) == error_str);
+    static_assert(machine(")()"_cts) == error_str);
+    static_assert(machine(")()("_cts) == error_str);
+    static_assert(machine("()())"_cts) == error_str);
 }
