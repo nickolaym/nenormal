@@ -24,6 +24,7 @@
 // X+=Z
 constexpr auto plus_nothing = RULE("+=", "");
 
+// take x and start moving it to the right...
 constexpr auto take_digit = RULES(
     RULE("0+", "+[0]"),
     RULE("1+", "+[1]"),
@@ -38,6 +39,7 @@ constexpr auto take_digit = RULES(
     rules<>{}
 );
 
+// continue moving x to the right...
 constexpr auto move_digit_to_the_right = RULES(
     RULE("[0]0", "0[0]"),
     RULE("[0]1", "1[0]"),
@@ -152,6 +154,7 @@ constexpr auto move_digit_to_the_right = RULES(
     rules<>{}
 );
 
+// "y[x]=" - add x+y with shift-out and carry
 constexpr auto add_digits = RULES(
     RULE("0[0]=", "=0"),
     RULE("1[0]=", "=1"),
@@ -266,6 +269,7 @@ constexpr auto add_digits = RULES(
     rules<>{}
 );
 
+// propagate carry "y^" -> "u" or "^u"
 constexpr auto add_carry = RULES(
     RULE("0^", "1"),
     RULE("1^", "2"),
@@ -282,6 +286,7 @@ constexpr auto add_carry = RULES(
     rules<>{}
 );
 
+// no more rules, - addition stopped.
 constexpr auto cleanup = RULES(
     RULE("+", ""),
     RULE("=", ""),
