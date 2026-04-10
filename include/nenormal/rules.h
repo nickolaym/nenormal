@@ -51,8 +51,10 @@ CONCEPT(Rule)
 
 template<Str auto s, Str auto r, rule_state_t state> struct rule {
     REPRESENTS(Rule)
-    static_assert(s != str{""}, "empty search string results in an endless loop");
-    static_assert(s != r, "same search and replace results in an endless loop");
+    static_assert(
+        !(state == regular_state && s == r),
+        "same search and replace is meaningless: either inaccessible or results in an endless loop");
+
     friend std::ostream& operator << (std::ostream& os, rule const& v) {
         os << "rule(" << v.s << " -> " << v.r << ")";
         return os;
