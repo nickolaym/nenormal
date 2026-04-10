@@ -14,12 +14,14 @@ template<class T> struct stop;
 template<class T> struct arg {
     REPRESENTS(Arg);
     T value;
+    using type = T;
 
     constexpr bool operator == (const arg&) const = default;
 };
 template<class T> struct stop {
     REPRESENTS(Stop);
     T value;
+    using type = T;
 
     constexpr bool operator == (const stop&) const = default;
 };
