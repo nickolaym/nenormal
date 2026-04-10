@@ -37,6 +37,10 @@ template<CtStr T, CtState S> struct success {
     REPRESENTS(Success);
     T text;
     S state;
+
+    constexpr bool operator==(const success&) const = default;
+    template<class T1, class S1>
+    constexpr bool operator==(const success<T1, S1>&) const { return false; }
 };
 CONCEPT(Success);
 

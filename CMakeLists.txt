@@ -26,6 +26,7 @@ function(add_test_executable name source)
 endfunction()
 
 add_test_executable(test_compose tests/compose.cpp)
+add_test_executable(test_rules tests/rules.cpp)
 add_test_executable(test_hello_world tests/hello_world.cpp)
 add_test_executable(test_correct_bracket_sequence tests/correct_bracket_sequence.cpp)
 add_test_executable(test_arithmetics tests/arithmetics.cpp)
