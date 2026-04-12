@@ -59,6 +59,19 @@ TEST(single_rule, of_final_type) {
     static_assert(FINAL_RULE("a", "b")(CTSTR("a")) == FINAL("b"));
 }
 
+TEST(rules, empty_rules_always_fail) {
+    constexpr auto program = rules<>{};
+    static_assert(program(CTSTR("")) == fail{});
+}
+
+TEST(rules, singular_rules) {
+    constexpr auto program = RULES(
+        RULE("a", "b")
+    );
+    static_assert(program(CTSTR("aaa")) == REGULAR("baa"));
+    static_assert(program(CTSTR("c")) == fail{});
+}
+
 TEST(rules, only_earlier_acts_regular) {
     constexpr auto program = RULES(
         RULE("a", "1"),
@@ -94,4 +107,94 @@ TEST(rules, only_earlier_acts_mixed) {
     static_assert(program(CTSTR("cbdbc")) == REGULAR("c2dbc"));
     static_assert(program(CTSTR("cdddc")) == FINAL("3dddc"));
     static_assert(program(CTSTR("ddddd")) == fail{});
+}
+
+auto failure_trace = [](CtStr auto text, Rule auto p, CtStr auto dst) {
+    ADD_FAILURE() << "no trace expected if there were no match";
+};
+auto print_trace = [](CtStr auto text, Rule auto p, CtStr auto dst) {
+    std::cout
+        << p << " ::: "
+        << std::quoted(text.value.value)
+        << " -> "
+        << std::quoted(dst.value.value)
+        << std::endl;
+};
+
+TEST(runtime, rule_fails) {
+    RULE("a", "b")(trace_input{CTSTR(""), failure_trace});
+}
+
+TEST(runtime, rules_fails) {
+    RULES(
+        RULE("a", "b"),
+        RULE("c", "d")
+    )(trace_input{CTSTR(""), failure_trace});
+}
+
+TEST(runtime, rule_trace) {
+    bool invoked = false;
+    auto trace = [&](CtStr auto text, Rule auto p, CtStr auto dst) {
+        invoked = true;
+        print_trace(text, p, dst);
+    };
+
+    constexpr auto p = RULE("a", "b");
+
+    auto src = CTSTR("abc");
+    auto ti = trace_input{src, trace};
+    static_assert(ti.value == src);
+    p(ti);
+    EXPECT_TRUE(invoked);
+}
+
+TEST(runtime, rules_trace) {
+    bool invoked = false;
+    auto trace = [&](CtStr auto text, Rule auto p, CtStr auto dst) {
+        invoked = true;
+        print_trace(text, p, dst);
+    };
+
+    constexpr auto p = RULES(
+        RULE("a", "b"),
+        RULE("c", "d")
+    );
+
+    auto src = CTSTR("abc");
+    auto ti = trace_input{src, trace};
+    static_assert(ti.value == src);
+    p(ti);
+    EXPECT_TRUE(invoked);
+}
+
+TEST(runtime, loop_trace) {
+    int invoked = 0;
+    auto trace = [&](CtStr auto text, Rule auto p, CtStr auto dst) {
+        invoked++;
+        print_trace(text, p, dst);
+    };
+
+    // correct bracket sequence
+    constexpr auto p = RULES(
+        RULE(" ", ""),
+        RULE("()", ""),
+        RULE("(", "_"),
+        RULE(")", "_"),
+        RULE("__", "_"),
+        FINAL_RULE("_", "INCORRECT"),
+        FINAL_RULE("", "CORRECT")
+    );
+    constexpr auto m = MACHINE(p);
+
+    constexpr auto correct   = CTSTR(" ((((() ())())))  ");
+    constexpr auto incorrect = CTSTR(")((((())())()))))(");
+
+    invoked = 0;
+    EXPECT_EQ(m(trace_input{correct, trace}), CTSTR("CORRECT"));
+    EXPECT_EQ(invoked, 12);
+
+    invoked = 0;
+    EXPECT_EQ(m(trace_input{incorrect, trace}), CTSTR("INCORRECT"));
+    EXPECT_EQ(invoked, 15);
+
 }

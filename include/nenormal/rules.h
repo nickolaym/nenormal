@@ -8,10 +8,20 @@
 #include <iostream>
 #include <iomanip>
 
+template<CtStr T, class F> struct trace_input {
+    REPRESENTS(TraceInput);
+    static constexpr T value = T{};
+    T text;
+    F f;
+};
+CONCEPT(TraceInput);
+
+
 // rule function types
+// RuleInput -> RuleOutput
 
 // input: just CtStr
-template<class T> concept RuleInput = CtStr<T>;
+template<class T> concept RuleInput = CtStr<T> || TraceInput<T>;
 
 // output:
 // - fail (not matched)
@@ -56,13 +66,24 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
         !(state == regular_state && s == r),
         "same search and replace is meaningless: either inaccessible or results in an endless loop");
 
-    friend std::ostream& operator << (std::ostream& os, rule const& v) {
-        os << "rule(" << v.s << " -> " << v.r << ")";
+    friend std::ostream& operator << (std::ostream& os, rule) {
+        os << "rule(";
+        os << std::quoted(s.value) << " -> " << std::quoted(r.value);
+        if (state == final_state) os << ", final";
+        os << ")";
         return os;
     }
 
-    constexpr RuleOutput auto operator()(RuleInput auto t) const {
-        constexpr Str auto const& src = t.value;
+    RuleOutput auto operator()(TraceInput auto t) const {
+        constexpr auto dst = rule{}(t.value);
+        if constexpr (!failed(dst)) {
+            t.f(t.text, *this, dst.text);
+        }
+        return dst;
+    }
+
+    constexpr RuleOutput auto operator()(CtStr auto t) const {
+        constexpr const Str auto& src = t.value;
         if constexpr (src.size() < s.size()) {
             return fail{};
         } else if constexpr (src == s) {
@@ -138,6 +159,15 @@ namespace loop_helper {
     // implements endless loop on text >> rule >> rule >> ...
 
     constexpr auto make_arg(RuleInput auto text) { return arg{text}; }
+
+    // constexpr auto next_arg(RuleInput auto src, CtStr auto dst) { return arg{dst}; }
+    constexpr auto next_arg(CtStr auto src, CtStr auto dst) {
+        return arg(dst);
+    }
+    constexpr auto next_arg(TraceInput auto src, CtStr auto dst) {
+        return arg(trace_input{dst, src.f});
+    }
+
     constexpr auto make_fun(Rule auto rule) {
         // rule : CtStr -> success{CtStr,(regular|final)} | fail
         // fun  : arg<RuleInput> -> arg<RuleInput> | stop<success>
@@ -148,7 +178,7 @@ namespace loop_helper {
             else if constexpr (finished(r)) // matched, final state
                 return stop{r}; // stop with result
             else
-                return arg{r.text}; // matched, regular state - continue with new value
+                return next_arg(a.value, r.text); // matched, regular state - continue with new value
         };
     }
     template<RuleInput T> constexpr fail take_res(arg<T> a) = delete; // never fails
@@ -172,6 +202,10 @@ template<Rule auto p> struct rule_loop {
 // about regular / final state.
 
 template<Rule auto m> struct machine_fun {
+    constexpr CtStr auto operator()(TraceInput auto ti) const {
+        RuleOutput auto dst = m(ti);
+        return dst.text;
+    }
     constexpr CtStr auto operator()(CtStr auto text) const {
         return m(text).text;
     }
