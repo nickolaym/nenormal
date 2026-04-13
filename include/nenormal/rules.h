@@ -168,13 +168,17 @@ namespace loop_helper {
         return arg(trace_input{dst, src.f});
     }
 
+    // constexpr auto stop_with_arg(RuleInput auto)
+    constexpr CtStr auto src_text(CtStr auto text) { return text; }
+    constexpr CtStr auto src_text(TraceInput auto t) { return t.text; }
+
     constexpr auto make_fun(Rule auto rule) {
         // rule : CtStr -> success{CtStr,(regular|final)} | fail
         // fun  : arg<RuleInput> -> arg<RuleInput> | stop<success>
         return [rule]<RuleInput T>(arg<T> a) {
             RuleOutput auto r = rule(a.value);
             if constexpr (failed(r))  // not matched anymore
-                return stop{success{a.value, ct<regular_state>{}}}; // stop with previous value
+                return stop{success{src_text(a.value), ct<regular_state>{}}}; // stop with previous value
             else if constexpr (finished(r)) // matched, final state
                 return stop{r}; // stop with result
             else
@@ -202,11 +206,7 @@ template<Rule auto p> struct rule_loop {
 // about regular / final state.
 
 template<Rule auto m> struct machine_fun {
-    constexpr CtStr auto operator()(TraceInput auto ti) const {
-        RuleOutput auto dst = m(ti);
-        return dst.text;
-    }
-    constexpr CtStr auto operator()(CtStr auto text) const {
+    constexpr CtStr auto operator()(RuleInput auto text) const {
         return m(text).text;
     }
 };

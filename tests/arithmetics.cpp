@@ -326,3 +326,26 @@ TEST(arithmetics, big_nums) {
     static_assert(machine(CTSTR("12345+67890=")) == CTSTR("80235"));
     static_assert(machine(CTSTR("98765+66666=")) == CTSTR("165431"));
 }
+
+TEST(arithmetics, runtime) {
+    constexpr auto show = [](CtStr auto src) {
+        size_t step = 0;
+        auto trace = [&](CtStr auto src, Rule auto p, CtStr auto dst) {
+            std::cout
+                << ++step << " : "
+                << std::quoted(src.value.value)
+                << "  -->  "
+                << std::quoted(dst.value.value)
+                << std::endl;
+        };
+
+        std::cout << std::quoted(src.value.value) << std::endl;
+        auto dst = machine(trace_input{src, trace});
+        std::cout << std::quoted(dst.value.value) << std::endl;
+        std::cout << "-----" << std::endl;
+    };
+
+    show(CTSTR("1+2="));
+    show(CTSTR("12345+67890="));
+    show(CTSTR("98765+66666="));
+}
