@@ -140,7 +140,7 @@ namespace loop_helper {
     constexpr auto make_fun(Rule auto rule) {
         // rule : CtStr -> success{CtStr,(regular|final)} | fail
         // fun  : arg<RuleInput> -> arg<RuleInput> | stop<success>
-        return [rule]<CtStr T>(arg<T> a) {
+        return [rule]<RuleInput T>(arg<T> a) {
             RuleOutput auto r = rule(a.value);
             if constexpr (failed(r))  // not matched anymore
                 return stop{success{a.value, ct<regular_state>{}}}; // stop with previous value
