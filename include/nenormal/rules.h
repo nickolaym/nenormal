@@ -61,7 +61,7 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
     }
 
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
-        constexpr Str auto& src = t.value;
+        constexpr Str auto const& src = t.value;
         if constexpr (src.size() < s.size()) {
             return fail{};
         } else if constexpr (src == s) {

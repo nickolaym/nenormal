@@ -3,9 +3,10 @@
 // compile time constants
 
 #include "concepts.h"
+#include <iostream>
 
 template<auto V> struct ct {
-    using type = decltype(V);
+    using type = std::remove_const_t<decltype(V)>;
     static constexpr auto value = V;
     REPRESENTS(Ct)
     friend std::ostream& operator << (std::ostream& os, ct const& v) {

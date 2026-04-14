@@ -3,6 +3,10 @@
 #include "concepts.h"
 #include "ct.h"
 
+#include <string_view>
+#include <iostream>
+#include <iomanip>
+
 template<size_t N> using charbuf = char[N];
 
 template<size_t N> struct str {
@@ -13,7 +17,7 @@ template<size_t N> struct str {
 
     REPRESENTS(Str)
     friend std::ostream& operator << (std::ostream& os, str const& v) {
-        os << std::quoted(v.value) << "_ss";
+        os << std::quoted(v.view()) << "_ss";
         return os;
     }
 
@@ -23,6 +27,11 @@ template<size_t N> struct str {
     constexpr auto end() const { return std::begin(value) + size(); }
 
     constexpr size_t size() const { return N-1; }
+
+    constexpr operator std::string_view() const { return view(); }
+    constexpr std::string_view view() const { return {begin(), end()}; }
+    constexpr auto& operator[](size_t i) { return value[i]; }
+    constexpr auto& operator[](size_t i) const { return value[i]; }
 
     constexpr bool operator == (const str& rhs) const = default;
     template<size_t M> constexpr bool operator == (const str<M>& rhs) const { return false; }

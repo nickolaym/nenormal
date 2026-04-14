@@ -25,8 +25,12 @@ function(add_test_executable name source)
     gtest_discover_tests(${name})
 endfunction()
 
+# test elements
+add_test_executable(test_str tests/str.cpp)
 add_test_executable(test_compose tests/compose.cpp)
 add_test_executable(test_rules tests/rules.cpp)
+
+# test examples
 add_test_executable(test_hello_world tests/hello_world.cpp)
 add_test_executable(test_correct_bracket_sequence tests/correct_bracket_sequence.cpp)
 add_test_executable(test_arithmetics tests/arithmetics.cpp)
