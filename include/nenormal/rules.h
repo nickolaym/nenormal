@@ -43,6 +43,7 @@ template<CtStr T, CtState S> struct success {
     constexpr bool operator==(const success<T1, S1>&) const { return false; }
 };
 CONCEPT(Success);
+constexpr bool finished(Success auto s) { return s.state.value == final_state; }
 
 template<class T> concept RuleOutput = Success<T> || Fail<T>;
 
@@ -144,7 +145,7 @@ namespace loop_helper {
             RuleOutput auto r = rule(a.value);
             if constexpr (failed(r))  // not matched anymore
                 return stop{success{a.value, ct<regular_state>{}}}; // stop with previous value
-            else if constexpr (r.state.value == final_state) // matched, final state
+            else if constexpr (finished(r)) // matched, final state
                 return stop{r}; // stop with result
             else
                 return arg{r.text}; // matched, regular state - continue with new value
