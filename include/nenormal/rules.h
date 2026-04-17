@@ -27,6 +27,9 @@ struct fail {
 constexpr bool failed(const auto& a) { return fail{} == a; }
 template<class T> concept Fail = std::same_as<T, fail>;
 
+// opposite to fail
+template<class T> concept FailOrSubst = Fail<T> || CtStr<T>;
+
 enum rule_state_t {
     regular_state,
     final_state,
@@ -62,11 +65,20 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
     }
 
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
+        FailOrSubst auto res = try_substute(t);
+        if constexpr (failed(res)) {
+            return fail{};
+        } else {
+            return success{res, ct<state>{}};
+        }
+    }
+
+    static constexpr FailOrSubst auto try_substute(RuleInput auto t) {
         constexpr Str auto const& src = t.value;
         if constexpr (src.size() < s.size()) {
             return fail{};
         } else if constexpr (src == s) {
-            return success{ct<r>{}, ct<state>{}};
+            return ct<r>{};
         } else {
             constexpr auto fbegin = std::search(src.begin(), src.end(), s.begin(), s.end());
             if constexpr (fbegin == src.end()) {
@@ -84,7 +96,7 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
                         *it = 0;
                         return dst;
                     }();
-                return success{ct<dst>{}, ct<state>{}};
+                return ct<dst>{};
             }
         }
     }
