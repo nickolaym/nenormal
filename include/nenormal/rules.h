@@ -4,6 +4,7 @@
 #include "ct.h"
 #include "str.h"
 #include "compose.h"
+#include "augmented.h"
 
 #include <iostream>
 #include <iomanip>
@@ -59,6 +60,10 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
         !(state == regular_state && s == r),
         "same search and replace is meaningless: either inaccessible or results in an endless loop");
 
+    static constexpr auto ct_search = ct<s>{};
+    static constexpr auto ct_replace = ct<r>{};
+    static constexpr auto ct_state = ct<state>{};
+
     friend std::ostream& operator << (std::ostream& os, rule const& v) {
         os
             << (state == regular_state ? "rule" : "final_rule")
@@ -71,11 +76,11 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
     }
 
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
-        FailOrSubst auto res = try_substute(t);
+        FailOrSubst auto res = try_substute(extract_text(t));
         if constexpr (failed(res)) {
             return fail{};
         } else {
-            return success{res, ct<state>{}};
+            return success{update_text(t, rule{}, res), ct_state};
         }
     }
 
@@ -84,7 +89,7 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
         if constexpr (src.size() < s.size()) {
             return fail{};
         } else if constexpr (src == s) {
-            return ct<r>{};
+            return ct_replace;
         } else {
             constexpr auto fbegin = std::search(src.begin(), src.end(), s.begin(), s.end());
             if constexpr (fbegin == src.end()) {
