@@ -12,7 +12,7 @@
 // rule function types
 
 // input: just CtStr
-template<class T> concept RuleInput = CtStr<T>;
+template<class T> concept RuleInput = CtStr<T> || Augmented<T>;
 
 // output:
 // - fail (not matched)
@@ -37,9 +37,11 @@ enum rule_state_t {
 };
 template<class T> concept CtState = CtOf<T, rule_state_t>;
 
-template<CtStr T, CtState S> struct success {
+// successful result will be passed to the next loop.
+// that's why type T is a kind of RuleInput
+template<RuleInput T, CtState S> struct success {
     REPRESENTS(Success);
-    T text;
+    T data;
     S state;
 
     constexpr bool operator==(const success&) const = default;
@@ -80,7 +82,8 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
         if constexpr (failed(res)) {
             return fail{};
         } else {
-            return success{update_text(t, rule{}, res), ct_state};
+            RuleInput auto tt = update_text(t, rule{}, res);
+            return success{tt, ct_state};
         }
     }
 
@@ -116,12 +119,12 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
 // subroutine
 
 namespace rules_helper {
-    // implements disjunction on text >> rule1 >> rule2 >> ...
+    // implements disjunction on input >> rule1 >> rule2 >> ...
 
-    constexpr auto make_arg(RuleInput auto text) { return arg{text}; }
+    constexpr auto make_arg(RuleInput auto input) { return arg{input}; }
     constexpr auto make_fun(Rule auto rule) {
-        // rule : CtStr -> success | fail
-        // fun  : arg<CtStr> -> arg<CtStr> | stop<success>
+        // rule : input -> success | fail
+        // fun  : arg<input> -> arg<input> | stop<success>
         return [rule]<RuleInput T>(arg<T> a) {
             RuleOutput auto r = rule(a.value);
             if constexpr (failed(r)) // not matched yet
@@ -158,12 +161,12 @@ template<> struct rules<> {
 // machine loop
 
 namespace loop_helper {
-    // implements endless loop on text >> rule >> rule >> ...
+    // implements endless loop on input >> rule >> rule >> ...
 
-    constexpr auto make_arg(RuleInput auto text) { return arg{text}; }
+    constexpr auto make_arg(RuleInput auto input) { return arg{input}; }
     constexpr auto make_fun(Rule auto rule) {
-        // rule : CtStr -> success{CtStr,(regular|final)} | fail
-        // fun  : arg<RuleInput> -> arg<RuleInput> | stop<success>
+        // rule : input -> success{output,(regular|final)} | fail
+        // fun  : arg<input> -> arg<output> | stop<success>
         return [rule]<RuleInput T>(arg<T> a) {
             RuleOutput auto r = rule(a.value);
             if constexpr (failed(r))  // not matched anymore
@@ -171,7 +174,7 @@ namespace loop_helper {
             else if constexpr (finished(r)) // matched, final state
                 return stop{r}; // stop with result
             else
-                return arg{r.text}; // matched, regular state - continue with new value
+                return arg{r.data}; // matched, regular state - continue with new value
         };
     }
     template<RuleInput T> constexpr fail take_res(arg<T> a) = delete; // never fails
@@ -186,7 +189,7 @@ template<Rule auto p> struct rule_loop {
 
     static constexpr auto the_loop = endless_loop{repeat<10>(loop_helper::make_fun(p))};
 
-    constexpr RuleOutput auto operator()(RuleInput auto t) const {
+    constexpr /* Success */ RuleOutput auto operator()(RuleInput auto t) const {
         return loop_helper::take_res(the_loop(loop_helper::make_arg(t)));
     }
 };
@@ -195,8 +198,8 @@ template<Rule auto p> struct rule_loop {
 // about regular / final state.
 
 template<Rule auto m> struct machine_fun {
-    constexpr CtStr auto operator()(CtStr auto text) const {
-        return m(text).text;
+    constexpr RuleInput auto operator()(RuleInput auto input) const {
+        return m(input).data;
     }
 };
 
