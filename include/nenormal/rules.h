@@ -183,9 +183,9 @@ template<Rule auto m> struct machine_fun {
 #define CTSTR(s) (ct<STR(s)>{}) // s##_cts
 #define RULE(s, r) (rule<STR(s), STR(r), regular_state>{})
 #define FINAL_RULE(s, r) (rule<STR(s), STR(r), final_state>{})
-#define RULES(...) rules<__VA_ARGS__>{}
-#define RULE_LOOP(r) rule_loop<(r)>{}
-#define MACHINE_FROM_RULE(r) machine_fun<(r)>{}
+#define RULES(...) (rules<__VA_ARGS__>{})
+#define RULE_LOOP(r) (rule_loop<(r)>{})
+#define MACHINE_FROM_RULE(r) (machine_fun<(r)>{})
 #define MACHINE(r) MACHINE_FROM_RULE(RULE_LOOP(r))
 
 // To hide a program from compiler output
