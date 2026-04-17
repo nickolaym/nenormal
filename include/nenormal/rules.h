@@ -60,7 +60,13 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
         "same search and replace is meaningless: either inaccessible or results in an endless loop");
 
     friend std::ostream& operator << (std::ostream& os, rule const& v) {
-        os << "rule(" << v.s << " -> " << v.r << ")";
+        os
+            << (state == regular_state ? "rule" : "final_rule")
+            << "("
+            << std::quoted(s.view())
+            << " -> "
+            << std::quoted(r.view())
+            << ")";
         return os;
     }
 
