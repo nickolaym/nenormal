@@ -42,7 +42,7 @@ template<class T> concept CtState = CtOf<T, rule_state_t>;
 template<RuleInput T, CtState S> struct success {
     REPRESENTS(Success);
     T data;
-    S state;
+    S state;  // TODO make it static!
 
     constexpr bool operator==(const success&) const = default;
     template<class T1, class S1>
@@ -55,9 +55,11 @@ template<class T> concept RuleOutput = Success<T> || Fail<T>;
 
 // single search-and-replace function
 CONCEPT(Rule)
+CONCEPT(SingleRule)
 
 template<Str auto s, Str auto r, rule_state_t state> struct rule {
     REPRESENTS(Rule)
+    REPRESENTS(SingleRule)
     static_assert(
         !(state == regular_state && s == r),
         "same search and replace is meaningless: either inaccessible or results in an endless loop");
@@ -171,7 +173,7 @@ namespace loop_helper {
             RuleOutput auto r = rule(a.value);
             if constexpr (failed(r))  // not matched anymore
                 return stop{success{a.value, ct<regular_state>{}}}; // stop with previous value
-            else if constexpr (finished(r)) // matched, final state
+            else if constexpr (r.state.value == final_state) // matched, final state
                 return stop{r}; // stop with result
             else
                 return arg{r.data}; // matched, regular state - continue with new value
@@ -184,10 +186,10 @@ namespace loop_helper {
 
 } // namespace loop_helper
 
-template<Rule auto p> struct rule_loop {
+template<Rule auto p, size_t const factor = 1> struct rule_loop {
     REPRESENTS(Rule)
 
-    static constexpr auto the_loop = endless_loop{repeat<10>(loop_helper::make_fun(p))};
+    static constexpr auto the_loop = endless_loop{repeat<factor>(loop_helper::make_fun(p))};
 
     constexpr /* Success */ RuleOutput auto operator()(RuleInput auto t) const {
         return loop_helper::take_res(the_loop(loop_helper::make_arg(t)));

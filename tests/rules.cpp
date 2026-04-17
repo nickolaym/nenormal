@@ -148,3 +148,49 @@ TEST(augmented, machine) {
     constexpr auto output = p(input);
     static_assert(output.text == "bbb"_cts);
 }
+
+TEST(augmented, single_rule_runtime) {
+    int count = 0;
+    auto trace = [&](CtStr auto input, SingleRule auto p, CtStr auto output) {
+        ++count;
+    };
+    auto input = augmented_text{"aaa"_cts, side_effect{trace}};
+    constexpr auto p = RULE("a", "b");
+    p(input);
+    EXPECT_EQ(count, 1);
+}
+
+TEST(augmented, rules_runtime) {
+    int count = 0;
+    auto trace = [&](CtStr auto input, SingleRule auto p, CtStr auto output) {
+        ++count;
+    };
+    auto input = augmented_text{"aaa"_cts, side_effect{trace}};
+    constexpr auto p = RULES(RULE("a", "b"), RULE("c", "d"));
+    p(input);
+    EXPECT_EQ(count, 1);
+}
+
+TEST(augmented, rule_loop_runtime) {
+    int count = 0;
+    auto trace = [&](CtStr auto input, SingleRule auto p, CtStr auto output) {
+        ++count;
+    };
+    auto input = augmented_text{"aaa"_cts, side_effect{trace}};
+    constexpr auto p = RULE_LOOP(RULE("a", "b"));
+    auto output = p(input);
+    static_assert(output.data.text == "bbb"_cts);
+    EXPECT_EQ(count, 3);
+}
+
+TEST(augmented, machine_runtime) {
+    int count = 0;
+    auto trace = [&](CtStr auto input, SingleRule auto p, CtStr auto output) {
+        ++count;
+    };
+    auto input = augmented_text{"aaa"_cts, side_effect{trace}};
+    constexpr auto p = MACHINE(RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f")));
+    auto output = p(input);
+    static_assert(output.text == "bbb"_cts);
+    EXPECT_EQ(count, 3);
+}
