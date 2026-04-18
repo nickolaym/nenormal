@@ -25,7 +25,7 @@ TEST(compare_values, success) {
     constexpr auto regular_success = success{text, ct<regular_state>{}};
     constexpr auto final_success = success{text, ct<final_state>{}};
 
-    static_assert(regular_success.text == text);
+    static_assert(regular_success.data == text);
     static_assert(regular_success.state.value == regular_state);
     static_assert(regular_success == REGULAR("abc"));
 
@@ -94,4 +94,103 @@ TEST(rules, only_earlier_acts_mixed) {
     static_assert(program(CTSTR("cbdbc")) == REGULAR("c2dbc"));
     static_assert(program(CTSTR("cdddc")) == FINAL("3dddc"));
     static_assert(program(CTSTR("ddddd")) == fail{});
+}
+
+TEST(augmented, single_rule) {
+    constexpr auto input = augmented_text{"aaa"_cts, empty{}};
+    using input_type = std::remove_const_t<decltype(input)>;
+    static_assert(Augmented<input_type>);
+    static_assert(RuleInput<input_type>);
+    constexpr auto p = RULE("a", "b");
+    constexpr auto output = p(input);
+    using output_type = std::remove_const_t<decltype(output)>;
+    static_assert(Success<output_type>);
+    constexpr auto output_data = output.data;
+    using output_data_type = std::remove_const_t<decltype(output_data)>;
+    static_assert(Augmented<output_data_type>);
+    static_assert(output_data.text == "baa"_cts);
+    static_assert(std::same_as<decltype(output_data.aux), empty>);
+}
+
+TEST(single_rule, augmented_fail) {
+    constexpr auto input = augmented_text{"aaa"_cts, empty{}};
+    constexpr auto p = RULE("c", "d");
+    constexpr auto output = p(input);
+    static_assert(failed(output));
+}
+
+TEST(augmented, rules) {
+    constexpr auto input = augmented_text{"aaa"_cts, empty{}};
+    constexpr auto p = RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f"));
+    constexpr auto output = p(input);
+    static_assert(!failed(output));
+    static_assert(output.data.text == "baa"_cts);
+}
+
+TEST(augmented, rules_fail) {
+    constexpr auto input = augmented_text{"xxx"_cts, empty{}};
+    constexpr auto p = RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f"));
+    constexpr auto output = p(input);
+    static_assert(failed(output));
+}
+
+TEST(augmented, rule_loop) {
+    constexpr auto input = augmented_text{"aaa"_cts, empty{}};
+    constexpr auto p = RULE_LOOP(RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f")));
+    constexpr auto output = p(input);
+    static_assert(!failed(output));
+    static_assert(output.data.text == "bbb"_cts);
+}
+
+TEST(augmented, machine) {
+    constexpr auto input = augmented_text{"aaa"_cts, empty{}};
+    constexpr auto p = MACHINE(RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f")));
+    constexpr auto output = p(input);
+    static_assert(output.text == "bbb"_cts);
+}
+
+TEST(augmented, single_rule_runtime) {
+    int count = 0;
+    auto trace = [&](CtStr auto input, SingleRule auto p, CtStr auto output) {
+        ++count;
+    };
+    auto input = augmented_text{"aaa"_cts, side_effect{trace}};
+    constexpr auto p = RULE("a", "b");
+    p(input);
+    EXPECT_EQ(count, 1);
+}
+
+TEST(augmented, rules_runtime) {
+    int count = 0;
+    auto trace = [&](CtStr auto input, SingleRule auto p, CtStr auto output) {
+        ++count;
+    };
+    auto input = augmented_text{"aaa"_cts, side_effect{trace}};
+    constexpr auto p = RULES(RULE("a", "b"), RULE("c", "d"));
+    p(input);
+    EXPECT_EQ(count, 1);
+}
+
+TEST(augmented, rule_loop_runtime) {
+    int count = 0;
+    auto trace = [&](CtStr auto input, SingleRule auto p, CtStr auto output) {
+        ++count;
+    };
+    auto input = augmented_text{"aaa"_cts, side_effect{trace}};
+    constexpr auto p = RULE_LOOP(RULE("a", "b"));
+    auto output = p(input);
+    static_assert(output.data.text == "bbb"_cts);
+    EXPECT_EQ(count, 3);
+}
+
+TEST(augmented, machine_runtime) {
+    int count = 0;
+    auto trace = [&](CtStr auto input, SingleRule auto p, CtStr auto output) {
+        ++count;
+    };
+    auto input = augmented_text{"aaa"_cts, side_effect{trace}};
+    constexpr auto p = MACHINE(RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f")));
+    auto output = p(input);
+    static_assert(output.text == "bbb"_cts);
+    EXPECT_EQ(count, 3);
 }

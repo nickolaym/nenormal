@@ -47,26 +47,26 @@ TEST(program, final_step) {
 // but in single step it shows "some substring before and after the object of replacement"
 TEST(program, single_step) {
     // reduce pairs
-    static_assert(program("---()---"_cts).text == "------"_cts);
-    static_assert(program("---[]---"_cts).text == "------"_cts);
-    static_assert(program("---{}---"_cts).text == "------"_cts);
+    static_assert(program("---()---"_cts).data == "------"_cts);
+    static_assert(program("---[]---"_cts).data == "------"_cts);
+    static_assert(program("---{}---"_cts).data == "------"_cts);
     // unify unpaired
-    static_assert(program("---(---"_cts).text == "---_---"_cts);
-    static_assert(program("---[---"_cts).text == "---_---"_cts);
-    static_assert(program("---{---"_cts).text == "---_---"_cts);
-    static_assert(program("---)---"_cts).text == "---_---"_cts);
-    static_assert(program("---]---"_cts).text == "---_---"_cts);
-    static_assert(program("---}---"_cts).text == "---_---"_cts);
+    static_assert(program("---(---"_cts).data == "---_---"_cts);
+    static_assert(program("---[---"_cts).data == "---_---"_cts);
+    static_assert(program("---{---"_cts).data == "---_---"_cts);
+    static_assert(program("---)---"_cts).data == "---_---"_cts);
+    static_assert(program("---]---"_cts).data == "---_---"_cts);
+    static_assert(program("---}---"_cts).data == "---_---"_cts);
     // shrink unpaired
-    static_assert(program("---__---"_cts).text == "---_---"_cts);
+    static_assert(program("---__---"_cts).data == "---_---"_cts);
     // error_str message
-    static_assert(program("---_---"_cts).text == "---ERROR---"_cts);
+    static_assert(program("---_---"_cts).data == "---ERROR---"_cts);
 }
 
 TEST(program, priority_pairs_over_unpaired) {
-    static_assert(program("---([{+}])+()---"_cts).text == "---([{+}])+---"_cts);
-    static_assert(program("---([{+}])+{}---"_cts).text == "---([{+}])+---"_cts);
-    static_assert(program("---([{+}])+[]---"_cts).text == "---([{+}])+---"_cts);
+    static_assert(program("---([{+}])+()---"_cts).data == "---([{+}])+---"_cts);
+    static_assert(program("---([{+}])+{}---"_cts).data == "---([{+}])+---"_cts);
+    static_assert(program("---([{+}])+[]---"_cts).data == "---([{+}])+---"_cts);
 }
 
 TEST(machine, final_step) {

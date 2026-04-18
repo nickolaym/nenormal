@@ -27,6 +27,7 @@ endfunction()
 
 # test elements
 add_test_executable(test_str tests/str.cpp)
+add_test_executable(test_augmented tests/augmented.cpp)
 add_test_executable(test_compose tests/compose.cpp)
 add_test_executable(test_rules tests/rules.cpp)
 
