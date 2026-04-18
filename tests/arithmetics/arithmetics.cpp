@@ -343,10 +343,16 @@ TEST(arithmetics, runtime) {
                 << std::endl;
         };
 
+        constexpr auto count = [](int n, auto...) { return n+1; };
+
         std::cout << q(src) << std::endl;
         auto dst = machine(augmented_text{src, side_effect{trace}}).text;
         std::cout << q(dst) << std::endl;
         std::cout << "----- " << step << " steps" << std::endl;
+
+        constexpr auto counted = machine(augmented_text{src, cumulative_effect{count, 0}}).aux.a;
+        constexpr auto ct_counted = ct<counted>{};
+        EXPECT_EQ(ct_counted.value, step);
     };
 
     show(CTSTR("1+2="));

@@ -75,7 +75,7 @@ static_assert(program("()({})[(()[])"_cts) == "FAILURE"_cts);
 
 ## Пример: сложение десятичных чисел
 
-[arithmetics.cpp](../tests/arithmetics.cpp)
+[arithmetics.cpp](../tests/arithmetics/arithmetics.cpp)
 
 Самый навороченный, на данный момент, пример.
 

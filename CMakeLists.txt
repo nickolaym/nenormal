@@ -34,4 +34,4 @@ add_test_executable(test_rules tests/rules.cpp)
 # test examples
 add_test_executable(test_hello_world tests/hello_world.cpp)
 add_test_executable(test_correct_bracket_sequence tests/correct_bracket_sequence.cpp)
-add_test_executable(test_arithmetics tests/arithmetics.cpp)
+add_test_executable(test_arithmetics tests/arithmetics/arithmetics.cpp)
