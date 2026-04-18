@@ -1,4 +1,4 @@
-#include <gtest/gtest.h>
+#pragma once
 
 #include "nenormal/nenormal.h"
 
@@ -304,52 +304,3 @@ constexpr auto program = NAMED_RULE(program_t, RULES(
 ));
 
 constexpr auto machine = MACHINE(program);
-
-TEST(arithmetics, one_digit) {
-    static_assert(machine(CTSTR("1+1=")) == CTSTR("2"));
-    static_assert(machine(CTSTR("2+3=")) == CTSTR("5"));
-}
-TEST(arithmetics, one_digit_with_carry) {
-    static_assert(machine(CTSTR("1+9=")) == CTSTR("10"));
-    static_assert(machine(CTSTR("7+8=")) == CTSTR("15"));
-}
-TEST(arithmetics, short_plus_long) {
-    static_assert(machine(CTSTR("1+12345=")) == CTSTR("12346"));
-    static_assert(machine(CTSTR("12345+1=")) == CTSTR("12346"));
-}
-TEST(arithmetics, propagate_carry) {
-    static_assert(machine(CTSTR("1+123999=")) == CTSTR("124000")); // carry stops
-    static_assert(machine(CTSTR("1+999999=")) == CTSTR("1000000")); // carry exceeds 1 digit
-}
-
-TEST(arithmetics, big_nums) {
-    static_assert(machine(CTSTR("12345+67890=")) == CTSTR("80235"));
-    static_assert(machine(CTSTR("98765+66666=")) == CTSTR("165431"));
-}
-
-TEST(arithmetics, runtime) {
-    auto q = [](CtStr auto cts) { return std::quoted(cts.value.view()); };
-    auto show = [&](CtStr auto src) {
-        size_t step = 0;
-        auto trace = [&](CtStr auto src, SingleRule auto p, CtStr auto dst) {
-            step++;
-            std::cout
-                << step << " : "
-                << q(src)
-                << "  >>  "
-                << p
-                << "  ==  "
-                << q(dst)
-                << std::endl;
-        };
-
-        std::cout << q(src) << std::endl;
-        auto dst = machine(augmented_text{src, side_effect{trace}}).text;
-        std::cout << q(dst) << std::endl;
-        std::cout << "----- " << step << " steps" << std::endl;
-    };
-
-    show(CTSTR("1+2="));
-    show(CTSTR("12345+67890="));
-    show(CTSTR("98765+66666="));
-}
