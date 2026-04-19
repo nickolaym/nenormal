@@ -4,7 +4,7 @@
 
 ## Пример: hello world
 
-[hello_world.cpp](../tests/hello_world.cpp)
+[hello_world.cpp](hello_world.cpp)
 
 Самый простой случай. Заменяем независимые подстроки, пока заменяется.
 
@@ -23,7 +23,7 @@ std::cout << dst.value.value << std::endl; // privet mir
 
 ## Пример: правильная скобочная последовательность
 
-[correct_bracket_sequence.cpp](../tests/correct_bracket_sequence.cpp)
+[correct_bracket_sequence.cpp](correct_bracket_sequence.cpp)
 
 Это более сложный пример, здесь важен порядок выполнения правил.
 1) сперва удаляем все парные скобки
@@ -79,10 +79,10 @@ static_assert(program("()({})[(()[])"_cts) == "FAILURE"_cts);
 
 Он показывает, что программирование на НАМ - не линейно.
 
-Подробности вынес в отдельное место [/tests/arithmetics/](../tests/arithmetics/README.md)
+Подробности вынес в отдельное место [arithmetics/](arithmetics/README.md)
 
 ## Пример: последовательность Коллаца (3N+1)
 
-[collatz](../tests/collatz/README.md)
+[collatz/](collatz/README.md)
 
 Не могу пройти мимо, Коллац - это обязательное упражнение.

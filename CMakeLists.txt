@@ -32,9 +32,10 @@ add_test_executable(test_compose tests/compose.cpp)
 add_test_executable(test_rules tests/rules.cpp)
 
 # test examples
-add_test_executable(test_hello_world tests/hello_world.cpp)
-add_test_executable(test_correct_bracket_sequence tests/correct_bracket_sequence.cpp)
-add_test_executable(test_arithmetics tests/arithmetics/arithmetics.cpp)
-add_test_executable(test_arithmetics_runtime tests/arithmetics/arithmetics_runtime.cpp)
+add_test_executable(test_hello_world examples/hello_world.cpp)
+add_test_executable(test_correct_bracket_sequence examples/correct_bracket_sequence.cpp)
 
-add_test_executable(test_collatz tests/collatz/collatz.cpp)
+add_test_executable(test_arithmetics examples/arithmetics/arithmetics.cpp)
+add_test_executable(test_arithmetics_runtime examples/arithmetics/arithmetics_runtime.cpp)
+
+add_test_executable(test_collatz examples/collatz/collatz.cpp)

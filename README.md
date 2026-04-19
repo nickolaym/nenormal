@@ -27,7 +27,7 @@
 Подробнее о том, как устроен код - в тексте
 - [details/functional_composition.md](details/functional_composition.md)
 
-Но проще всего сразу смотреть на **[примеры](details/examples.md)**
+Но проще всего сразу смотреть на **[примеры](examples/README.md)**
 
 ### Концепты
 
@@ -235,4 +235,4 @@ while (true) {
 - вызываем программу с аргументом CtStr - и получаем результат CtStr
 - дальше работаем с ним, как с обычной константной строкой
 
-Подробнее о примерах - в [examples](details/examples.md)
+Подробнее о примерах - в [examples/](examples/README.md)
