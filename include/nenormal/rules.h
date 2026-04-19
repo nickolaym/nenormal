@@ -90,7 +90,7 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
         }
     }
 
-    static constexpr FailOrSubst auto try_substute(RuleInput auto t) {
+    static constexpr FailOrSubst auto try_substute(CtStr auto t) {
         constexpr Str auto const& src = t.value;
         if constexpr (src.size() < s.size()) {
             return fail{};
