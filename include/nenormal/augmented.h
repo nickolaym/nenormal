@@ -30,7 +30,10 @@ struct cumulative_effect {
     }
 };
 
-///
+/////////////////////////////////////
+// augmented_text provides two modes:
+// - update augmentation (invoke side effect function)
+// - simply rebind without application
 
 template<CtStr T, class A>
 struct augmented_text {
@@ -38,10 +41,13 @@ struct augmented_text {
     T text;
     A aux;
 
-    constexpr auto operator()(auto p, CtStr auto new_text) const {
+    constexpr auto update(auto p, CtStr auto new_text) const {
         auto new_aux = aux(text, p, new_text);
         auto res = augmented_text<decltype(new_text), decltype(new_aux)>{new_text, new_aux};
         return res;
+    }
+    constexpr auto rebind(CtStr auto new_text) const {
+        return augmented_text<decltype(new_text), A>{new_text, aux};
     }
 };
 CONCEPT(Augmented)
@@ -55,5 +61,12 @@ constexpr CtStr auto update_text(CtStr auto i, auto p, CtStr auto o) {
     return o;
 }
 constexpr Augmented auto update_text(Augmented auto i, auto p, CtStr auto o) {
-    return i(p, o);
+    return i.update(p, o);
+}
+
+constexpr CtStr auto rebind_text(CtStr auto i, CtStr auto o) {
+    return o;
+}
+constexpr Augmented auto rebind_text(Augmented auto i, CtStr auto o) {
+    return i.rebind(o);
 }

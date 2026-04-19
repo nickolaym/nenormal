@@ -4,10 +4,14 @@
 TEST(collatz, stop_cases) {
     static_assert(machine(CTSTR("")) == CTSTR(""));
     static_assert(machine(CTSTR("<1>")) == CTSTR(""));
+
+    static_assert(printable_machine(CTSTR("")) == CTSTR(""));
+    static_assert(printable_machine(CTSTR("<1>")) == CTSTR(""));
 }
 
 TEST(collatz, case_2) {
     static_assert(machine(CTSTR("<11>")) == CTSTR("2"));
+    static_assert(printable_machine(CTSTR("<11>")) == CTSTR("2"));
 }
 
 TEST(collatz, case_3) {
@@ -23,26 +27,22 @@ TEST(collatz, case_3) {
 
     // whole run: 3 -> 10 -> 5 -> 16 -> 8 -> 4 -> 2 -> 1
     // 2222323
-    constexpr auto tf = machine(t0);
-    static_assert(tf == CTSTR("2222323"));
+    static_assert(machine(t0) == CTSTR("2222323"));
+    static_assert(printable_machine(t0) == CTSTR("2222323"));
 }
 
 TEST(collatz, runtime) {
     auto print_text = [](CtStr auto t) {
         std::string_view v = t.value.view();
-        if (v.size() > 1 && v[1] == ':') {
-            std::cout << "  ";
-        } else {
-            std::cout << "- ";
-        }
-        std::cout << v << std::endl;
+        bool milestone = !v.starts_with("<:");
+        std::cout << (milestone ? "- " : "  ") << v << std::endl;
     };
     auto trace = [&](CtStr auto src, SingleRule auto p, CtStr auto dst) {
         print_text(dst);
     };
     auto show = [&](CtStr auto src) {
         print_text(src);
-        auto dst = machine(augmented_text{src, side_effect{trace}}).text;
+        auto dst = printable_machine(augmented_text{src, side_effect{trace}}).text;
         std::string_view v = dst.value.view();
         std::cout << v.size() << " iterations" << std::endl;
         std::cout << std::endl;
