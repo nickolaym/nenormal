@@ -83,6 +83,7 @@ static_assert(program("()({})[(()[])"_cts) == "FAILURE"_cts);
 
 ## Пример: последовательность Коллаца (3N+1)
 
-[collatz/](collatz/README.md)
+- [collatz/](collatz/README.md) - единеричная версия
+- [collatz_decimal/](collatz_decimal/README.md) - десятичная версия
 
 Не могу пройти мимо, Коллац - это обязательное упражнение.
