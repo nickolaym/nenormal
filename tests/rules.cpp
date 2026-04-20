@@ -194,3 +194,42 @@ TEST(augmented, machine_runtime) {
     static_assert(output.text == "bbb"_cts);
     EXPECT_EQ(count, 3);
 }
+
+TEST(hidden, text) {
+    constexpr auto p = HIDDEN_RULE(RULE("a", "b"));
+    static_assert(failed(p(CTSTR(""))));
+    static_assert(p(CTSTR("aaa")).data == CTSTR("baa"));
+}
+
+TEST(hidden, empty_augmentation) {
+    constexpr auto p = HIDDEN_RULE(RULE("a", "b"));
+
+    constexpr RuleInput auto bad_input = augmented_text{CTSTR(""), empty{}};
+    constexpr RuleOutput auto bad_output = p(bad_input);
+    static_assert(failed(bad_output));
+
+    constexpr RuleInput auto good_input = augmented_text{CTSTR("aaa"), empty{}};
+    constexpr RuleOutput auto good_output = p(good_input);
+    static_assert(good_output.data.text == CTSTR("baa"));
+}
+
+TEST(hidden, cumulative_augmentation) {
+    constexpr auto p = RULE("a", "b");
+    constexpr auto h = HIDDEN_RULE(p);
+
+    constexpr auto inc = [](int n, auto...) { return n + 1; };
+
+    constexpr RuleInput auto bad_input = augmented_text{CTSTR(""), cumulative_effect{inc, 0}};
+    constexpr RuleOutput auto bad_output = h(bad_input);
+    static_assert(failed(bad_output));
+
+    constexpr RuleInput auto good_input = augmented_text{CTSTR("aaa"), cumulative_effect{inc, 0}};
+    constexpr RuleOutput auto good_output = h(good_input);
+    static_assert(good_output.data.text == CTSTR("baa"));
+    static_assert(good_output.data.aux.a == 0);
+
+    // in contrast, non-hidden rule updates the accumulator
+    constexpr RuleOutput auto good_updated_output = p(good_input);
+    static_assert(good_updated_output.data.text == CTSTR("baa"));
+    static_assert(good_updated_output.data.aux.a == 1);
+}

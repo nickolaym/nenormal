@@ -187,7 +187,7 @@ namespace loop_helper {
 
 } // namespace loop_helper
 
-template<Rule auto p, size_t const factor = 1> struct rule_loop {
+template<Rule auto p, size_t const factor = 10> struct rule_loop {
     REPRESENTS(Rule)
 
     static constexpr auto the_loop = endless_loop{repeat<factor>(loop_helper::make_fun(p))};
@@ -206,6 +206,20 @@ template<Rule auto m> struct machine_fun {
     }
 };
 
+// control augmentation
+
+template<Rule auto p> struct hidden_rule {
+    REPRESENTS(Rule)
+    constexpr RuleOutput auto operator()(RuleInput auto t) const {
+        RuleOutput auto out = p(extract_text(t)); // success(str, state) or fail
+        if constexpr (failed(out)) {
+            return fail{};
+        } else {
+            return success{rebind_text(t, out.data), out.state};
+        }
+    }
+};
+
 // useful macros
 
 #define STR(s) (str{s}) // s##_ss
@@ -216,6 +230,8 @@ template<Rule auto m> struct machine_fun {
 #define RULE_LOOP(r) (rule_loop<(r)>{})
 #define MACHINE_FROM_RULE(r) (machine_fun<(r)>{})
 #define MACHINE(r) MACHINE_FROM_RULE(RULE_LOOP(r))
+
+#define HIDDEN_RULE(p) (hidden_rule<(p)>{})
 
 // To hide a program from compiler output
 #define NAMED_RULE(name, p) \

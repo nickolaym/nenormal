@@ -10,6 +10,9 @@ TEST(augmented, no_augmentation) {
     constexpr auto a = "aaa"_cts;
     constexpr auto b = update_text(a, "rule_goes_here", "bbb"_cts);
     static_assert(b == "bbb"_cts);
+
+    constexpr auto r = rebind_text(b, "rrr"_cts);
+    static_assert(r == "rrr"_cts);
 }
 
 TEST(augmented, empty) {
@@ -17,6 +20,9 @@ TEST(augmented, empty) {
     auto b = update_text(a, "rule_goes_here", "bbb"_cts);
     static_assert(b.text == "bbb"_cts);
     empty e = b.aux;
+
+    constexpr auto r = rebind_text(b, "rrr"_cts);
+    static_assert(r.text == "rrr"_cts);
 }
 
 TEST(augmented, side_effect) {
@@ -31,15 +37,21 @@ TEST(augmented, side_effect) {
     auto b = update_text(a, "rule_goes_here", "bbb"_cts);
     static_assert(b.text == "bbb"_cts);
     EXPECT_EQ(counter, 1);
-    auto c = b("rule_goes_here", "ccc"_cts);
+    auto c = update_text(b, "rule_goes_here", "ccc"_cts);
     static_assert(c.text == "ccc"_cts);
     EXPECT_EQ(counter, 2);
+
+    auto r = rebind_text(c, "rrr"_cts);
+    static_assert(r.text == "rrr"_cts);
+    EXPECT_EQ(counter, 2);  // no side effect
 }
 
 TEST(augmented, pure_side_effect) {
     constexpr auto f = [](auto...) {}; // does nothing
     constexpr auto a = augmented_text{"aaa"_cts, side_effect{f}};
     constexpr auto b = update_text(a, "rule_goes_here", "bbb"_cts);
+    constexpr auto r = rebind_text(b, "rrr"_cts);
+    static_assert(r.text == "rrr"_cts);
 }
 
 TEST(augmented, cumulative_effect) {
@@ -56,6 +68,10 @@ TEST(augmented, cumulative_effect) {
     auto c = update_text(b, "rule_goes_here", "ccc"_cts);
     static_assert(c.text == "ccc"_cts);
     EXPECT_EQ(c.aux.a, 2);
+
+    auto r = rebind_text(c, "rrr"_cts);
+    static_assert(r.text == "rrr"_cts);
+    EXPECT_EQ(r.aux.a, 2);
 }
 
 TEST(augmented, pure_cumulative_effect) {
@@ -72,4 +88,8 @@ TEST(augmented, pure_cumulative_effect) {
     static_assert(c.text == "ccc"_cts);
     EXPECT_EQ(c.aux.a, 2);
     static_assert(c.aux.a == 2);
+
+    constexpr auto r = rebind_text(c, "rrr"_cts);
+    static_assert(r.text == "rrr"_cts);
+    static_assert(r.aux.a == 2);
 }
