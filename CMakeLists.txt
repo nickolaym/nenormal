@@ -5,6 +5,10 @@ project(nenormal)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Add the compilation flag for concepts diagnostics depth
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts-diagnostics-depth=10")
+
+
 enable_testing()
 find_package(GTest)
 
@@ -40,3 +44,5 @@ add_test_executable(test_arithmetics_runtime examples/arithmetics/arithmetics_ru
 
 add_test_executable(test_collatz examples/collatz/collatz.cpp)
 add_test_executable(test_collatz_decimal examples/collatz_decimal/collatz_decimal.cpp)
+
+add_test_executable(test_monadic experimental/monadic.cpp)
