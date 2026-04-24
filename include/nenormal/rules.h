@@ -81,7 +81,7 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
     }
 
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
-        FailOrSubst auto res = try_substute(extract_text(t));
+        FailOrSubst auto res = try_substitute(extract_text(t));
         if constexpr (failed(res)) {
             return fail{};
         } else {
@@ -90,7 +90,7 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
         }
     }
 
-    static constexpr FailOrSubst auto try_substute(CtStr auto t) {
+    static constexpr FailOrSubst auto try_substitute(CtStr auto t) {
         constexpr Str auto const& src = t.value;
         if constexpr (src.size() < s.size()) {
             return fail{};
