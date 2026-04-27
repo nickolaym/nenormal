@@ -5,7 +5,10 @@
 
 // augmentation is a self-updating function of a single rule "p"
 
+CONCEPT(Augmentation)
+
 struct empty {
+    REPRESENTS(Augmentation)
     constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) const {
         return empty{};
     }
@@ -13,6 +16,7 @@ struct empty {
 
 template<class F>
 struct side_effect {
+    REPRESENTS(Augmentation)
     F f;
     constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) const {
         f(i, p, o);
@@ -22,6 +26,7 @@ struct side_effect {
 
 template<class F, class A>
 struct cumulative_effect {
+    REPRESENTS(Augmentation)
     F f;
     A a;
     constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) const {
@@ -35,7 +40,7 @@ struct cumulative_effect {
 // - update augmentation (invoke side effect function)
 // - simply rebind without application
 
-template<CtStr T, class A>
+template<CtStr T, Augmentation A>
 struct augmented_text {
     REPRESENTS(Augmented)
     T text;
