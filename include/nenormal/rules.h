@@ -81,14 +81,13 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
     }
 
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
-        FailOrSubst auto res = try_substitute(ct_search, ct_replace, extract_text(t))
-            .then([](CtStr auto ctr){ return ctr; }, fail{});
-        if constexpr (failed(res)) {
-            return fail{};
-        } else {
-            RuleInput auto tt = update_text(t, rule{}, res);
-            return success{tt, ct_state};
-        }
+        return try_substitute(ct_search, ct_replace, extract_text(t))
+            .then(
+                [&](CtStr auto res){
+                    RuleInput auto tt = update_text(t, rule{}, res);
+                    return success{tt, ct_state};
+                },
+                fail{});
     }
 };
 
