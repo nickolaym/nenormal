@@ -6,7 +6,6 @@
 #include "compose.h"
 #include "augmented.h"
 
-#include <algorithm>
 #include <iostream>
 #include <iomanip>
 

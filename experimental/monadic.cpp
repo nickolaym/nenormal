@@ -130,21 +130,6 @@ constexpr Either auto simplify_loopout(MonadicEitherFinishedOrContinued auto o) 
 // replacer : str -> maybe str'
 // kind: regular/final = right/left
 
-template<class T> concept JustCtStr = Just<T> && CtStr<typename T::type>;
-template<class T> concept MaybeCtStr = Nothing<T> || JustCtStr<T>;
-
-// maybe_subst_fun uses common Maybe instead of ad-hoc fail|value
-template<Str auto S, Str auto R, rule_state_t C>
-constexpr auto maybe_subst_fun(rule<S,R,C> r) {
-    return [](CtStr auto data) -> MaybeCtStr auto {
-        FailOrSubst auto result = rule<S,R,C>::try_substitute(data);
-        if constexpr (failed(result))
-            return nothing{};
-        else
-            return just{result};
-    };
-}
-
 // mapping ad-hoc rule_state_t constants to constructors of Either as we need
 template<class> struct incomplete;
 template<rule_state_t s> constexpr auto rule_output_kind = incomplete<ct<s>>{};
@@ -156,11 +141,10 @@ template<> constexpr auto rule_output_kind<final_state> = left;
 template<Str auto S, Str auto R, rule_state_t C>
 constexpr auto monadic_rule(rule<S,R,C> r) {
     constexpr auto f = [](MonadicDomain auto src) -> MonadicOutput auto {
-        constexpr auto msf = maybe_subst_fun(rule<S,R,C>{});
         constexpr auto kind = rule_output_kind<C>;
 
-        auto src_text = src.value;
-        return msf(src_text).then(
+        CtStr auto src_text = src.value;
+        return try_substitute(ct<S>{}, ct<R>{}, src_text).then(
             [&](CtStr auto dst_text) {
                 auto src_handler = src.aux;
                 auto dst_handler = src_handler(src_text, rule<S,R,C>{}, dst_text);
