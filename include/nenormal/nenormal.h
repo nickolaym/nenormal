@@ -5,5 +5,6 @@
 #include "concepts.h"
 #include "ct.h"
 #include "str.h"
+#include "maybe.h"
 #include "compose.h"
 #include "rules.h"

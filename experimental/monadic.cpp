@@ -1,28 +1,6 @@
 #include "nenormal/nenormal.h"
 #include <gtest/gtest.h>
 
-// monad Maybe
-
-CONCEPT(Nothing); // stops a chain
-CONCEPT(Just); // continues a chain
-template<class T> concept Maybe = Nothing<T> || Just<T>;
-
-struct nothing {
-    REPRESENTS(Nothing);
-    constexpr operator bool() const { return false; }
-    constexpr auto then(auto f, auto e) const { return e; }
-};
-
-template<class T>
-struct just {
-    REPRESENTS(Just);
-    using type = T;
-    T value;
-    constexpr operator bool() const { return true; }
-    constexpr auto then(auto f, auto e) const { return f(value); }
-};
-
-
 // monad Either
 
 CONCEPT(Left); // stops a chain

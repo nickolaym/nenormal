@@ -34,6 +34,7 @@ add_test_executable(test_str tests/str.cpp)
 add_test_executable(test_augmented tests/augmented.cpp)
 add_test_executable(test_compose tests/compose.cpp)
 add_test_executable(test_rules tests/rules.cpp)
+add_test_executable(test_maybe tests/maybe.cpp)
 
 # test examples
 add_test_executable(test_hello_world examples/hello_world.cpp)
