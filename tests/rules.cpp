@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include "nenormal/nenormal.h"
 
-#define REGULAR(s) success{CTSTR(s), ct<regular_state>{}}
-#define FINAL(s) success{CTSTR(s), ct<final_state>{}}
+#define REGULAR(s) (success{CTSTR(s), ct<regular_state>{}})
+#define FINAL(s) (success{CTSTR(s), ct<final_state>{}})
 
 TEST(compare_values, str) {
     static_assert(STR("abc") == STR("abc"));

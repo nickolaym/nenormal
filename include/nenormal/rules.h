@@ -45,6 +45,10 @@ template<RuleInput T, CtState S> struct success {
     T data;
     S state;  // TODO make it static!
 
+    friend std::ostream& operator << (std::ostream& ost, const success& v) {
+        return ost << "success{" << v.data << ", " << v.state << "}";
+    }
+
     constexpr bool operator==(const success&) const = default;
     template<class T1, class S1>
     constexpr bool operator==(const success<T1, S1>&) const { return false; }
@@ -96,35 +100,33 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
 namespace rules_helper {
     // implements disjunction on input >> rule1 >> rule2 >> ...
 
-    constexpr auto make_arg(RuleInput auto input) { return arg{input}; }
-    constexpr auto make_fun(Rule auto rule) {
-        // rule : input -> success | fail
-        // fun  : arg<input> -> arg<input> | stop<success>
-        return [rule]<RuleInput T>(arg<T> a) {
-            RuleOutput auto r = rule(a.value);
+    constexpr auto make_arg(RuleInput auto input) { return right(input); }
+    constexpr auto make_fun(Rule auto p) {
+        // p   : input -> success | fail
+        // fun : input -> right<input> | left<success>
+        return [p](RuleInput auto t) -> Either auto {
+            RuleOutput auto r = p(t);
             if constexpr (failed(r)) // not matched yet
-                return a;            // continue...
+                return right(t);     // continue...
             else
-                return stop{r};      // success
+                return left(r);      // success
         };
     }
-    template<RuleInput T> constexpr fail take_res(arg<T> a) {
-        // still not resolved
-        return fail{};
+    constexpr RuleOutput auto take_res(Either auto a) {
+        return a.either(
+            [](auto r) { return r; }, // left the chain - success
+            [](auto i) { return fail{}; } // went to the right - failed to match
+        );
     }
-    template<RuleOutput T> constexpr T take_res(stop<T> a) {
-        return a.value;
-    }
-
 } // namespace rules_helper
 
-template<Rule auto... rs> struct rules {
+template<Rule auto... ps> struct rules {
     REPRESENTS(Rule)
 
-    static constexpr auto the_chain = chain(rules_helper::make_fun(rs)...);
-
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
-        return rules_helper::take_res(the_chain(rules_helper::make_arg(t)));
+        return rules_helper::take_res(
+            (rules_helper::make_arg(t) >> ... >> rules_helper::make_fun(ps))
+        );
     }
 };
 
@@ -138,34 +140,39 @@ template<> struct rules<> {
 namespace loop_helper {
     // implements endless loop on input >> rule >> rule >> ...
 
-    constexpr auto make_arg(RuleInput auto input) { return arg{input}; }
-    constexpr auto make_fun(Rule auto rule) {
-        // rule : input -> success{output,(regular|final)} | fail
-        // fun  : arg<input> -> arg<output> | stop<success>
-        return [rule]<RuleInput T>(arg<T> a) {
-            RuleOutput auto r = rule(a.value);
+    constexpr auto make_arg(RuleInput auto input) { return right(input); }
+    constexpr auto make_fun(Rule auto p) {
+        // p   : input -> success{output,(regular|final)} | fail
+        // fun : input -> left<output> | right<success>
+        return [p](RuleInput auto t) {
+            RuleOutput auto r = p(t);
             if constexpr (failed(r))  // not matched anymore
-                return stop{success{a.value, ct<regular_state>{}}}; // stop with previous value
+                return left(success{t, ct<regular_state>{}}); // stop with previous value
             else if constexpr (r.state.value == final_state) // matched, final state
-                return stop{r}; // stop with result
+                return left(r); // stop with result
             else
-                return arg{r.data}; // matched, regular state - continue with new value
+                return right(r.data); // matched, regular state - continue with new value
         };
     }
-    template<RuleInput T> constexpr fail take_res(arg<T> a) = delete; // never fails
-    template<RuleOutput T> constexpr T take_res(stop<T> a) {
-        return a.value;
-    }
+    constexpr auto take_res(Either auto a) { return fromLeft(a); }
+
+    template<class F> struct looped_fun {
+        F f;
+        constexpr auto operator()(RuleInput auto t) const {
+            return right(t) >> f >> f >> f >> f >> f >> f >> f >> f >> *this;
+        }
+    };
 
 } // namespace loop_helper
 
 template<Rule auto p, size_t const factor = 10> struct rule_loop {
     REPRESENTS(Rule)
 
-    static constexpr auto the_loop = endless_loop{repeat<factor>(loop_helper::make_fun(p))};
+    // static constexpr auto the_loop = endless_loop{repeat<factor>(loop_helper::make_fun(p))};
+    static constexpr auto the_loop = loop_helper::looped_fun{loop_helper::make_fun(p)};
 
     constexpr /* Success */ RuleOutput auto operator()(RuleInput auto t) const {
-        return loop_helper::take_res(the_loop(loop_helper::make_arg(t)));
+        return loop_helper::take_res(loop_helper::make_arg(t) >> the_loop);
     }
 };
 
