@@ -115,13 +115,6 @@ constexpr auto rebind_monadic_output(MonadicDomain auto data, MonadicOutput auto
     return output_map(
         [&](MonadicDomain auto d) { return stateful{d.value, data.aux}; },
         res);
-    // auto do_rebind_text = [&](CtStr auto v) { return rebind_text(data, v); };
-    // return res.eitherLifted(
-    //     // left(left(s)), left(right(s))
-    //     [&](Either auto v) { return v.eitherLifted(do_rebind_text, do_rebind_text); },
-    //     // right(s)
-    //     do_rebind_text
-    // );
 }
 
 template<Rule auto p>
