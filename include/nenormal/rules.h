@@ -58,7 +58,7 @@ constexpr bool finished(Success auto s) { return s.state.value == final_state; }
 
 /// translate either ((either str str) str) to success (final / regular) / fail
 
-#if 0
+#if 1
 template<class T> concept NewRuleSuccess = Either<T> && RuleInput<typename T::type>;
 template<class T> concept NewRuleSuccessOutput = Left<T> && NewRuleSuccess<typename T::type>;
 template<class T> concept NewRuleFailOutput = Right<T> && RuleInput<typename T::type>;
