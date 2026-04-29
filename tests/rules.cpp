@@ -13,20 +13,20 @@ TEST(compare_values, str) {
 }
 
 TEST(compare_values, fail) {
-    constexpr auto f = fail{};
-    static_assert(f == fail{});
+    constexpr auto f = make_fail(""_cts);
+    static_assert(f == make_fail(""_cts));
 
     static_assert(failed(f));
-    static_assert(!failed(""_cts));
+    static_assert(!failed(make_success(""_cts, ct<regular_state>{})));
 }
 
 TEST(compare_values, success) {
     constexpr auto text = CTSTR("abc");
-    constexpr auto regular_success = success{text, ct<regular_state>{}};
-    constexpr auto final_success = success{text, ct<final_state>{}};
+    constexpr auto regular_success = make_success(text, ct<regular_state>{});
+    constexpr auto final_success = make_success(text, ct<final_state>{});
 
-    static_assert(regular_success.data == text);
-    static_assert(regular_success.state.value == regular_state);
+    static_assert(success_data(regular_success) == text);
+    static_assert(success_state(regular_success).value == regular_state);
     static_assert(regular_success == REGULAR("abc"));
 
     static_assert(final_success == FINAL("abc"));
@@ -34,8 +34,8 @@ TEST(compare_values, success) {
 }
 
 TEST(single_rule, fails) {
-    static_assert(RULE("a", "b")(CTSTR("")) == make_fail(CTSTR("a")));
-    static_assert(RULE("a", "b")(CTSTR("b")) == make_fail(CTSTR("a")));
+    static_assert(RULE("a", "b")(CTSTR("")) == make_fail(CTSTR("")));
+    static_assert(RULE("a", "b")(CTSTR("b")) == make_fail(CTSTR("b")));
     static_assert(RULE("aaa", "b")(CTSTR("aa")) == make_fail(CTSTR("aa")));
 }
 
@@ -68,7 +68,7 @@ TEST(rules, only_earlier_acts_regular) {
     static_assert(program(CTSTR("cbabc")) == REGULAR("cb1bc"));
     static_assert(program(CTSTR("cbdbc")) == REGULAR("c2dbc"));
     static_assert(program(CTSTR("cdddc")) == REGULAR("3dddc"));
-    static_assert(program(CTSTR("ddddd")) == make_fail("ddddd"));
+    static_assert(program(CTSTR("ddddd")) == make_fail(CTSTR("ddddd")));
 }
 
 TEST(rules, only_earlier_acts_final) {
@@ -80,7 +80,7 @@ TEST(rules, only_earlier_acts_final) {
     static_assert(program(CTSTR("cbabc")) == FINAL("cb1bc"));
     static_assert(program(CTSTR("cbdbc")) == FINAL("c2dbc"));
     static_assert(program(CTSTR("cdddc")) == FINAL("3dddc"));
-    static_assert(program(CTSTR("ddddd")) == make_fail("ddddd"));
+    static_assert(program(CTSTR("ddddd")) == make_fail(CTSTR("ddddd")));
 }
 
 TEST(rules, only_earlier_acts_mixed) {
@@ -93,7 +93,7 @@ TEST(rules, only_earlier_acts_mixed) {
     static_assert(program(CTSTR("cbabc")) == FINAL("cb1bc"));
     static_assert(program(CTSTR("cbdbc")) == REGULAR("c2dbc"));
     static_assert(program(CTSTR("cdddc")) == FINAL("3dddc"));
-    static_assert(program(CTSTR("ddddd")) == make_fail("ddddd"));
+    static_assert(program(CTSTR("ddddd")) == make_fail(CTSTR("ddddd")));
 }
 
 TEST(augmented, single_rule) {
@@ -104,8 +104,8 @@ TEST(augmented, single_rule) {
     constexpr auto p = RULE("a", "b");
     constexpr auto output = p(input);
     using output_type = std::remove_const_t<decltype(output)>;
-    static_assert(Success<output_type>);
-    constexpr auto output_data = output.data;
+    static_assert(SuccessOutput<output_type>);
+    constexpr auto output_data = success_data(output);
     using output_data_type = std::remove_const_t<decltype(output_data)>;
     static_assert(Augmented<output_data_type>);
     static_assert(output_data.text == "baa"_cts);
@@ -124,7 +124,7 @@ TEST(augmented, rules) {
     constexpr auto p = RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f"));
     constexpr auto output = p(input);
     static_assert(!failed(output));
-    static_assert(output.data.text == "baa"_cts);
+    static_assert(success_data(output).text == "baa"_cts);
 }
 
 TEST(augmented, rules_fail) {
@@ -139,7 +139,7 @@ TEST(augmented, rule_loop) {
     constexpr auto p = RULE_LOOP(RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f")));
     constexpr auto output = p(input);
     static_assert(!failed(output));
-    static_assert(output.data.text == "bbb"_cts);
+    static_assert(success_data(output).text == "bbb"_cts);
 }
 
 TEST(augmented, machine) {
@@ -179,7 +179,8 @@ TEST(augmented, rule_loop_runtime) {
     auto input = augmented_text{"aaa"_cts, side_effect{trace}};
     constexpr auto p = RULE_LOOP(RULE("a", "b"));
     auto output = p(input);
-    static_assert(output.data.text == "bbb"_cts);
+    auto output_text = success_data(output).text;
+    static_assert(output_text == "bbb"_cts);
     EXPECT_EQ(count, 3);
 }
 
@@ -198,7 +199,7 @@ TEST(augmented, machine_runtime) {
 TEST(hidden, text) {
     constexpr auto p = HIDDEN_RULE(RULE("a", "b"));
     static_assert(failed(p(CTSTR(""))));
-    static_assert(p(CTSTR("aaa")).data == CTSTR("baa"));
+    static_assert(success_data(p(CTSTR("aaa"))) == CTSTR("baa"));
 }
 
 TEST(hidden, empty_augmentation) {
@@ -210,7 +211,7 @@ TEST(hidden, empty_augmentation) {
 
     constexpr RuleInput auto good_input = augmented_text{CTSTR("aaa"), empty{}};
     constexpr RuleOutput auto good_output = p(good_input);
-    static_assert(good_output.data.text == CTSTR("baa"));
+    static_assert(success_data(good_output).text == CTSTR("baa"));
 }
 
 TEST(hidden, cumulative_augmentation) {
@@ -225,11 +226,11 @@ TEST(hidden, cumulative_augmentation) {
 
     constexpr RuleInput auto good_input = augmented_text{CTSTR("aaa"), cumulative_effect{inc, 0}};
     constexpr RuleOutput auto good_output = h(good_input);
-    static_assert(good_output.data.text == CTSTR("baa"));
-    static_assert(good_output.data.aux.a == 0);
+    static_assert(success_data(good_output).text == CTSTR("baa"));
+    static_assert(success_data(good_output).aux.a == 0);
 
     // in contrast, non-hidden rule updates the accumulator
     constexpr RuleOutput auto good_updated_output = p(good_input);
-    static_assert(good_updated_output.data.text == CTSTR("baa"));
-    static_assert(good_updated_output.data.aux.a == 1);
+    static_assert(success_data(good_updated_output).text == CTSTR("baa"));
+    static_assert(success_data(good_updated_output).aux.a == 1);
 }
