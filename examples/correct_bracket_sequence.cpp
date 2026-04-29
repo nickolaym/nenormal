@@ -38,8 +38,8 @@ constexpr auto ok_str = "OK"_cts;
 constexpr auto error_str = "ERROR"_cts;
 
 TEST(program, final_step) {
-    static_assert(program(""_cts) == success{ok_str, ct<final_state>{}});
-    static_assert(program("_"_cts) == success{error_str, ct<final_state>{}});
+    static_assert(program(""_cts) == make_success(ok_str, ct<final_state>{}));
+    static_assert(program("_"_cts) == make_success(error_str, ct<final_state>{}));
 }
 
 // note that '-' does not belong to the domain of the program.

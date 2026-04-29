@@ -56,6 +56,38 @@ template<RuleInput T, CtState S> struct success {
 CONCEPT(Success);
 constexpr bool finished(Success auto s) { return s.state.value == final_state; }
 
+/// translate either either str str str to success/fail
+
+#if 0
+template<class T> concept NewRuleSuccess = Either<T> && RuleInput<typename T::type>;
+template<class T> concept NewRuleSuccessOutput = Left<T> && NewRuleSuccess<typename T::type>;
+template<class T> concept NewRuleFailOutput = Right<T> && RuleInput<typename T::type>;
+template<class T> concept NewRuleOutput = NewRuleSuccessOutput<T> || NewRuleFailOutput<T>;
+
+constexpr NewRuleSuccessOutput auto make_success(RuleInput auto r, CtState auto s) {
+    if constexpr (s.value == regular_state)
+        return left(right(r));
+    else
+        return left(left(r));
+}
+constexpr NewRuleFailOutput auto make_fail(RuleInput auto t) {
+    return right(t);
+}
+constexpr RuleInput auto success_data(NewRuleSuccessOutput auto a) {
+    return fromLeft(a).value;
+}
+constexpr CtState auto success_state(NewRuleSuccessOutput auto v) {
+    return fromLeft(a).eitherConst(ct<regular_state>{}, ct<final_state>{});
+}
+#else
+
+constexpr auto make_success(auto r, auto s) { return success{r, s}; }
+constexpr auto make_fail(auto t) { return fail{}; }
+constexpr auto success_data(const auto& s) { return s.data; }
+constexpr auto success_state(const auto& s) { return s.state; }
+
+#endif
+
 template<class T> concept RuleOutput = Success<T> || Fail<T>;
 
 // single search-and-replace function
@@ -86,12 +118,13 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
 
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
         return try_substitute(ct_search, ct_replace, extract_text(t))
-            .then(
+            .then_else(
                 [&](CtStr auto res){
                     RuleInput auto tt = update_text(t, rule{}, res);
-                    return success{tt, ct_state};
+                    return make_success(tt, ct_state);
                 },
-                fail{});
+                [&]{ return make_fail(t); }
+            );
     }
 };
 
@@ -147,7 +180,7 @@ namespace loop_helper {
         return [p](RuleInput auto t) {
             RuleOutput auto r = p(t);
             if constexpr (failed(r))  // not matched anymore
-                return left(success{t, ct<regular_state>{}}); // stop with previous value
+                return left(make_success(t, ct<regular_state>{})); // stop with previous value
             else if constexpr (r.state.value == final_state) // matched, final state
                 return left(r); // stop with result
             else
@@ -192,9 +225,9 @@ template<Rule auto p> struct hidden_rule {
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
         RuleOutput auto out = p(extract_text(t)); // success(str, state) or fail
         if constexpr (failed(out)) {
-            return fail{};
+            return make_fail(t);
         } else {
-            return success{rebind_text(t, out.data), out.state};
+            return make_success(rebind_text(t, out.data), out.state);
         }
     }
 };

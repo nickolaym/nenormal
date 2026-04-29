@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include "nenormal/nenormal.h"
 
-#define REGULAR(s) (success{CTSTR(s), ct<regular_state>{}})
-#define FINAL(s) (success{CTSTR(s), ct<final_state>{}})
+#define REGULAR(s) (make_success(CTSTR(s), ct<regular_state>{}))
+#define FINAL(s) (make_success(CTSTR(s), ct<final_state>{}))
 
 TEST(compare_values, str) {
     static_assert(STR("abc") == STR("abc"));
@@ -34,9 +34,9 @@ TEST(compare_values, success) {
 }
 
 TEST(single_rule, fails) {
-    static_assert(RULE("a", "b")(CTSTR("")) == fail{});
-    static_assert(RULE("a", "b")(CTSTR("b")) == fail{});
-    static_assert(RULE("aaa", "b")(CTSTR("aa")) == fail{});
+    static_assert(RULE("a", "b")(CTSTR("")) == make_fail(CTSTR("a")));
+    static_assert(RULE("a", "b")(CTSTR("b")) == make_fail(CTSTR("a")));
+    static_assert(RULE("aaa", "b")(CTSTR("aa")) == make_fail(CTSTR("aa")));
 }
 
 TEST(single_rule, when_text_is_same_as_search) {
@@ -68,7 +68,7 @@ TEST(rules, only_earlier_acts_regular) {
     static_assert(program(CTSTR("cbabc")) == REGULAR("cb1bc"));
     static_assert(program(CTSTR("cbdbc")) == REGULAR("c2dbc"));
     static_assert(program(CTSTR("cdddc")) == REGULAR("3dddc"));
-    static_assert(program(CTSTR("ddddd")) == fail{});
+    static_assert(program(CTSTR("ddddd")) == make_fail("ddddd"));
 }
 
 TEST(rules, only_earlier_acts_final) {
@@ -80,7 +80,7 @@ TEST(rules, only_earlier_acts_final) {
     static_assert(program(CTSTR("cbabc")) == FINAL("cb1bc"));
     static_assert(program(CTSTR("cbdbc")) == FINAL("c2dbc"));
     static_assert(program(CTSTR("cdddc")) == FINAL("3dddc"));
-    static_assert(program(CTSTR("ddddd")) == fail{});
+    static_assert(program(CTSTR("ddddd")) == make_fail("ddddd"));
 }
 
 TEST(rules, only_earlier_acts_mixed) {
@@ -93,7 +93,7 @@ TEST(rules, only_earlier_acts_mixed) {
     static_assert(program(CTSTR("cbabc")) == FINAL("cb1bc"));
     static_assert(program(CTSTR("cbdbc")) == REGULAR("c2dbc"));
     static_assert(program(CTSTR("cdddc")) == FINAL("3dddc"));
-    static_assert(program(CTSTR("ddddd")) == fail{});
+    static_assert(program(CTSTR("ddddd")) == make_fail("ddddd"));
 }
 
 TEST(augmented, single_rule) {

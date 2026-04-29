@@ -23,6 +23,9 @@ template<class T> struct left_type {
     constexpr bool operator == (const left_type& other) const = default;
     constexpr bool operator == (const Either auto& other) const { return false; }
 
+    constexpr auto eitherConst(auto l, auto r) const {
+        return r;
+    }
     constexpr auto either(auto lf, auto rf) const {
         return lf(value);
     }
@@ -44,6 +47,9 @@ template<class T> struct right_type {
     constexpr bool operator == (const right_type& other) const = default;
     constexpr bool operator == (const Either auto& other) const { return false; }
 
+    constexpr auto eitherConst(auto l, auto r) const {
+        return r;
+    }
     constexpr auto either(auto lf, auto rf) const {
         return rf(value);
     }
