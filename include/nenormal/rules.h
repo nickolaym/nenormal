@@ -3,10 +3,10 @@
 #include "concepts.h"
 #include "ct.h"
 #include "str.h"
+#include "substitute.h"
 #include "compose.h"
 #include "augmented.h"
 
-#include <algorithm>
 #include <iostream>
 #include <iomanip>
 
@@ -81,40 +81,13 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
     }
 
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
-        FailOrSubst auto res = try_substitute(extract_text(t));
+        FailOrSubst auto res = try_substitute(ct_search, ct_replace, extract_text(t))
+            .then([](CtStr auto ctr){ return ctr; }, fail{});
         if constexpr (failed(res)) {
             return fail{};
         } else {
             RuleInput auto tt = update_text(t, rule{}, res);
             return success{tt, ct_state};
-        }
-    }
-
-    static constexpr FailOrSubst auto try_substitute(CtStr auto t) {
-        constexpr Str auto const& src = t.value;
-        if constexpr (src.size() < s.size()) {
-            return fail{};
-        } else if constexpr (src == s) {
-            return ct_replace;
-        } else {
-            constexpr auto fbegin = std::search(src.begin(), src.end(), s.begin(), s.end());
-            if constexpr (fbegin == src.end()) {
-                return fail{};
-            } else {
-                constexpr Str auto dst = // constexpr constant
-                    [&]{
-                        auto fend = fbegin + s.size();
-                        constexpr auto len = src.size() - s.size() + r.size();
-                        str<len + 1> dst; // not constant yet in this block
-                        auto it = dst.begin();
-                        it = std::copy(src.begin(), fbegin, it);
-                        it = std::copy(r.begin(), r.end(), it);
-                        it = std::copy(fend, src.end(), it);
-                        *it = 0;
-                        return dst;
-                    }();
-                return ct<dst>{};
-            }
         }
     }
 };
