@@ -12,6 +12,7 @@ struct empty {
     constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) const {
         return empty{};
     }
+    constexpr bool operator == (empty const&) const = default;
 };
 
 template<class F>
@@ -22,6 +23,8 @@ struct side_effect {
         f(i, p, o);
         return side_effect{std::move(f)};
     }
+
+    constexpr bool operator == (side_effect const&) const { return true; }
 };
 
 template<class F, class A>
@@ -33,6 +36,11 @@ struct cumulative_effect {
         auto b = f(a, i, p, o);
         return cumulative_effect<F, decltype(b)>{std::move(f), std::move(b)};
     }
+
+    constexpr bool operator == (cumulative_effect const& v) const { return a == v.a; }
+
+    template<class A1>
+    constexpr bool operator == (cumulative_effect<F,A1> const& v) const { return a == v.a; }
 };
 
 /////////////////////////////////////
@@ -45,6 +53,12 @@ struct augmented_text {
     REPRESENTS(Augmented)
     T text;
     A aux;
+
+    constexpr bool operator == (augmented_text const&) const = default;
+    template<CtStr T1, Augmentation A1>
+    constexpr bool operator == (augmented_text<T1,A1> const& v) const {
+        return text == v.text && aux == v.aux;
+    }
 
     constexpr auto update(auto p, CtStr auto new_text) const {
         auto new_aux = aux(text, p, new_text);

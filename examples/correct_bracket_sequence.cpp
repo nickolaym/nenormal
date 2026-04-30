@@ -38,8 +38,8 @@ constexpr auto ok_str = "OK"_cts;
 constexpr auto error_str = "ERROR"_cts;
 
 TEST(program, final_step) {
-    static_assert(program(""_cts) == success{ok_str, ct<final_state>{}});
-    static_assert(program("_"_cts) == success{error_str, ct<final_state>{}});
+    static_assert(program(""_cts) == matched_final{ok_str});
+    static_assert(program("_"_cts) == matched_final{error_str});
 }
 
 // note that '-' does not belong to the domain of the program.
@@ -47,26 +47,26 @@ TEST(program, final_step) {
 // but in single step it shows "some substring before and after the object of replacement"
 TEST(program, single_step) {
     // reduce pairs
-    static_assert(program("---()---"_cts).data == "------"_cts);
-    static_assert(program("---[]---"_cts).data == "------"_cts);
-    static_assert(program("---{}---"_cts).data == "------"_cts);
+    static_assert(program("---()---"_cts).value == "------"_cts);
+    static_assert(program("---[]---"_cts).value == "------"_cts);
+    static_assert(program("---{}---"_cts).value == "------"_cts);
     // unify unpaired
-    static_assert(program("---(---"_cts).data == "---_---"_cts);
-    static_assert(program("---[---"_cts).data == "---_---"_cts);
-    static_assert(program("---{---"_cts).data == "---_---"_cts);
-    static_assert(program("---)---"_cts).data == "---_---"_cts);
-    static_assert(program("---]---"_cts).data == "---_---"_cts);
-    static_assert(program("---}---"_cts).data == "---_---"_cts);
+    static_assert(program("---(---"_cts).value == "---_---"_cts);
+    static_assert(program("---[---"_cts).value == "---_---"_cts);
+    static_assert(program("---{---"_cts).value == "---_---"_cts);
+    static_assert(program("---)---"_cts).value == "---_---"_cts);
+    static_assert(program("---]---"_cts).value == "---_---"_cts);
+    static_assert(program("---}---"_cts).value == "---_---"_cts);
     // shrink unpaired
-    static_assert(program("---__---"_cts).data == "---_---"_cts);
+    static_assert(program("---__---"_cts).value == "---_---"_cts);
     // error_str message
-    static_assert(program("---_---"_cts).data == "---ERROR---"_cts);
+    static_assert(program("---_---"_cts).value == "---ERROR---"_cts);
 }
 
 TEST(program, priority_pairs_over_unpaired) {
-    static_assert(program("---([{+}])+()---"_cts).data == "---([{+}])+---"_cts);
-    static_assert(program("---([{+}])+{}---"_cts).data == "---([{+}])+---"_cts);
-    static_assert(program("---([{+}])+[]---"_cts).data == "---([{+}])+---"_cts);
+    static_assert(program("---([{+}])+()---"_cts).value == "---([{+}])+---"_cts);
+    static_assert(program("---([{+}])+{}---"_cts).value == "---([{+}])+---"_cts);
+    static_assert(program("---([{+}])+[]---"_cts).value == "---([{+}])+---"_cts);
 }
 
 TEST(machine, final_step) {

@@ -4,6 +4,7 @@
 #include "ct.h"
 #include "str.h"
 #include "substitute.h"
+#include "tristate.h"
 #include "compose.h"
 #include "augmented.h"
 
@@ -52,7 +53,9 @@ template<RuleInput T, CtState S> struct success {
 CONCEPT(Success);
 constexpr bool finished(Success auto s) { return s.state.value == final_state; }
 
-template<class T> concept RuleOutput = Success<T> || Fail<T>;
+template<class T> concept RuleOutput = Tristate<T> && RuleInput<typename T::type>;
+template<class T> concept RuleMatchedOutput = RuleOutput<T> && !NotMatchedYet<T>;
+template<class T> concept RuleFailedOutput = RuleOutput<T> && NotMatchedYet<T>;
 
 // single search-and-replace function
 CONCEPT(Rule)
@@ -81,92 +84,58 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
     }
 
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
-        FailOrSubst auto res = try_substitute(ct_search, ct_replace, extract_text(t))
-            .then([](CtStr auto ctr){ return ctr; }, fail{});
-        if constexpr (failed(res)) {
-            return fail{};
+        MaybeCtStr auto mb = try_substitute(ct_search, ct_replace, extract_text(t));
+        if constexpr (!mb) {
+            // failed
+            return not_matched_yet{t};
         } else {
-            RuleInput auto tt = update_text(t, rule{}, res);
-            return success{tt, ct_state};
+            RuleInput auto u = update_text(t, rule{}, mb.value);
+            if constexpr (state == regular_state) {
+                return matched_regular{u};
+            } else {
+                return matched_final{u};
+            }
         }
     }
 };
 
 // subroutine
 
-namespace rules_helper {
-    // implements disjunction on input >> rule1 >> rule2 >> ...
-
-    constexpr auto make_arg(RuleInput auto input) { return arg{input}; }
-    constexpr auto make_fun(Rule auto rule) {
-        // rule : input -> success | fail
-        // fun  : arg<input> -> arg<input> | stop<success>
-        return [rule]<RuleInput T>(arg<T> a) {
-            RuleOutput auto r = rule(a.value);
-            if constexpr (failed(r)) // not matched yet
-                return a;            // continue...
-            else
-                return stop{r};      // success
-        };
-    }
-    template<RuleInput T> constexpr fail take_res(arg<T> a) {
-        // still not resolved
-        return fail{};
-    }
-    template<RuleOutput T> constexpr T take_res(stop<T> a) {
-        return a.value;
-    }
-
-} // namespace rules_helper
-
-template<Rule auto... rs> struct rules {
+template<Rule auto... ps> struct rules {
     REPRESENTS(Rule)
 
-    static constexpr auto the_chain = chain(rules_helper::make_fun(rs)...);
-
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
-        return rules_helper::take_res(the_chain(rules_helper::make_arg(t)));
+        return (not_matched_yet{t} >> ... >> ps);
     }
 };
 
+// empty rules do nothing
+
 template<> struct rules<> {
     REPRESENTS(Rule)
-    constexpr RuleOutput auto operator()(RuleInput auto t) const { return fail{}; }
+    constexpr RuleOutput auto operator()(RuleInput auto t) const { return not_matched_yet{t}; }
 };
 
 // machine loop
 
-namespace loop_helper {
-    // implements endless loop on input >> rule >> rule >> ...
-
-    constexpr auto make_arg(RuleInput auto input) { return arg{input}; }
-    constexpr auto make_fun(Rule auto rule) {
-        // rule : input -> success{output,(regular|final)} | fail
-        // fun  : arg<input> -> arg<output> | stop<success>
-        return [rule]<RuleInput T>(arg<T> a) {
-            RuleOutput auto r = rule(a.value);
-            if constexpr (failed(r))  // not matched anymore
-                return stop{success{a.value, ct<regular_state>{}}}; // stop with previous value
-            else if constexpr (r.state.value == final_state) // matched, final state
-                return stop{r}; // stop with result
-            else
-                return arg{r.data}; // matched, regular state - continue with new value
-        };
-    }
-    template<RuleInput T> constexpr fail take_res(arg<T> a) = delete; // never fails
-    template<RuleOutput T> constexpr T take_res(stop<T> a) {
-        return a.value;
-    }
-
-} // namespace loop_helper
-
-template<Rule auto p, size_t const factor = 10> struct rule_loop {
+template<Rule auto p> struct rule_loop_body {
     REPRESENTS(Rule)
 
-    static constexpr auto the_loop = endless_loop{repeat<factor>(loop_helper::make_fun(p))};
+    constexpr RuleOutput auto operator()(RuleInput auto t) const {
+        return p(t).commit();
+    }
+};
 
-    constexpr /* Success */ RuleOutput auto operator()(RuleInput auto t) const {
-        return loop_helper::take_res(the_loop(loop_helper::make_arg(t)));
+template<Rule auto p> struct rule_loop {
+    REPRESENTS(Rule)
+
+    constexpr RuleOutput auto operator()(RuleInput auto t) const {
+        constexpr auto body = rule_loop_body<p>{};
+        return not_matched_yet{t}
+            // unwrap the loop 10 times
+            >> body >> body >> body >> body >> body
+            >> body >> body >> body >> body >> body
+            >> rule_loop{};
     }
 };
 
@@ -175,7 +144,7 @@ template<Rule auto p, size_t const factor = 10> struct rule_loop {
 
 template<Rule auto m> struct machine_fun {
     constexpr RuleInput auto operator()(RuleInput auto input) const {
-        return m(input).data;
+        return m(input).value;
     }
 };
 
@@ -184,12 +153,10 @@ template<Rule auto m> struct machine_fun {
 template<Rule auto p> struct hidden_rule {
     REPRESENTS(Rule)
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
-        RuleOutput auto out = p(extract_text(t)); // success(str, state) or fail
-        if constexpr (failed(out)) {
-            return fail{};
-        } else {
-            return success{rebind_text(t, out.data), out.state};
-        }
+        RuleOutput auto out = p(extract_text(t));
+        // combine old augmentation with new text,
+        // then combine new kind of tristate result with new augmented
+        return out.rebind(rebind_text(t, out.value));
     }
 };
 

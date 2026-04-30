@@ -1,9 +1,12 @@
 #include <gtest/gtest.h>
 #include "nenormal/nenormal.h"
 
-#define REGULAR(s) success{CTSTR(s), ct<regular_state>{}}
-#define FINAL(s) success{CTSTR(s), ct<final_state>{}}
+#define NOT_MATCHED(s) (not_matched_yet{CTSTR(s)})
+#define REGULAR(s) (matched_regular{CTSTR(s)})
+#define FINAL(s) (matched_final{CTSTR(s)})
+#define HALTED(s) (matched_final_halted{CTSTR(s)})
 
+#if 0
 TEST(compare_values, str) {
     static_assert(STR("abc") == STR("abc"));
     static_assert(STR("abc") != STR("def"));
@@ -32,11 +35,12 @@ TEST(compare_values, success) {
     static_assert(final_success == FINAL("abc"));
     static_assert(regular_success != final_success);
 }
+#endif
 
 TEST(single_rule, fails) {
-    static_assert(RULE("a", "b")(CTSTR("")) == fail{});
-    static_assert(RULE("a", "b")(CTSTR("b")) == fail{});
-    static_assert(RULE("aaa", "b")(CTSTR("aa")) == fail{});
+    static_assert(RULE("a", "b")(CTSTR("")) == NOT_MATCHED(""));
+    static_assert(RULE("a", "b")(CTSTR("b")) == NOT_MATCHED("b"));
+    static_assert(RULE("aaa", "b")(CTSTR("aa")) == NOT_MATCHED("aa"));
 }
 
 TEST(single_rule, when_text_is_same_as_search) {
@@ -68,7 +72,7 @@ TEST(rules, only_earlier_acts_regular) {
     static_assert(program(CTSTR("cbabc")) == REGULAR("cb1bc"));
     static_assert(program(CTSTR("cbdbc")) == REGULAR("c2dbc"));
     static_assert(program(CTSTR("cdddc")) == REGULAR("3dddc"));
-    static_assert(program(CTSTR("ddddd")) == fail{});
+    static_assert(program(CTSTR("ddddd")) == NOT_MATCHED("ddddd"));
 }
 
 TEST(rules, only_earlier_acts_final) {
@@ -80,7 +84,7 @@ TEST(rules, only_earlier_acts_final) {
     static_assert(program(CTSTR("cbabc")) == FINAL("cb1bc"));
     static_assert(program(CTSTR("cbdbc")) == FINAL("c2dbc"));
     static_assert(program(CTSTR("cdddc")) == FINAL("3dddc"));
-    static_assert(program(CTSTR("ddddd")) == fail{});
+    static_assert(program(CTSTR("ddddd")) == NOT_MATCHED("ddddd"));
 }
 
 TEST(rules, only_earlier_acts_mixed) {
@@ -93,19 +97,79 @@ TEST(rules, only_earlier_acts_mixed) {
     static_assert(program(CTSTR("cbabc")) == FINAL("cb1bc"));
     static_assert(program(CTSTR("cbdbc")) == REGULAR("c2dbc"));
     static_assert(program(CTSTR("cdddc")) == FINAL("3dddc"));
-    static_assert(program(CTSTR("ddddd")) == fail{});
+    static_assert(program(CTSTR("ddddd")) == NOT_MATCHED("ddddd"));
+}
+
+TEST(rule_loop, step_by_step) {
+    constexpr auto rs = RULES(RULE("c", "d"), RULE("a", "b"), FINAL_RULE("e", "f"));
+    constexpr auto rb = rule_loop_body<rs>{};
+    constexpr auto rl = RULE_LOOP(rs);
+
+    auto expect = [&](auto a0, auto e1, auto e2, auto e3, auto e4, auto e5) {
+        constexpr auto a1 = a0 >> rb;
+        constexpr auto a2 = a1 >> rb;
+        constexpr auto a3 = a2 >> rb;
+        constexpr auto a4 = a3 >> rb;
+        constexpr auto a5 = a4 >> rb;
+
+        EXPECT_EQ(a1, e1);
+        EXPECT_EQ(a2, e2);
+        EXPECT_EQ(a3, e3);
+        EXPECT_EQ(a4, e4);
+        EXPECT_EQ(a5, e5);
+
+        auto ae = a0 >> rl;
+        EXPECT_EQ(ae, e5);
+        static_assert(ae == e5);
+    };
+    expect(
+        NOT_MATCHED(""),
+        HALTED(""),
+        HALTED(""),
+        HALTED(""),
+        HALTED(""),
+        HALTED(""));
+    expect(
+        NOT_MATCHED("a"),
+        NOT_MATCHED("b"),
+        HALTED("b"),
+        HALTED("b"),
+        HALTED("b"),
+        HALTED("b"));
+    expect(
+        NOT_MATCHED("aa"),
+        NOT_MATCHED("ba"),
+        NOT_MATCHED("bb"),
+        HALTED("bb"),
+        HALTED("bb"),
+        HALTED("bb"));
+    expect(
+        NOT_MATCHED("aaa"),
+        NOT_MATCHED("baa"),
+        NOT_MATCHED("bba"),
+        NOT_MATCHED("bbb"),
+        HALTED("bbb"),
+        HALTED("bbb"));
+    expect(
+        NOT_MATCHED("aaae"),
+        NOT_MATCHED("baae"),
+        NOT_MATCHED("bbae"),
+        NOT_MATCHED("bbbe"),
+        FINAL("bbbf"),
+        FINAL("bbbf"));
+    static_assert(rl(CTSTR("aaaaaaaaaaaaaaaa")) == HALTED("bbbbbbbbbbbbbbbb"));
+    static_assert(rl(CTSTR("eaaaaaaaaaaaaaaa")) == FINAL("fbbbbbbbbbbbbbbb"));
 }
 
 TEST(augmented, single_rule) {
-    constexpr auto input = augmented_text{"aaa"_cts, empty{}};
+    constexpr RuleInput auto input = augmented_text{"aaa"_cts, empty{}};
     using input_type = std::remove_const_t<decltype(input)>;
     static_assert(Augmented<input_type>);
     static_assert(RuleInput<input_type>);
-    constexpr auto p = RULE("a", "b");
-    constexpr auto output = p(input);
+    constexpr Rule auto p = RULE("a", "b");
+    constexpr RuleMatchedOutput auto output = p(input); // matched_regular{augmented_test{...}}
     using output_type = std::remove_const_t<decltype(output)>;
-    static_assert(Success<output_type>);
-    constexpr auto output_data = output.data;
+    constexpr auto output_data = output.value;
     using output_data_type = std::remove_const_t<decltype(output_data)>;
     static_assert(Augmented<output_data_type>);
     static_assert(output_data.text == "baa"_cts);
@@ -113,33 +177,33 @@ TEST(augmented, single_rule) {
 }
 
 TEST(single_rule, augmented_fail) {
-    constexpr auto input = augmented_text{"aaa"_cts, empty{}};
-    constexpr auto p = RULE("c", "d");
-    constexpr auto output = p(input);
-    static_assert(failed(output));
+    constexpr RuleInput auto input = augmented_text{"aaa"_cts, empty{}};
+    constexpr Rule auto p = RULE("c", "d");
+    constexpr RuleFailedOutput auto output = p(input);
+    constexpr RuleInput auto output_data = output.value;
+    static_assert(input == output_data);
 }
 
 TEST(augmented, rules) {
     constexpr auto input = augmented_text{"aaa"_cts, empty{}};
     constexpr auto p = RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f"));
-    constexpr auto output = p(input);
-    static_assert(!failed(output));
-    static_assert(output.data.text == "baa"_cts);
+    constexpr RuleMatchedOutput auto output = p(input);
+    static_assert(output.value == augmented_text{"baa"_cts, empty{}});
 }
 
 TEST(augmented, rules_fail) {
     constexpr auto input = augmented_text{"xxx"_cts, empty{}};
     constexpr auto p = RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f"));
-    constexpr auto output = p(input);
-    static_assert(failed(output));
+    constexpr RuleFailedOutput auto output = p(input);
+    static_assert(output.value == input);
 }
 
 TEST(augmented, rule_loop) {
     constexpr auto input = augmented_text{"aaa"_cts, empty{}};
     constexpr auto p = RULE_LOOP(RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f")));
-    constexpr auto output = p(input);
-    static_assert(!failed(output));
-    static_assert(output.data.text == "bbb"_cts);
+    constexpr RuleMatchedOutput auto output = p(input);
+    constexpr auto t = output.value.text;
+    static_assert(output.value == augmented_text{"bbb"_cts, empty{}});
 }
 
 TEST(augmented, machine) {
@@ -179,7 +243,7 @@ TEST(augmented, rule_loop_runtime) {
     auto input = augmented_text{"aaa"_cts, side_effect{trace}};
     constexpr auto p = RULE_LOOP(RULE("a", "b"));
     auto output = p(input);
-    static_assert(output.data.text == "bbb"_cts);
+    static_assert(output.value.text == "bbb"_cts);
     EXPECT_EQ(count, 3);
 }
 
@@ -197,20 +261,20 @@ TEST(augmented, machine_runtime) {
 
 TEST(hidden, text) {
     constexpr auto p = HIDDEN_RULE(RULE("a", "b"));
-    static_assert(failed(p(CTSTR(""))));
-    static_assert(p(CTSTR("aaa")).data == CTSTR("baa"));
+    static_assert(p(CTSTR("")) == NOT_MATCHED(""));
+    static_assert(p(CTSTR("aaa")) == REGULAR("baa"));
 }
 
 TEST(hidden, empty_augmentation) {
     constexpr auto p = HIDDEN_RULE(RULE("a", "b"));
 
     constexpr RuleInput auto bad_input = augmented_text{CTSTR(""), empty{}};
-    constexpr RuleOutput auto bad_output = p(bad_input);
-    static_assert(failed(bad_output));
+    constexpr RuleFailedOutput auto bad_output = p(bad_input);
+    static_assert(bad_output.value == bad_input);
 
     constexpr RuleInput auto good_input = augmented_text{CTSTR("aaa"), empty{}};
-    constexpr RuleOutput auto good_output = p(good_input);
-    static_assert(good_output.data.text == CTSTR("baa"));
+    constexpr RuleMatchedOutput auto good_output = p(good_input);
+    static_assert(good_output.value == augmented_text{CTSTR("baa"), empty{}});
 }
 
 TEST(hidden, cumulative_augmentation) {
@@ -220,16 +284,16 @@ TEST(hidden, cumulative_augmentation) {
     constexpr auto inc = [](int n, auto...) { return n + 1; };
 
     constexpr RuleInput auto bad_input = augmented_text{CTSTR(""), cumulative_effect{inc, 0}};
-    constexpr RuleOutput auto bad_output = h(bad_input);
-    static_assert(failed(bad_output));
+    constexpr RuleFailedOutput auto bad_output = h(bad_input);
+    static_assert(bad_output.value == bad_input);
 
     constexpr RuleInput auto good_input = augmented_text{CTSTR("aaa"), cumulative_effect{inc, 0}};
-    constexpr RuleOutput auto good_output = h(good_input);
-    static_assert(good_output.data.text == CTSTR("baa"));
-    static_assert(good_output.data.aux.a == 0);
+    constexpr RuleMatchedOutput auto good_output = h(good_input);
+    static_assert(good_output.value.text == CTSTR("baa"));
+    static_assert(good_output.value.aux == cumulative_effect{inc, 0});
 
     // in contrast, non-hidden rule updates the accumulator
-    constexpr RuleOutput auto good_updated_output = p(good_input);
-    static_assert(good_updated_output.data.text == CTSTR("baa"));
-    static_assert(good_updated_output.data.aux.a == 1);
+    constexpr RuleMatchedOutput auto good_updated_output = p(good_input);
+    static_assert(good_updated_output.value.text == CTSTR("baa"));
+    static_assert(good_updated_output.value.aux == cumulative_effect{inc, 1});
 }

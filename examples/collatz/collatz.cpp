@@ -15,7 +15,7 @@ TEST(collatz, case_2) {
 }
 
 TEST(collatz, case_3) {
-    constexpr auto step = [](CtStr auto s) { return program(s).data; };
+    constexpr auto step = [](CtStr auto s) { return program(s).value; };
 
     // 3 -> 3x+1 = 10
     constexpr auto t0 = CTSTR("<111>");
