@@ -37,6 +37,7 @@ add_test_executable(test_rules tests/rules.cpp)
 add_test_executable(test_maybe tests/maybe.cpp)
 add_test_executable(test_substitute tests/substitute.cpp)
 add_test_executable(test_either tests/either.cpp)
+add_test_executable(test_tristate tests/tristate.cpp)
 
 # test examples
 add_test_executable(test_hello_world examples/hello_world.cpp)
