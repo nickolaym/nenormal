@@ -4,7 +4,7 @@
 
 Набросок кода - в [monadic.cpp](/experimental/monadic.cpp)
 
-И в ветке [dev/monadic](/tree/dev/monadic)
+И в ветке [dev/monadic](https://github.com/nickolaym/nenormal/tree/dev/monadic)
 
 ### Домен
 
