@@ -6,37 +6,6 @@
 #define FINAL(s) (matched_final{CTSTR(s)})
 #define HALTED(s) (matched_final_halted{CTSTR(s)})
 
-#if 0
-TEST(compare_values, str) {
-    static_assert(STR("abc") == STR("abc"));
-    static_assert(STR("abc") != STR("def"));
-    static_assert(CTSTR("abc") == CTSTR("abc"));
-    static_assert(CTSTR("abc") != CTSTR("def"));
-    static_assert(CTSTR("abc").value == STR("abc"));
-}
-
-TEST(compare_values, fail) {
-    constexpr auto f = fail{};
-    static_assert(f == fail{});
-
-    static_assert(failed(f));
-    static_assert(!failed(""_cts));
-}
-
-TEST(compare_values, success) {
-    constexpr auto text = CTSTR("abc");
-    constexpr auto regular_success = success{text, ct<regular_state>{}};
-    constexpr auto final_success = success{text, ct<final_state>{}};
-
-    static_assert(regular_success.data == text);
-    static_assert(regular_success.state.value == regular_state);
-    static_assert(regular_success == REGULAR("abc"));
-
-    static_assert(final_success == FINAL("abc"));
-    static_assert(regular_success != final_success);
-}
-#endif
-
 TEST(single_rule, fails) {
     static_assert(RULE("a", "b")(CTSTR("")) == NOT_MATCHED(""));
     static_assert(RULE("a", "b")(CTSTR("b")) == NOT_MATCHED("b"));

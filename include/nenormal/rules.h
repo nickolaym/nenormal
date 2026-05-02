@@ -21,37 +21,11 @@ template<class T> concept RuleInput = CtStr<T> || Augmented<T>;
 // - intermediate string (matched, stops processing rules, continues machine loop)
 // - final string (matched, stops processing rules, stops machine loop)
 
-struct fail {
-    friend std::ostream& operator << (std::ostream& os, fail const& v) { os << "fail"; return os; }
-
-    constexpr bool operator == (const fail&) const = default;
-    constexpr bool operator == (const auto&) const { return false; }
-};
-constexpr bool failed(const auto& a) { return fail{} == a; }
-template<class T> concept Fail = std::same_as<T, fail>;
-
-// opposite to fail
-template<class T> concept FailOrSubst = Fail<T> || CtStr<T>;
-
 enum rule_state_t {
     regular_state,
     final_state,
 };
 template<class T> concept CtState = CtOf<T, rule_state_t>;
-
-// successful result will be passed to the next loop.
-// that's why type T is a kind of RuleInput
-template<RuleInput T, CtState S> struct success {
-    REPRESENTS(Success);
-    T data;
-    S state;  // TODO make it static!
-
-    constexpr bool operator==(const success&) const = default;
-    template<class T1, class S1>
-    constexpr bool operator==(const success<T1, S1>&) const { return false; }
-};
-CONCEPT(Success);
-constexpr bool finished(Success auto s) { return s.state.value == final_state; }
 
 template<class T> concept RuleOutput = Tristate<T> && RuleInput<typename T::type>;
 template<class T> concept RuleMatchedOutput = RuleOutput<T> && !NotMatchedYet<T>;
