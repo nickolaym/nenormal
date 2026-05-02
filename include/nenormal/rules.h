@@ -95,9 +95,11 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
 template<Str auto s, Str auto r, rule_state_t state> constexpr rule<s, r, state> rule_v{};
 
 // subroutine
-
 template<Rule auto... ps> struct rules {
     REPRESENTS(Rule)
+
+    constexpr rules() = default;
+    constexpr rules(Rule auto...) {}
 
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
         return (not_matched_yet{t} >> ... >> ps);
@@ -109,6 +111,8 @@ template<Rule auto... ps> struct rules {
     }
 };
 template<Rule auto... ps> constexpr rules<ps...> rules_v{};
+// CTAD
+template<Rule ...Ps> rules(Ps...) -> rules<Ps{}...>;
 
 // empty rules do nothing
 
