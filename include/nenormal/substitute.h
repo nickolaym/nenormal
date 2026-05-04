@@ -4,6 +4,7 @@
 #include "str.h"
 #include "maybe.h"
 #include <algorithm>
+#include <optional>
 
 template<class T> concept JustCtStr = Just<T> && CtStr<typename T::type>;
 template<class T> concept MaybeCtStr = Nothing<T> || JustCtStr<T>;
@@ -40,5 +41,37 @@ constexpr MaybeCtStr auto try_substitute(CtStr auto cts, CtStr auto ctr, CtStr a
             CtStr auto ctd = ct<dst>{};
             return just{ctd};
         }
+    }
+}
+
+bool try_substitute_inplace(CtStr auto cts, CtStr auto ctr, std::string& text) {
+    constexpr Str auto const& s = cts.value;
+    constexpr Str auto const& r = ctr.value;
+
+    if (text.size() < s.size()) {
+        return false;
+    } else if (text == s.view()) {
+        text = r.view();
+        return true;
+    } else if (s.empty() && r.empty()) {
+        return true;
+    } else {
+        size_t pos = text.find(s.view());
+        if (pos == std::string::npos) {
+            return false;
+        } else {
+            text.replace(pos, s.size(), r.view());
+            return true;
+        }
+    }
+}
+
+using optional_string = std::optional<std::string>;
+
+optional_string try_substitute_opt(CtStr auto cts, CtStr auto ctr, std::string text) {
+    if (try_substitute_inplace(cts, ctr, text)) {
+        return {std::move(text)};
+    } else {
+        return {};
     }
 }
