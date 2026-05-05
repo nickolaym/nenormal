@@ -266,3 +266,56 @@ TEST(hidden, cumulative_augmentation) {
     static_assert(good_updated_output.value.text == CTSTR("baa"));
     static_assert(good_updated_output.value.aux == cumulative_effect{inc, 1});
 }
+
+/// inplace
+
+constexpr auto run_inplace(std::string t, auto&& p) {
+    inplace_argument<std::string> a{std::move(t)};
+    a.updated_by(p);
+    return a;
+}
+
+TEST(inplace, simple_check) {
+    constexpr auto p = RULES(RULE("a","b"), FINAL_RULE("c","d"), RULE("e","f"));
+    constexpr auto rl = RULE_LOOP(p);
+
+    // single step
+    EXPECT_EQ(
+        run_inplace("zzz", p),
+        (inplace_argument{"zzz", k_not_matched_yet})
+    );
+    EXPECT_EQ(
+        run_inplace("aaa", p),
+        (inplace_argument{"baa", k_matched_regular})
+    );
+    EXPECT_EQ(
+        run_inplace("ccc", p),
+        (inplace_argument{"dcc", k_matched_final})
+    );
+    EXPECT_EQ(
+        run_inplace("eee", p),
+        (inplace_argument{"fee", k_matched_regular})
+    );
+
+    // loop
+    EXPECT_EQ(
+        run_inplace("zzz", rl),
+        (inplace_argument{"zzz", k_matched_final_halted})
+    );
+    EXPECT_EQ(
+        run_inplace("aaa", rl),
+        (inplace_argument{"bbb", k_matched_final_halted})
+    );
+    EXPECT_EQ(
+        run_inplace("ccc", rl),
+        (inplace_argument{"dcc", k_matched_final})
+    );
+    EXPECT_EQ(
+        run_inplace("eee", rl),
+        (inplace_argument{"fff", k_matched_final_halted})
+    );
+    EXPECT_EQ(
+        run_inplace("aec", rl),
+        (inplace_argument{"bed", k_matched_final})
+    );
+}

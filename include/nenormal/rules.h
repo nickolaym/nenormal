@@ -11,6 +11,8 @@
 #include <iostream>
 #include <iomanip>
 
+#include <cassert>
+
 // rule function types
 
 // input: just CtStr
@@ -95,8 +97,8 @@ template<Rule auto... ps> struct rules {
         return (not_matched_yet{t} >> ... >> ps);
     }
     constexpr inplace_state operator()(RuleFixedInput auto& t) const {
-        inplace_argument a{t};
-        (a || ... || a.update_by(ps));
+        inplace_argument<decltype(t)> a{t};
+        (a || ... || a.updated_by(ps));
         return a.state;
     }
 };
@@ -120,8 +122,8 @@ template<Rule auto p> struct rule_loop_body {
         return p(t).commit();
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
-        inplace_argument a{t};
-        a.update_by(p);
+        inplace_argument<decltype(t)> a{t};
+        a.updated_by(p);
         a.commit();
         return a.state;
     }
@@ -140,10 +142,13 @@ template<Rule auto p> struct rule_loop {
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
         constexpr auto body = rule_loop_body<p>{};
-        inplace_argument a{t};
+        inplace_argument<decltype(t)> a{t};
+        size_t limit = 10000;
         while (!a) {
-            a.update_by(body);
+            if (--limit == 0) break;
+            a.updated_by(body);
         }
+        assert(limit); // probably infinite loop
         return a.state;
     }
 };
