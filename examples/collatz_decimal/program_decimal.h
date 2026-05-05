@@ -204,3 +204,13 @@ constexpr auto stop_on_unit = RULES(
 );
 
 constexpr auto start = RULE(">", ":>");
+
+// whole program
+
+constexpr auto program = RULES(
+    HIDDEN_RULE(mult_or_div),
+    HIDDEN_RULE(increment_after_iteration),
+    clean_after_increment,
+    stop_on_unit,
+    HIDDEN_RULE(start)
+);

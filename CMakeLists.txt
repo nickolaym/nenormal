@@ -49,5 +49,6 @@ add_test_executable(test_arithmetics_inplace examples/arithmetics/arithmetics_in
 
 add_test_executable(test_collatz examples/collatz/collatz.cpp)
 add_test_executable(test_collatz_decimal examples/collatz_decimal/collatz_decimal.cpp)
+add_test_executable(test_collatz_decimal_inplace examples/collatz_decimal/collatz_decimal_inplace.cpp)
 
 add_test_executable(test_monadic experimental/monadic.cpp)
