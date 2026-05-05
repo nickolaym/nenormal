@@ -1,7 +1,5 @@
 #include <gtest/gtest.h>
-
 #include "./program.h"
-
 
 TEST(arithmetics, runtime) {
     auto q = [](CtStr auto cts) { return std::quoted(cts.value.view()); };

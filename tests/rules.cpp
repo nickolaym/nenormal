@@ -278,6 +278,7 @@ constexpr auto run_inplace(std::string t, auto&& p) {
 TEST(inplace, simple_check) {
     constexpr auto p = RULES(RULE("a","b"), FINAL_RULE("c","d"), RULE("e","f"));
     constexpr auto rl = RULE_LOOP(p);
+    constexpr auto m = MACHINE_FROM_RULE(rl);
 
     // single step
     EXPECT_EQ(
@@ -317,5 +318,27 @@ TEST(inplace, simple_check) {
     EXPECT_EQ(
         run_inplace("aec", rl),
         (inplace_argument{"bed", k_matched_final})
+    );
+
+    // machine
+    EXPECT_EQ(
+        m(std::string{"zzz"}),
+        "zzz"
+    );
+    EXPECT_EQ(
+        m(std::string{"aaa"}),
+        "bbb"
+    );
+    EXPECT_EQ(
+        m(std::string{"ccc"}),
+        "dcc"
+    );
+    EXPECT_EQ(
+        m(std::string{"eee"}),
+        "fff"
+    );
+    EXPECT_EQ(
+        m(std::string{"aec"}),
+        "bed"
     );
 }

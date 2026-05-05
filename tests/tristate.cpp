@@ -1,4 +1,5 @@
 #include "nenormal/tristate.h"
+#include "nenormal/inplace/inplace_tristate.h"
 #include "nenormal/str.h"
 #include <gtest/gtest.h>
 

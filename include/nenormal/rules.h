@@ -5,8 +5,10 @@
 #include "str.h"
 #include "substitute.h"
 #include "tristate.h"
+#include "inplace/inplace_tristate.h"
 #include "compose.h"
 #include "augmented.h"
+#include "inplace/inplace_augmented.h"
 
 #include <iostream>
 #include <iomanip>
@@ -18,7 +20,7 @@
 // input: just CtStr
 template<class T> concept RuleInput = CtStr<T> || Augmented<T>;
 
-template<class T> concept RuleFixedInput = std::same_as<T, std::string>;
+template<class T> concept RuleFixedInput = std::same_as<T, std::string> || InplaceAugmented<T>;
 template<class T> concept RuleInplaceArg = Inplace<T> && RuleFixedInput<typename T::type>;
 
 // output:
@@ -78,12 +80,15 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
     }
 
     constexpr inplace_state operator()(RuleFixedInput auto& t) const {
-        if (!try_substitute_inplace(ct_search, ct_replace, t)) {
+        if (!try_substitute_inplace(ct_search, ct_replace, inplace_extract_text(t))) {
             return k_not_matched_yet;
-        } else if (state == regular_state) {
-            return k_matched_regular;
         } else {
-            return k_matched_final;
+            inplace_update_text(t, rule{});
+            if (state == regular_state) {
+                return k_matched_regular;
+            } else {
+                return k_matched_final;
+            }
         }
     }
 };
@@ -97,7 +102,7 @@ template<Rule auto... ps> struct rules {
         return (not_matched_yet{t} >> ... >> ps);
     }
     constexpr inplace_state operator()(RuleFixedInput auto& t) const {
-        inplace_argument<decltype(t)> a{t};
+        inplace_argument<decltype(t)> a{t}; // reference to input
         (a || ... || a.updated_by(ps));
         return a.state;
     }
@@ -122,7 +127,7 @@ template<Rule auto p> struct rule_loop_body {
         return p(t).commit();
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
-        inplace_argument<decltype(t)> a{t};
+        inplace_argument<decltype(t)> a{t}; // reference to input
         a.updated_by(p);
         a.commit();
         return a.state;
@@ -177,8 +182,7 @@ template<Rule auto p> struct hidden_rule {
         return out.rebind(rebind_text(t, out.value));
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
-        // TODO rebind...
-        return p(t);
+        return p(inplace_extract_text(t));
     }
 };
 
@@ -201,4 +205,5 @@ template<Rule auto p> struct hidden_rule {
     REPRESENTS(Rule) \
     static constexpr auto impl = (p); \
     constexpr RuleOutput auto operator()(RuleInput auto t) const { return impl(t); } \
+    constexpr auto operator()(RuleFixedInput auto& t) const { return impl(t); } \
 }){}
