@@ -45,8 +45,10 @@ add_test_executable(test_correct_bracket_sequence examples/correct_bracket_seque
 
 add_test_executable(test_arithmetics examples/arithmetics/arithmetics.cpp)
 add_test_executable(test_arithmetics_runtime examples/arithmetics/arithmetics_runtime.cpp)
+add_test_executable(test_arithmetics_inplace examples/arithmetics/arithmetics_inplace.cpp)
 
 add_test_executable(test_collatz examples/collatz/collatz.cpp)
 add_test_executable(test_collatz_decimal examples/collatz_decimal/collatz_decimal.cpp)
+add_test_executable(test_collatz_decimal_inplace examples/collatz_decimal/collatz_decimal_inplace.cpp)
 
 add_test_executable(test_monadic experimental/monadic.cpp)

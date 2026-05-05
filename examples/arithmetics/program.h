@@ -294,12 +294,13 @@ constexpr auto cleanup = RULES(
 );
 
 constexpr auto program = NAMED_RULE(program_t, RULES(
-    add_carry,
-    add_digits,
-    move_digit_to_the_right,
-    plus_nothing,
-    take_digit,
-    cleanup,
+    FACADE_RULE("carry        x^    : ^y  ", add_carry),
+    FACADE_RULE("add digits   [x]y= : ^=z ", add_digits),
+    FACADE_RULE("move digit   [x]y  : y[x]", move_digit_to_the_right),
+    FACADE_RULE("plus nothing +=    :     ", plus_nothing),
+    FACADE_RULE("take digit   x+    : +[x]", take_digit),
+    FACADE_RULE("cleanup      +/=   :     ", cleanup),
+    FACADE_RULE("that's all folks!        ", FINAL_RULE("", "")),
     rules{}
 ));
 

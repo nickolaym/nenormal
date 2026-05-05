@@ -9,8 +9,8 @@ constexpr auto trace = [](auto input, auto p, auto output) {
     print_text(output);
 };
 
-constexpr auto show = [](auto program, CtStr auto input) -> CtStr auto {
-    constexpr auto machine = MACHINE(program);
+constexpr auto show = [](auto prg, CtStr auto input) -> CtStr auto {
+    constexpr auto machine = MACHINE(prg);
 
     constexpr auto augmented_input = augmented_text{input, side_effect{trace}};
     print_text(input);
@@ -138,13 +138,7 @@ TEST(loop_body, single_run) {
 }
 
 TEST(sequence, complete_run) {
-    constexpr auto prg = RULES(
-        HIDDEN_RULE(mult_or_div),
-        HIDDEN_RULE(increment_after_iteration),
-        clean_after_increment,
-        stop_on_unit,
-        HIDDEN_RULE(start)
-    );
+    constexpr auto prg = program;
 
     EXPECT_EQ(show(prg, CTSTR("<1>")), CTSTR("0"));
     EXPECT_EQ(show(prg, CTSTR("<2>")), CTSTR("1"));

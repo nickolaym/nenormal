@@ -1,17 +1,15 @@
 #include <gtest/gtest.h>
-
 #include "./program.h"
-
 
 TEST(arithmetics, runtime) {
     auto q = [](CtStr auto cts) { return std::quoted(cts.value.view()); };
     auto show = [&](CtStr auto src) {
         size_t step = 0;
-        auto trace = [&](CtStr auto src, SingleRule auto p, CtStr auto dst) {
+        auto trace = [&](CtStr auto src, Rule auto p, CtStr auto dst) {
             step++;
             std::cout
-                << step << " : "
-                << q(src)
+                << std::setw(3) << step << " : "
+                << std::setw(20) << std::left << q(src)
                 << "  >>  "
                 << p
                 << "  ==  "

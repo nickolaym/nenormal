@@ -1,4 +1,5 @@
 #include "nenormal/augmented.h"
+#include "nenormal/inplace/inplace_augmented.h"
 #include <gtest/gtest.h>
 
 template<class T> struct foo {
@@ -92,4 +93,39 @@ TEST(augmented, pure_cumulative_effect) {
     constexpr auto r = rebind_text(c, "rrr"_cts);
     static_assert(r.text == "rrr"_cts);
     static_assert(r.aux.a == 2);
+}
+
+/// inplace
+
+TEST(inplace_augmented, empty) {
+    inplace_augmented_text t{"foo", inplace_empty{}};
+    EXPECT_EQ(&inplace_extract_text(t), &t.text);
+    inplace_update_text(t, "rule goes here");
+    EXPECT_EQ(t.text, "foo"); // stays unchanged
+}
+
+TEST(inplace_augmented, side_effect) {
+    int counter = 0;
+    std::string e;
+    auto f = [&](auto p, std::string const& t) {
+        ++counter;
+        e = t;
+    };
+    inplace_augmented_text t{"foo", inplace_side_effect{f}};
+    EXPECT_EQ(&inplace_extract_text(t), &t.text);
+    inplace_update_text(t, "rule goes here");
+    EXPECT_EQ(t.text, "foo"); // stays unchanged
+    EXPECT_EQ(counter, 1);
+    EXPECT_EQ(e, "foo");
+}
+
+TEST(inplace_augmented, cumulative_effect) {
+    auto f = [](int counter, auto p, std::string const& t) {
+        return counter + 1;
+    };
+    inplace_augmented_text t{"foo", inplace_cumulative_effect{f, 0}};
+    EXPECT_EQ(&inplace_extract_text(t), &t.text);
+    inplace_update_text(t, "rule goes here");
+    EXPECT_EQ(t.text, "foo"); // stays unchanged
+    EXPECT_EQ(t.aux.a, 1);
 }
