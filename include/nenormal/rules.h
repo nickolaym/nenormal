@@ -186,6 +186,31 @@ template<Rule auto p> struct hidden_rule {
     }
 };
 
+template<Str auto name, Rule auto p> struct facade_rule {
+    REPRESENTS(Rule)
+    REPRESENTS(FacadeRule)
+
+    friend std::ostream& operator << (std::ostream& os, facade_rule const& v) { return os << name.view(); }
+    constexpr RuleOutput auto operator()(RuleInput auto t) const {
+        RuleOutput auto out = p(extract_text(t));
+        // combine old augmentation with new text,
+        // then combine new kind of tristate result with new augmented
+        if constexpr (NotMatchedYet<decltype(out)>) {
+            return out.rebind(rebind_text(t, out.value));
+        } else {
+            return out.rebind(update_text(t, *this, out.value));
+        }
+    }
+    constexpr auto operator()(RuleFixedInput auto& t) const {
+        auto res = p(inplace_extract_text(t));
+        if (res != k_not_matched_yet) {
+            inplace_update_text(t, *this);
+        }
+        return res;
+    }
+};
+CONCEPT(FacadeRule)
+
 // useful macros
 
 #define STR(s) (str{s}) // s##_ss
@@ -198,6 +223,7 @@ template<Rule auto p> struct hidden_rule {
 #define MACHINE(r) MACHINE_FROM_RULE(RULE_LOOP(r))
 
 #define HIDDEN_RULE(p) (hidden_rule<(p)>{})
+#define FACADE_RULE(name, p) (facade_rule<STR(name), (p)>{})
 
 // To hide a program from compiler output
 #define NAMED_RULE(name, p) \

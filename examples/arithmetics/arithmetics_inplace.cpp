@@ -5,17 +5,19 @@ TEST(arithmetics, inplace) {
     auto q = [](const std::string& s) { return std::quoted(s); };
     auto show = [&](const std::string& src) {
         size_t step = 0;
-        auto trace = [&](SingleRule auto p, const std::string& dst) {
+        auto trace = [&](Rule auto p, const std::string& dst) {
+            using rule_type = decltype(p);
+            static_assert(SingleRule<rule_type> || FacadeRule<rule_type>);
             step++;
             std::cout
-                << step << " : "
+                << std::setw(3) << step << " : "
                 << p
                 << "  ==>  "
                 << q(dst)
                 << std::endl;
         };
 
-        constexpr auto count = [](int n, auto...) { return n+1; };
+        constexpr auto count = [](int n, auto&&...) { return n+1; };
 
         static_assert(RuleFixedInput<std::string>);
 
