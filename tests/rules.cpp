@@ -32,6 +32,16 @@ TEST(single_rule, of_final_type) {
     static_assert(FINAL_RULE("a", "b")(CTSTR("a")) == FINAL("b"));
 }
 
+TEST(rules, ctad) {
+    constexpr auto program = rules{
+        RULE("a", "b"),
+        RULE("c", "d"),
+        RULE("e", "f"),
+    };
+    static_assert(program(CTSTR("abc")) == REGULAR("bbc"));
+    static_assert(program(CTSTR("def")) == REGULAR("dff"));
+}
+
 TEST(rules, only_earlier_acts_regular) {
     constexpr auto program = RULES(
         RULE("a", "1"),

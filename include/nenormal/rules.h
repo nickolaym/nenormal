@@ -92,11 +92,14 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
         }
     }
 };
+template<Str auto s, Str auto r, rule_state_t state> constexpr rule<s, r, state> rule_v{};
 
 // subroutine
-
 template<Rule auto... ps> struct rules {
     REPRESENTS(Rule)
+
+    constexpr rules() = default;
+    constexpr rules(Rule auto...) {}
 
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
         return (not_matched_yet{t} >> ... >> ps);
@@ -107,6 +110,9 @@ template<Rule auto... ps> struct rules {
         return a.state;
     }
 };
+template<Rule auto... ps> constexpr rules<ps...> rules_v{};
+// CTAD
+template<Rule ...Ps> rules(Ps...) -> rules<Ps{}...>;
 
 // empty rules do nothing
 
@@ -157,6 +163,7 @@ template<Rule auto p> struct rule_loop {
         return a.state;
     }
 };
+template<Rule auto p> constexpr rule_loop<p> rule_loop_v{};
 
 // machine is a function string -> string, without technical details
 // about regular / final state.
@@ -170,6 +177,7 @@ template<Rule auto m> struct machine_fun {
         return input;
     }
 };
+template<Rule auto m> constexpr machine_fun<m> machine_fun_v{};
 
 // control augmentation
 
@@ -185,6 +193,7 @@ template<Rule auto p> struct hidden_rule {
         return p(inplace_extract_text(t));
     }
 };
+template<Rule auto p> constexpr hidden_rule<p> hidden_rule_v{};
 
 template<Str auto name, Rule auto p> struct facade_rule {
     REPRESENTS(Rule)
@@ -209,21 +218,22 @@ template<Str auto name, Rule auto p> struct facade_rule {
         return res;
     }
 };
+template<Str auto name, Rule auto p> constexpr facade_rule<name, p> facade_rule_v{};
 CONCEPT(FacadeRule)
 
 // useful macros
 
 #define STR(s) (str{s}) // s##_ss
 #define CTSTR(s) (ct<STR(s)>{}) // s##_cts
-#define RULE(s, r) (rule<STR(s), STR(r), regular_state>{})
-#define FINAL_RULE(s, r) (rule<STR(s), STR(r), final_state>{})
-#define RULES(...) (rules<__VA_ARGS__>{})
-#define RULE_LOOP(r) (rule_loop<(r)>{})
-#define MACHINE_FROM_RULE(r) (machine_fun<(r)>{})
+#define RULE(s, r) (rule_v<STR(s), STR(r), regular_state>)
+#define FINAL_RULE(s, r) (rule_v<STR(s), STR(r), final_state>)
+#define RULES(...) (rules_v<__VA_ARGS__>)
+#define RULE_LOOP(r) (rule_loop_v<(r)>)
+#define MACHINE_FROM_RULE(r) (machine_fun_v<(r)>)
 #define MACHINE(r) MACHINE_FROM_RULE(RULE_LOOP(r))
 
-#define HIDDEN_RULE(p) (hidden_rule<(p)>{})
-#define FACADE_RULE(name, p) (facade_rule<STR(name), (p)>{})
+#define HIDDEN_RULE(p) (hidden_rule_v<(p)>)
+#define FACADE_RULE(name, p) (facade_rule_v<STR(name), (p)>)
 
 // To hide a program from compiler output
 #define NAMED_RULE(name, p) \
