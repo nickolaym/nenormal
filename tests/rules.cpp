@@ -277,6 +277,59 @@ TEST(hidden, cumulative_augmentation) {
     static_assert(good_updated_output.value.aux == cumulative_effect{inc, 1});
 }
 
+/// facade_rule tests
+
+// Test 1: transformation result of bare rule and facade_rule must match
+
+TEST(facade, bare_vs_wrapped_match) {
+    constexpr auto p = RULE("a", "b");
+    constexpr auto f = FACADE_RULE("my_rule", p);
+
+    static_assert(p(CTSTR("aaa")) == f(CTSTR("aaa")));
+    static_assert(p(CTSTR("a")) == f(CTSTR("a")));
+    static_assert(p(CTSTR("ba")) == f(CTSTR("ba")));
+}
+
+TEST(facade, bare_vs_wrapped_no_match) {
+    constexpr auto p = RULE("x", "y");
+    constexpr auto f = FACADE_RULE("my_rule", p);
+
+    static_assert(p(CTSTR("aaa")) == f(CTSTR("aaa")));
+    static_assert(p(CTSTR("zzz")) == f(CTSTR("zzz")));
+    static_assert(p(CTSTR("")) == f(CTSTR("")));
+}
+
+TEST(facade, bare_vs_wrapped_final) {
+    constexpr auto p = FINAL_RULE("a", "b");
+    constexpr auto f = FACADE_RULE("final_rule", p);
+
+    static_assert(p(CTSTR("aaa")) == f(CTSTR("aaa")));
+    static_assert(p(CTSTR("a")) == f(CTSTR("a")));
+}
+
+// Test 2: verify callback receives correct rule type
+// If facade_rule is passed to augmented_text with FacadeRule callback,
+// it should compile. If bare_rule is passed instead, it should NOT compile.
+
+// Approach: static_assert inside callback with cumulative_effect to verify invocation
+TEST(facade, facade_rule_invokes_callback_with_facade_type) {
+    // This test verifies that:
+    // 1. facade_rule passes FacadeRule check inside callback
+    // 2. callback is actually invoked (accumulator changes)
+    constexpr auto f = FACADE_RULE("my_rule", RULE("a", "b"));
+    constexpr auto inc = [](int acc, CtStr auto, auto rule, CtStr auto) constexpr {
+        static_assert(FacadeRule<decltype(rule)>,
+            "Callback must receive FacadeRule, not bare rule");
+        return acc + 1;
+    };
+    constexpr RuleInput auto input = augmented_text{
+        CTSTR("aaa"),
+        cumulative_effect{inc, 0}
+    };
+    constexpr auto output = f(input);
+    static_assert(output.value.aux.a == 1); // callback was invoked, accumulator incremented
+}
+
 /// inplace
 
 constexpr auto run_inplace(std::string t, auto&& p) {
