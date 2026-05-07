@@ -32,9 +32,11 @@ struct cumulative_effect {
     REPRESENTS(Augmentation)
     F f;
     A a;
+
     constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) const {
-        auto b = f(a, i, p, o);
-        return cumulative_effect<F, decltype(b)>{std::move(f), std::move(b)};
+        using new_acc_type = decltype(f(a, i, p, o));
+        // CTAD does not work here because cumulative_effect{} corresponds to current
+        return cumulative_effect<F, new_acc_type>{f, f(a, i, p, o)};
     }
 
     constexpr bool operator == (cumulative_effect const& v) const { return a == v.a; }
@@ -54,6 +56,10 @@ struct augmented_text {
     T text;
     A aux;
 
+    // cannot easily guarantee safety of references
+    // so require that A is a value type
+    static_assert(!std::is_reference_v<A>);
+
     constexpr bool operator == (augmented_text const&) const = default;
     template<CtStr T1, Augmentation A1>
     constexpr bool operator == (augmented_text<T1,A1> const& v) const {
@@ -61,9 +67,13 @@ struct augmented_text {
     }
 
     constexpr auto update(auto p, CtStr auto new_text) const {
-        auto new_aux = aux(text, p, new_text);
-        auto res = augmented_text<decltype(new_text), decltype(new_aux)>{new_text, new_aux};
-        return res;
+        using new_text_type = decltype(new_text);
+        using new_aux_type = decltype(aux(text, p, new_text));
+        // CTAD does not work here because augmented_text{} corresponds to current
+        return augmented_text<new_text_type, new_aux_type>{
+            new_text,
+            aux(text, p, new_text),
+        };
     }
     constexpr auto rebind(CtStr auto new_text) const {
         return augmented_text<decltype(new_text), A>{new_text, aux};
@@ -79,7 +89,7 @@ constexpr CtStr auto extract_text(Augmented auto const& i) { return i.text; }
 constexpr CtStr auto update_text(CtStr auto i, auto p, CtStr auto o) {
     return o;
 }
-constexpr Augmented auto update_text(Augmented auto i, auto p, CtStr auto o) {
+constexpr Augmented auto update_text(Augmented auto const& i, auto p, CtStr auto o) {
     return i.update(p, o);
 }
 

@@ -43,28 +43,41 @@
 ... очень похожая на Either, но с 3-4 вариантами.
 
 ```haskell
-return i = not_matched_yet i
-(>>=) m k = case m of
-    not_matched_yet i -> k i
-    otherwise       -> m
+instance Monad Tristate where
+    return i = not_matched_yet i
 
-commit m = case m of
+    (>>=) m k = case m of
+        not_matched_yet i -> k i -- k :: x -> Tristate y
+        otherwise         -> m
+
+    (>>) m k = case m of
+        not_matched_yet i -> k m -- k :: Tristate x -> Tristate y
+        otherwise         -> m
+
+-- перебор альтернатив
+
+commit_alts m = m -- в хаскелле тривиально, но не в C++
+
+rules [k1, k2, ..., kn] = \m -> commit_alts (m >> k1 >> k2 >> ... >> kn)
+rules ks = \m -> commit_alts (foldl (>>) m ks)
+
+-- тело цикла
+
+commit_loop m = case m of
     not_matched_yet i -> matched_final_halted i
-    matched_regular o -> return o
+    matched_regular o -> not_matched_yet o
     otherwise         -> m
 
-loop_body k = \m -> commit (m >>= k)
+loop_body k = \m -> commit_loop (m >> k)
 
-rule_loop k = \m -> m >>= body >>= body >>= ... >>= body >>= the_loop
+rule_loop k = \m -> m >> body >> body >> ... >> body >> the_loop
   where body     = loop_body k
         the_loop = rule_loop k
-
-rules k1 k2 ... kn = \m -> m >>= k1 >>= k2 >>= ... >>= kn
 ```
 
 ## А в чём выгода?
 
-А в том, что ветвление функций `operator>>` и `commit` зависит напрямую от тэга типа.
+А в том, что ветвление функций `operator>>` и `commit_loop` зависит напрямую от тэга типа.
 
 И в C++ перегрузки можно резолвить, просто сделав их членами классов.
 
@@ -81,3 +94,15 @@ rules k1 k2 ... kn = \m -> m >>= k1 >>= k2 >>= ... >>= kn
 Но опыты показали, что это создаёт очень большую нагрузку на компилятор.
 
 Подробнее - [Эксперимент monadic](./monadic.md)
+
+## Таблица свойств
+
+| тип `T`             | `not_matched_yet`      | `matched_regular`      | `matched_final`        | `matched_final_halted` |
+|---------------------|------------------------|------------------------|------------------------|------------------------|
+| Either              | `Right input`          | `Left (Left temp)`     | `Left (Right final)`   | `Left (Right last)`    |
+| Си                  | `switch()...`          | `switch{ ... break;}`  | `while(){... break;}`  | `while(false)`         |
+| временный?          | не обязательно         | да                     | да                     | да                     |
+| создаётся           | перед итерацией        | в правиле              | в правиле              | в конце итерации       |
+| `t >> p`            | `p(t)` : `T&&` / `U`   | `t` : `T&&`            | `t` : `T&&`            | `t` : `T&&`            |
+| `t.commit_alts()`   | `T&&` / `T const&`     | `t` : `T`              | `t` : `T`              | `t` : `T`              |
+| `t.commit_loop()`   | `matched_final_halted` | `not_matched_yet`      | `t` : `T`              | `t` : `T`              |

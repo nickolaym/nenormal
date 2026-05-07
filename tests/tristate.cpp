@@ -3,18 +3,23 @@
 #include "nenormal/str.h"
 #include <gtest/gtest.h>
 
-constexpr auto mismatch    = [](int x) constexpr { return not_matched_yet{x}; };
-constexpr auto regular_inc = [](int x) constexpr { return matched_regular{x + 1}; };
-constexpr auto final_inc   = [](int x) constexpr { return matched_final{x + 10}; };
+constexpr auto mismatch    = [](auto&& x) constexpr -> decltype(auto) { return std::forward<decltype(x)>(x); };
+constexpr auto regular_inc = [](auto&& x) constexpr { return matched_regular{x.value + 1}; };
+constexpr auto final_inc   = [](auto&& x) constexpr { return matched_final{x.value + 10}; };
 
 TEST(tristate, not_matched_yet) {
     constexpr auto z = not_matched_yet{0};
 
-    static_assert(z >> mismatch == z);
+    // conventional mismatch function returns reference to its arg
+    static_assert(std::is_same_v< decltype(z >> mismatch), not_matched_yet<int> const& >);
+    static_assert(&(z >> mismatch) == &z);
     static_assert(z >> regular_inc == matched_regular{1});
     static_assert(z >> final_inc == matched_final{10});
 
-    static_assert(z.commit() == matched_final_halted{0});
+    // commit returns reference
+    static_assert(&(z.commit_alts()) == &z);
+
+    static_assert(z.commit_loop() == matched_final_halted{0});
 
     static_assert(z.rebind(""_ss) == not_matched_yet{""_ss});
 }
@@ -22,11 +27,16 @@ TEST(tristate, not_matched_yet) {
 TEST(tristate, matched_regular) {
     constexpr auto z = matched_regular{0};
 
-    static_assert(z >> mismatch == z);
-    static_assert(z >> regular_inc == z);
-    static_assert(z >> final_inc == z);
+    // >> skips right arg and returns reference to itself
+    static_assert(&(z >> mismatch) == &z);
+    static_assert(&(z >> regular_inc) == &z);
+    static_assert(&(z >> final_inc) == &z);
 
-    static_assert(z.commit() == not_matched_yet{0});
+    // commit_alt returns value (because z itself is temporary)
+    static_assert(z.commit_alts() == z);
+    static_assert(std::is_same_v< decltype(z.commit_alts()), matched_regular<int> >);
+
+    static_assert(z.commit_loop() == not_matched_yet{0});
 
     static_assert(z.rebind(""_ss) == matched_regular{""_ss});
 }
@@ -34,11 +44,18 @@ TEST(tristate, matched_regular) {
 TEST(tristate, matched_final) {
     constexpr auto z = matched_final{0};
 
-    static_assert(z >> mismatch == z);
-    static_assert(z >> regular_inc == z);
-    static_assert(z >> final_inc == z);
+    // >> skips right arg and returns reference to itself
+    static_assert(&(z >> mismatch) == &z);
+    static_assert(&(z >> regular_inc) == &z);
+    static_assert(&(z >> final_inc) == &z);
 
-    static_assert(z.commit() == z);
+    // commit_alt returns value (because z itself is temporary)
+    static_assert(z.commit_alts() == z);
+    static_assert(std::is_same_v< decltype(z.commit_alts()), matched_final<int> >);
+
+    // commit_loop returns value (because z itself is temporary)
+    static_assert(z.commit_loop() == z);
+    static_assert(std::is_same_v< decltype(z.commit_loop()), matched_final<int> >);
 
     static_assert(z.rebind(""_ss) == matched_final{""_ss});
 }
@@ -46,11 +63,18 @@ TEST(tristate, matched_final) {
 TEST(tristate, matched_final_halted) {
     constexpr auto z = matched_final_halted{0};
 
-    static_assert(z >> mismatch == z);
-    static_assert(z >> regular_inc == z);
-    static_assert(z >> final_inc == z);
+    // >> skips right arg and returns reference to itself
+    static_assert(&(z >> mismatch) == &z);
+    static_assert(&(z >> regular_inc) == &z);
+    static_assert(&(z >> final_inc) == &z);
 
-    static_assert(z.commit() == z);
+    // commit_alt returns value (because z itself is temporary)
+    static_assert(z.commit_alts() == z);
+    static_assert(std::is_same_v< decltype(z.commit_alts()), matched_final_halted<int> >);
+
+    // commit_loop returns value (because z itself is temporary)
+    static_assert(z.commit_loop() == z);
+    static_assert(std::is_same_v< decltype(z.commit_loop()), matched_final_halted<int> >);
 
     static_assert(z.rebind(""_ss) == matched_final_halted{""_ss});
 }
@@ -58,7 +82,7 @@ TEST(tristate, matched_final_halted) {
 TEST(tristate, alternatives) {
     constexpr auto z = not_matched_yet{0};
 
-    static_assert(z >> mismatch >> mismatch >> mismatch == z);
+    static_assert(&(z >> mismatch >> mismatch >> mismatch) == &z);
     static_assert(z >> mismatch >> regular_inc >> regular_inc == matched_regular{1});
     static_assert(z >> mismatch >> final_inc >> regular_inc == matched_final{10});
 }

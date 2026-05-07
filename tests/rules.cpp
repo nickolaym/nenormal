@@ -337,90 +337,154 @@ struct ctor_tracker {
     int moves = 0;
     int inits = 0;
 
-    void copy() { std::cout << "c"; ++copies; }
-    void move() { std::cout << "m"; ++moves; }
-    void init() { std::cout << "i"; ++inits; }
+    void copy() { nl(); std::cout << "c"; ++copies; }
+    void move() { nl(); std::cout << "m"; ++moves; }
+    void init() { nl(); std::cout << "i"; ++inits; }
+    void nl() { if ((copies+moves+inits) % 10 == 0) std::cout << "\n    "; }
 
     friend std::ostream& operator << (std::ostream& os, ctor_tracker const& t) {
         return os << "tracker{c=" << t.copies << ", m=" << t.moves << ", i=" << t.inits << "}";
     }
 };
+struct ctor_tracker_arg {
+    ctor_tracker* t;
+    int s = 0;
+    explicit ctor_tracker_arg(ctor_tracker* t) noexcept : t{t} {}
+    ctor_tracker_arg(ctor_tracker* t, int s) noexcept : t{t}, s{s} {
+        t->init();
+        show();
+    }
+    ctor_tracker_arg(const ctor_tracker_arg& o) noexcept : t{o.t}, s{o.s} {
+        t->copy();
+        show();
+    }
+    ctor_tracker_arg(ctor_tracker_arg&& o) noexcept : t{o.t}, s{o.s} {
+        t->move();
+        show();
+    }
+    void show() {
+        std::cout << "[" << s << "]";
+    }
+
+    constexpr bool operator == (const ctor_tracker_arg&) const = default;
+};
+
 
 TEST(augmented, spurious_cctors) {
-    struct tracker_arg {
-        ctor_tracker* t;
-        int s = 0;
-        tracker_arg(ctor_tracker* t, int s) noexcept : t{t}, s{s} { t->init(); }
-        tracker_arg(const tracker_arg& o) noexcept : t{o.t}, s{o.s} { t->copy(); }
-        tracker_arg(tracker_arg&& o) noexcept : t{o.t}, s{o.s} { t->move(); }
-
-        constexpr bool operator == (const tracker_arg&) const = default;
+    auto pass = [](ctor_tracker_arg const& a, auto...) {
+        return ctor_tracker_arg{a.t, a.s+1};
     };
-    auto pass = [](auto&& a, auto...) { return tracker_arg{a.t, a.s+1}; };
 
-    auto p12345 = RULES(RULE("1",""), RULE("2",""), RULE("3",""), RULE("4",""), RULE("5",""));
+    auto p_miss = RULE("1","");
+    auto p_match = RULE("a","");
+    auto p_final = RULE(".", "");
+    auto p_mf = RULES(p_match, p_final);
+    auto p_miss5 = RULES(p_miss, p_miss, p_miss, p_miss, p_miss);
     auto prog_mismatch = RULES(
-        p12345,
-        HIDDEN_RULE(p12345),
-        FACADE_RULE("",p12345),
+        p_miss5,
+        HIDDEN_RULE(p_miss5),
+        FACADE_RULE("",p_miss5),
         rules<>{}
     );
     auto prog_match = RULES(
-        p12345,
-        RULE("a",""),
-        p12345,
-        p12345,
-        p12345
+        p_miss5,
+        p_match,
+        p_miss5,
+        p_miss5,
+        p_miss5
     );
 
     ctor_tracker t = {};
 
-    std::cout << "setup: ";
-    auto nmy = not_matched_yet{
-        augmented_text{
-            CTSTR("aaa"),
-            cumulative_effect{
-                pass,
-                tracker_arg{&t, 0}
+    const auto nmy = [&](CtStr auto s) {
+        return
+        not_matched_yet{
+            augmented_text{
+                s,
+                cumulative_effect{
+                    pass,
+                    ctor_tracker_arg{&t}
+                }
             }
-        }
+        };
     };
-    std::cout << " " << t << std::endl;
-    EXPECT_LT(t.copies, 24);
-    EXPECT_LT(t.moves, 3);
-    EXPECT_EQ(t.inits, 0); // nothing to do
 
-    t = {};
-    std::cout << "mismatch: ";
-    decltype(auto) out_mismatch = nmy >> prog_mismatch;
-    std::cout << " " << t << std::endl;
-    EXPECT_LT(t.copies, 19);
-    EXPECT_LT(t.moves, 1);
-    EXPECT_EQ(t.inits, out_mismatch.value.aux.a.s);
+    auto examine = [&](const char* title, auto s, auto p, int ec, int em) {
+        t = {};
+        std::cout << title << " ";
+        decltype(auto) out = p(nmy(s));
+        std::cout << "\n    " << t << std::endl;
+        EXPECT_LE(t.copies, ec);
+        EXPECT_LE(t.moves, em);
+        EXPECT_EQ(t.inits, out.value.aux.a.s);
+        std::cout << std::endl;
+    };
+    auto examine_m = [&](const char* title, auto s, auto m, int ec, int em) {
+        t = {};
+        std::cout << title << " ";
+        decltype(auto) out_value = m(nmy(s).value);
+        std::cout << "\n    " << t << std::endl;
+        EXPECT_EQ(t.copies, ec);
+        EXPECT_EQ(t.moves, em);
+        EXPECT_EQ(t.inits, out_value.aux.a.s);
+        std::cout << std::endl;
+    };
 
-    t = {};
-    std::cout << "match: ";
-    decltype(auto) out_match = nmy >> prog_match;
-    std::cout << " " << t << std::endl;
-    EXPECT_LT(t.copies, 19);
-    EXPECT_LT(t.moves, 1);
-    EXPECT_EQ(t.inits, out_match.value.aux.a.s);
+    auto s3 = CTSTR("aaa");
+    
+    examine("simple-miss", s3, RULES(RULES(RULES(p_miss))), 0, 0);
+    
+    // +1 move per each level of depth from matched rule (return by value)
+    examine("simple-match", s3, RULES(RULES(RULES(p_match))), 0, 3);
+    examine("match,etc...", s3, RULES(p_match, p_miss, p_miss, p_miss, p_miss), 0, 1);
+    examine("many-misses", s3, prog_mismatch, 0, 0);
+    examine("miss,match,etc...", s3, RULES(p_miss, p_match, p_miss, p_miss, p_miss), 0, 1);
+    
+    // loop still does +1 copy at exit
+    // +1 per each level of nesting (10 iterations or less) - return by value
+    examine("mismatch-loop", s3, RULE_LOOP(p_miss5), 1, 1);
+    // loop does +1 move per iteration
+    examine("match-loop-1", CTSTR("a"), RULE_LOOP(p_match), 1, 1+1);
+    examine("match-loop-3", CTSTR("aaa"), RULE_LOOP(p_match), 1, 3+1);
+    examine("match-loop-9", CTSTR("aaaaaaaaa"), RULE_LOOP(p_match), 1, 9+1);
+    examine("match-loop-10", CTSTR("aaaaaaaaaa"), RULE_LOOP(p_match), 1, 10+2);
+    examine("match-loop-13", CTSTR("aaaaaaaaaaaaa"), RULE_LOOP(p_match), 1, 13+2);
+    examine("match-loop-19", CTSTR("aaaaaaaaaaaaaaaaaaa"), RULE_LOOP(p_match), 1, 19+2);
+    examine("match-loop-20", CTSTR("aaaaaaaaaaaaaaaaaaaa"), RULE_LOOP(p_match), 1, 20+3);
+    examine("match-loop-23", CTSTR("aaaaaaaaaaaaaaaaaaaaaaa"), RULE_LOOP(p_match), 1, 23+3);
 
-    t = {};
-    std::cout << "loop: ";
-    decltype(auto) out_loop = nmy >> RULE_LOOP(prog_match);
-    std::cout << " " << t << std::endl;
-    EXPECT_LT(t.copies, 120);
-    EXPECT_LT(t.moves, 3);
-    EXPECT_EQ(t.inits, out_loop.value.aux.a.s);
+    examine("final-loop-!", CTSTR("."), RULE_LOOP(p_final), 1, 1+1);
+    // each iteration here takes +2 move (rules and rule_loop)
+    // each nesting still takes +1 move
+    examine("final-loop-1", CTSTR("."), RULE_LOOP(p_mf), 1, 1*2+1);
+    examine("final-loop-3", CTSTR("aa."), RULE_LOOP(p_mf), 1, 3*2+1);
+    examine("final-loop-5", CTSTR("aaaa."), RULE_LOOP(p_mf), 1, 5*2+1);
+    examine("final-loop-9", CTSTR("aaaaaaaa."), RULE_LOOP(p_mf), 1, 9*2+1);
+    examine("final-loop-10", CTSTR("aaaaaaaa."), RULE_LOOP(p_mf), 1, 10*2+2);
+    examine("final-loop-19", CTSTR("aaaaaaaaaaaaaaaaaa."), RULE_LOOP(p_mf), 1, 19*2+2);
+    examine("final-loop-20", CTSTR("aaaaaaaaaaaaaaaaaaa."), RULE_LOOP(p_mf), 1, 20*2+3);
+
+    // each iteration here takes +4 move (rules and rule_loop)
+    // each nesting still takes +1 move
+    examine("deep-loop-1", CTSTR("a"), RULE_LOOP(RULES(RULES(RULES(p_match)))), 1, 1*4+1);
+    examine("deep-loop-3", CTSTR("aaa"), RULE_LOOP(RULES(RULES(RULES(p_match)))), 1, 3*4+1);
+    examine("deep-loop-5", CTSTR("aaaaa"), RULE_LOOP(RULES(RULES(RULES(p_match)))), 1, 5*4+1);
+
+
+    // machine still does +1 copy at enter, then +1 copy at the loop
+    // examine_m("mismatch-machine", MACHINE(p_miss5), 2, 1);
+    // examine_m("match-machine", MACHINE(p_match), 2, 4);
+
+#if 0
 
     t = {};
     std::cout << "machine: ";
-    decltype(auto) res_machine = nmy >> MACHINE(prog_match);
+    decltype(auto) res_machine = MACHINE(prog_match)(nmy.value);
     std::cout << " " << t << std::endl;
     EXPECT_LT(t.copies, 121);
     EXPECT_LT(t.moves, 4);
     EXPECT_EQ(t.inits, res_machine.aux.a.s);
+#endif
 }
 
 

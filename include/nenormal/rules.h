@@ -65,14 +65,18 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
     }
 
     constexpr decltype(auto) operator()(RuleFailedOutput auto const& nmy) const {
-        RuleOutput auto out = rule{}(nmy.value);
-        if constexpr (!out) {
-            return nmy; // by ref
+        MaybeCtStr auto mb = try_substitute(ct_search, ct_replace, extract_text(nmy.value));
+        if constexpr (!mb) {
+            return nmy;
         } else {
-            return out;
+            if constexpr (state == regular_state) {
+                return matched_regular{update_text(nmy.value, rule{}, mb.value)};
+            } else {
+                return matched_final{update_text(nmy.value, rule{}, mb.value)};
+            }
         }
     }
-    constexpr RuleOutput auto operator()(RuleInput auto t) const {
+    constexpr RuleOutput auto operator()(RuleInput auto const& t) const {
         MaybeCtStr auto mb = try_substitute(ct_search, ct_replace, extract_text(t));
         if constexpr (!mb) {
             // failed
@@ -110,7 +114,7 @@ template<Rule auto... ps> struct rules {
     constexpr rules(Rule auto...) {}
 
     constexpr decltype(auto) operator()(RuleFailedOutput auto const& nmy) const {
-        return (nmy >> ... >> ps);
+        return (nmy >> ... >> ps).commit_alts();
     }
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
         return (not_matched_yet{t} >> ... >> ps);
@@ -146,10 +150,10 @@ template<Rule auto p> struct rule_loop_body {
     REPRESENTS(Rule)
 
     constexpr decltype(auto) operator()(RuleFailedOutput auto const& nmy) const {
-        return p(nmy).commit();
+        return p(nmy).commit_loop();
     }
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
-        return p(t).commit();
+        return p(t).commit_loop();
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
         inplace_argument<decltype(t)> a{t}; // reference to input
@@ -164,11 +168,12 @@ template<Rule auto p> struct rule_loop {
 
     constexpr decltype(auto) operator()(RuleFailedOutput auto const& nmy) const {
         constexpr auto body = rule_loop_body<p>{};
-        return nmy
+        return (nmy
             // unwrap the loop 10 times
             >> body >> body >> body >> body >> body
             >> body >> body >> body >> body >> body
-            >> rule_loop{};
+            >> rule_loop{}
+        ).commit_alts();
     }
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
         constexpr auto body = rule_loop_body<p>{};
@@ -196,8 +201,8 @@ template<Rule auto p> constexpr rule_loop<p> rule_loop_v{};
 // about regular / final state.
 
 template<Rule auto m> struct machine_fun {
-    constexpr RuleInput auto operator()(RuleInput auto input) const {
-        return m(input).value;
+    constexpr RuleInput auto operator()(RuleInput auto const& input) const {
+        return (not_matched_yet{input} >> m).value;
     }
     constexpr RuleFixedInput auto operator()(RuleFixedInput auto input) const {
         m(input);
@@ -212,7 +217,7 @@ template<Rule auto p> struct hidden_rule {
     REPRESENTS(Rule)
     constexpr decltype(auto) operator()(RuleFailedOutput auto const& nmy) const {
         RuleOutput auto out = not_matched_yet{extract_text(nmy.value)} >> p;
-        if constexpr (!out) {
+        if constexpr (!out.is_matched) {
             return nmy;
         } else {
             return out.rebind(rebind_text(nmy.value, out.value));
@@ -242,7 +247,7 @@ template<Str auto name, Rule auto p> struct facade_rule {
         RuleOutput auto const& out = p(bare_nmy);
         // combine old augmentation with new text,
         // then combine new kind of tristate result with new augmented
-        if constexpr (!out) {
+        if constexpr (!out.is_matched) {
             return nmy;
         } else {
             return out.rebind(update_text(nmy.value, *this, out.value));
@@ -252,7 +257,7 @@ template<Str auto name, Rule auto p> struct facade_rule {
         RuleOutput auto out = p(extract_text(t));
         // combine old augmentation with new text,
         // then combine new kind of tristate result with new augmented
-        if constexpr (!out) {
+        if constexpr (!out.is_matched) {
             return out.rebind(rebind_text(t, out.value));
         } else {
             return out.rebind(update_text(t, *this, out.value));
