@@ -330,6 +330,101 @@ TEST(facade, facade_rule_invokes_callback_with_facade_type) {
     static_assert(output.value.aux.a == 1); // callback was invoked, accumulator incremented
 }
 
+/// count spurious copy ctors
+
+struct ctor_tracker {
+    int copies = 0;
+    int moves = 0;
+    int inits = 0;
+
+    void copy() { std::cout << "c"; ++copies; }
+    void move() { std::cout << "m"; ++moves; }
+    void init() { std::cout << "i"; ++inits; }
+
+    friend std::ostream& operator << (std::ostream& os, ctor_tracker const& t) {
+        return os << "tracker{c=" << t.copies << ", m=" << t.moves << ", i=" << t.inits << "}";
+    }
+};
+
+TEST(augmented, spurious_cctors) {
+    struct tracker_arg {
+        ctor_tracker* t;
+        int s = 0;
+        tracker_arg(ctor_tracker* t, int s) noexcept : t{t}, s{s} { t->init(); }
+        tracker_arg(const tracker_arg& o) noexcept : t{o.t}, s{o.s} { t->copy(); }
+        tracker_arg(tracker_arg&& o) noexcept : t{o.t}, s{o.s} { t->move(); }
+
+        constexpr bool operator == (const tracker_arg&) const = default;
+    };
+    auto pass = [](auto&& a, auto...) { return tracker_arg{a.t, a.s+1}; };
+
+    auto p12345 = RULES(RULE("1",""), RULE("2",""), RULE("3",""), RULE("4",""), RULE("5",""));
+    auto prog_mismatch = RULES(
+        p12345,
+        HIDDEN_RULE(p12345),
+        FACADE_RULE("",p12345),
+        rules<>{}
+    );
+    auto prog_match = RULES(
+        p12345,
+        RULE("a",""),
+        p12345,
+        p12345,
+        p12345
+    );
+
+    ctor_tracker t = {};
+
+    std::cout << "setup: ";
+    auto nmy = not_matched_yet{
+        augmented_text{
+            CTSTR("aaa"),
+            cumulative_effect{
+                pass,
+                tracker_arg{&t, 0}
+            }
+        }
+    };
+    std::cout << " " << t << std::endl;
+    EXPECT_LT(t.copies, 24);
+    EXPECT_LT(t.moves, 3);
+    EXPECT_EQ(t.inits, 0); // nothing to do
+
+    t = {};
+    std::cout << "mismatch: ";
+    decltype(auto) out_mismatch = nmy >> prog_mismatch;
+    std::cout << " " << t << std::endl;
+    EXPECT_LT(t.copies, 19);
+    EXPECT_LT(t.moves, 1);
+    EXPECT_EQ(t.inits, out_mismatch.value.aux.a.s);
+
+    t = {};
+    std::cout << "match: ";
+    decltype(auto) out_match = nmy >> prog_match;
+    std::cout << " " << t << std::endl;
+    EXPECT_LT(t.copies, 19);
+    EXPECT_LT(t.moves, 1);
+    EXPECT_EQ(t.inits, out_match.value.aux.a.s);
+
+    t = {};
+    std::cout << "loop: ";
+    decltype(auto) out_loop = nmy >> RULE_LOOP(prog_match);
+    std::cout << " " << t << std::endl;
+    EXPECT_LT(t.copies, 120);
+    EXPECT_LT(t.moves, 3);
+    EXPECT_EQ(t.inits, out_loop.value.aux.a.s);
+
+    t = {};
+    std::cout << "machine: ";
+    decltype(auto) res_machine = nmy >> MACHINE(prog_match);
+    std::cout << " " << t << std::endl;
+    EXPECT_LT(t.copies, 121);
+    EXPECT_LT(t.moves, 4);
+    EXPECT_EQ(t.inits, res_machine.aux.a.s);
+}
+
+
+
 /// inplace
 
 constexpr auto run_inplace(std::string t, auto&& p) {
