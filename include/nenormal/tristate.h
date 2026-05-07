@@ -34,10 +34,12 @@ template<class T> struct not_matched_yet {
     constexpr decltype(auto) operator >> (auto&& f) const& { return f(*this); }
 
     // not-matched-yet result of (nmy >> p1 >> p2 >> p3) is nmy itself
-    constexpr const auto& commit_alts() const { return *this; }
+    constexpr decltype(auto) commit_alts() && { return std::move(*this); }
+    constexpr decltype(auto) commit_alts() const& { return *this; }
 
     // not_matched_yet breaks the loop
-    constexpr auto commit_loop() const { return matched_final_halted{value}; }
+    constexpr auto commit_loop() && { return matched_final_halted{std::move(value)}; }
+    constexpr auto commit_loop() const& { return matched_final_halted{value}; }
 
     // return Tristate of same kind, with new value
     constexpr auto rebind(auto v) const { return not_matched_yet<decltype(v)>{v}; }

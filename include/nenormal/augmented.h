@@ -80,22 +80,23 @@ struct augmented_text {
     }
 };
 CONCEPT(Augmented)
+template<class R> concept AugmentedRef = Augmented<std::remove_cvref_t<R>>;
 
 // extract and restore text from an augmented type
 
 constexpr CtStr auto extract_text(CtStr auto i) { return i; }
-constexpr CtStr auto extract_text(Augmented auto const& i) { return i.text; }
+constexpr CtStr auto extract_text(AugmentedRef auto&& i) { return i.text; }
 
 constexpr CtStr auto update_text(CtStr auto i, auto p, CtStr auto o) {
     return o;
 }
-constexpr Augmented auto update_text(Augmented auto const& i, auto p, CtStr auto o) {
+constexpr Augmented auto update_text(AugmentedRef auto&& i, auto p, CtStr auto o) {
     return i.update(p, o);
 }
 
 constexpr CtStr auto rebind_text(CtStr auto i, CtStr auto o) {
     return o;
 }
-constexpr Augmented auto rebind_text(Augmented auto i, CtStr auto o) {
+constexpr Augmented auto rebind_text(AugmentedRef auto&& i, CtStr auto o) {
     return i.rebind(o);
 }
