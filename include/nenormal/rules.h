@@ -64,6 +64,14 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
         return os;
     }
 
+    constexpr decltype(auto) operator()(RuleFailedOutput auto const& nmy) const {
+        RuleOutput auto out = rule{}(nmy.value);
+        if constexpr (!out) {
+            return nmy; // by ref
+        } else {
+            return out;
+        }
+    }
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
         MaybeCtStr auto mb = try_substitute(ct_search, ct_replace, extract_text(t));
         if constexpr (!mb) {
@@ -101,6 +109,9 @@ template<Rule auto... ps> struct rules {
     constexpr rules() = default;
     constexpr rules(Rule auto...) {}
 
+    constexpr decltype(auto) operator()(RuleFailedOutput auto const& nmy) const {
+        return (nmy >> ... >> ps);
+    }
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
         return (not_matched_yet{t} >> ... >> ps);
     }
@@ -118,7 +129,12 @@ template<Rule ...Ps> rules(Ps...) -> rules<Ps{}...>;
 
 template<> struct rules<> {
     REPRESENTS(Rule)
-    constexpr RuleOutput auto operator()(RuleInput auto t) const { return not_matched_yet{t}; }
+    constexpr decltype(auto) operator()(RuleFailedOutput auto const& nmy) const {
+        return nmy;
+    }
+    constexpr RuleOutput auto operator()(RuleInput auto t) const {
+        return not_matched_yet{t};
+    }
     constexpr auto operator()(RuleFixedInput auto& t) const {
         return k_not_matched_yet;
     }
@@ -129,6 +145,9 @@ template<> struct rules<> {
 template<Rule auto p> struct rule_loop_body {
     REPRESENTS(Rule)
 
+    constexpr decltype(auto) operator()(RuleFailedOutput auto const& nmy) const {
+        return p(nmy).commit();
+    }
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
         return p(t).commit();
     }
@@ -143,6 +162,14 @@ template<Rule auto p> struct rule_loop_body {
 template<Rule auto p> struct rule_loop {
     REPRESENTS(Rule)
 
+    constexpr decltype(auto) operator()(RuleFailedOutput auto const& nmy) const {
+        constexpr auto body = rule_loop_body<p>{};
+        return nmy
+            // unwrap the loop 10 times
+            >> body >> body >> body >> body >> body
+            >> body >> body >> body >> body >> body
+            >> rule_loop{};
+    }
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
         constexpr auto body = rule_loop_body<p>{};
         return not_matched_yet{t}
@@ -183,6 +210,14 @@ template<Rule auto m> constexpr machine_fun<m> machine_fun_v{};
 
 template<Rule auto p> struct hidden_rule {
     REPRESENTS(Rule)
+    constexpr decltype(auto) operator()(RuleFailedOutput auto const& nmy) const {
+        RuleOutput auto out = not_matched_yet{extract_text(nmy.value)} >> p;
+        if constexpr (!out) {
+            return nmy;
+        } else {
+            return out.rebind(rebind_text(nmy.value, out.value));
+        }
+    }
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
         RuleOutput auto out = p(extract_text(t));
         // combine old augmentation with new text,
@@ -200,11 +235,24 @@ template<Str auto name, Rule auto p> struct facade_rule {
     REPRESENTS(FacadeRule)
 
     friend std::ostream& operator << (std::ostream& os, facade_rule const& v) { return os << name.view(); }
+
+    constexpr decltype(auto) operator()(RuleFailedOutput auto const& nmy) const {
+        // host rebound arg in a scope-persistent storage
+        RuleFailedOutput auto bare_nmy = not_matched_yet{extract_text(nmy.value)};
+        RuleOutput auto const& out = p(bare_nmy);
+        // combine old augmentation with new text,
+        // then combine new kind of tristate result with new augmented
+        if constexpr (!out) {
+            return nmy;
+        } else {
+            return out.rebind(update_text(nmy.value, *this, out.value));
+        }
+    }
     constexpr RuleOutput auto operator()(RuleInput auto t) const {
         RuleOutput auto out = p(extract_text(t));
         // combine old augmentation with new text,
         // then combine new kind of tristate result with new augmented
-        if constexpr (NotMatchedYet<decltype(out)>) {
+        if constexpr (!out) {
             return out.rebind(rebind_text(t, out.value));
         } else {
             return out.rebind(update_text(t, *this, out.value));
@@ -240,6 +288,7 @@ CONCEPT(FacadeRule)
 (struct name { \
     REPRESENTS(Rule) \
     static constexpr auto impl = (p); \
+    constexpr decltype(auto) operator()(RuleFailedOutput auto const& nmy) const { return impl(nmy); } \
     constexpr RuleOutput auto operator()(RuleInput auto t) const { return impl(t); } \
     constexpr auto operator()(RuleFixedInput auto& t) const { return impl(t); } \
 }){}

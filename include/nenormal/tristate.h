@@ -27,11 +27,13 @@ template<class T> struct not_matched_yet {
         return os << "not_matched_yet{" << v.value << "}";
     }
 
+    constexpr operator bool() const { return false; }
+
     // not_matched_yet will be passed to next rule in the sequence
-    constexpr decltype(auto) operator >> (auto&& f) const { return f(value); }
+    constexpr decltype(auto) operator >> (auto&& f) const { return f(*this); }
 
     // not_matched_yet breaks the loop
-    constexpr decltype(auto) commit() const { return matched_final_halted{value}; }
+    constexpr auto commit() const { return matched_final_halted{value}; }
 
     // return Tristate of same kind, with new value
     constexpr auto rebind(auto v) const { return not_matched_yet<decltype(v)>{v}; }
@@ -47,11 +49,14 @@ template<class T> struct matched_regular {
         return os << "matched_regular{" << v.value << "}";
     }
 
+    constexpr operator bool() const { return true; }
+
     // matched_regular breaks the sequence
+    // return by reference to avoid copying
     constexpr decltype(auto) operator >> (auto&& f) const { return *this; }
 
     // matched_regular restarts the loop
-    constexpr decltype(auto) commit() const { return not_matched_yet{value}; }
+    constexpr auto commit() const { return not_matched_yet{value}; }
 
     // return Tristate of same kind, with new value
     constexpr auto rebind(auto v) const { return matched_regular<decltype(v)>{v}; }
@@ -67,7 +72,10 @@ template<class T> struct matched_final {
         return os << "matched_final{" << v.value << "}";
     }
 
+    constexpr operator bool() const { return true; }
+
     // matched_final breaks the sequence
+    // return by reference to avoid copying
     constexpr decltype(auto) operator >> (auto&& f) const { return *this; }
 
     // matched_final breaks the loop
@@ -86,6 +94,8 @@ template<class T> struct matched_final_halted {
     friend std::ostream& operator << (std::ostream& os, matched_final_halted const& v) {
         return os << "matched_halted{" << v.value << "}";
     }
+
+    constexpr operator bool() const { return true; }
 
     // matched_final breaks the sequence
     constexpr decltype(auto) operator >> (auto&& f) const { return *this; }
