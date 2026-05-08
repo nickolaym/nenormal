@@ -85,7 +85,7 @@ enum rule_state_t { regular_state, final_state };
 - параметризованная
   - парой строк search и replace
   - и признаком продолжения/финиша,
-- принимающая строку,
+- принимающая "ещё не найденную" строку `not_matched_yet`,
 - возвращающая успешный результат
   - `matched_regular` если правило обычное
   - `matched_final` если правило финальное
@@ -100,16 +100,22 @@ enum rule_state_t { regular_state, final_state };
 
 Возвращаемый результат `RuleOutput` - это обёртка над `RuleInput`, - одна из структур, образующих семейство. Подробнее см. [TriState](details/tristate.md)
 
+Аргументом является не непосредственно RuleInput, а частный случай RuleOutput - `RuleNotMatchedYetInput` - то есть, `not_matched_yet<T>`, где T - RuleInput.
+
+Подробнее, зачем сделано именно так, - см. [передача аргументов](/details/byref.md)
+
 Поскольку сама функция шаблонная, то, чтобы работать с ней как с полноценной сущностью языка C++,
 она реализована в виде объекта конкретного типа - структуры с шаблонным `operator()`.
 
 Так как любая функция подстановки параметризована строками поиска и замены, то получаем шаблон
 ```cpp
 template<Str auto search, Str auto replace, rule_state_t state> struct rule {
-    constexpr RuleOutput auto operator()(RuleInput auto text) const { ..... }
+    constexpr
+    /*RuleOutput*/ decltype(auto)
+    operator()(RuleNotMatchedYetInputRef auto&& text) const
+    { ..... }
 };
 ```
-
 Поскольку параметры - уже значения времени компиляции, то нет нужды заворачивать их в CtStr.
 
 ### Подпрограммы НАМ-машины
@@ -137,7 +143,7 @@ template<Str auto search, Str auto replace, rule_state_t state> struct rule {
 Из тех же соображений, типы аргумента и результата содержат полиморфные строки, а сама функция - это шаблон структуры
 ```cpp
 template<Rule auto program> struct rule_loop {
-    constexpr RuleOutput operator()(RuleInput auto src) const {.....}
+    constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& src) const {.....}
 };
 ```
 
