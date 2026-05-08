@@ -39,10 +39,14 @@ struct cumulative_effect {
         return cumulative_effect<F, new_acc_type>{f, f(a, i, p, o)};
     }
 
-    constexpr bool operator == (cumulative_effect const& v) const { return a == v.a; }
+    constexpr bool operator == (cumulative_effect const& v) const
+        requires std::equality_comparable<A>
+    { return a == v.a; }
 
     template<class A1>
-    constexpr bool operator == (cumulative_effect<F,A1> const& v) const { return a == v.a; }
+    constexpr bool operator == (cumulative_effect<F,A1> const& v) const
+        requires std::equality_comparable_with<A, A1>
+    { return a == v.a; }
 };
 
 /////////////////////////////////////
@@ -60,9 +64,13 @@ struct augmented_text {
     // so require that A is a value type
     static_assert(!std::is_reference_v<A>);
 
-    constexpr bool operator == (augmented_text const&) const = default;
+    constexpr bool operator == (augmented_text const&) const
+        requires std::equality_comparable<A>
+        = default;
     template<CtStr T1, Augmentation A1>
-    constexpr bool operator == (augmented_text<T1,A1> const& v) const {
+    constexpr bool operator == (augmented_text<T1,A1> const& v) const
+        requires std::equality_comparable_with<A, A1>
+    {
         return text == v.text && aux == v.aux;
     }
 
