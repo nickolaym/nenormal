@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utility.h"
 #include "concepts.h"
 #include "ct.h"
 #include "str.h"
@@ -71,7 +72,7 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
     constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
         MaybeCtStr auto mb = try_substitute(ct_search, ct_replace, extract_text(nmy.value));
         if constexpr (!mb) {
-            return std::forward<decltype(nmy)>(nmy);
+            return FWD(nmy);
         } else {
             if constexpr (state == regular_state) {
                 return matched_regular{update_text(nmy.value, rule{}, mb.value)};
@@ -84,7 +85,7 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
         MaybeCtStr auto mb = try_substitute(ct_search, ct_replace, extract_text(t));
         if constexpr (!mb) {
             // failed
-            return not_matched_yet{std::forward<decltype(t)>(t)};
+            return not_matched_yet{FWD(t)};
         } else {
             if constexpr (state == regular_state) {
                 return matched_regular{update_text(t, rule{}, mb.value)};
@@ -117,10 +118,10 @@ template<Rule auto... ps> struct rules {
     constexpr rules(Rule auto...) {}
 
     constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
-        return (std::forward<decltype(nmy)>(nmy) >> ... >> ps).commit_alts();
+        return (FWD(nmy) >> ... >> ps).commit_alts();
     }
     constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
-        return (not_matched_yet{std::forward<decltype(t)>(t)} >> ... >> ps);
+        return (not_matched_yet{FWD(t)} >> ... >> ps);
     }
     constexpr inplace_state operator()(RuleFixedInput auto& t) const {
         inplace_argument<decltype(t)> a{t}; // reference to input
@@ -137,10 +138,10 @@ template<Rule ...Ps> rules(Ps...) -> rules<Ps{}...>;
 template<> struct rules<> {
     REPRESENTS(Rule)
     constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
-        return std::forward<decltype(nmy)>(nmy);
+        return FWD(nmy);
     }
     constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
-        return not_matched_yet{std::forward<decltype(t)>(t)};
+        return not_matched_yet{FWD(t)};
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
         return k_not_matched_yet;
@@ -153,10 +154,10 @@ template<Rule auto p> struct rule_loop_body {
     REPRESENTS(Rule)
 
     constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
-        return p(std::forward<decltype(nmy)>(nmy)).commit_loop();
+        return p(FWD(nmy)).commit_loop();
     }
     constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
-        return p(std::forward<decltype(t)>(t)).commit_loop();
+        return p(FWD(t)).commit_loop();
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
         inplace_argument<decltype(t)> a{t}; // reference to input
@@ -171,7 +172,7 @@ template<Rule auto p> struct rule_loop {
 
     constexpr auto operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
         constexpr auto body = rule_loop_body<p>{};
-        return (std::forward<decltype(nmy)>(nmy)
+        return (FWD(nmy)
             // unwrap the loop 10 times
             >> body >> body >> body >> body >> body
             >> body >> body >> body >> body >> body
@@ -180,7 +181,7 @@ template<Rule auto p> struct rule_loop {
     }
     constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
         constexpr auto body = rule_loop_body<p>{};
-        return not_matched_yet{std::forward<decltype(t)>(t)}
+        return not_matched_yet{FWD(t)}
             // unwrap the loop 10 times
             >> body >> body >> body >> body >> body
             >> body >> body >> body >> body >> body
@@ -205,7 +206,7 @@ template<Rule auto p> constexpr rule_loop<p> rule_loop_v{};
 
 template<Rule auto m> struct machine_fun {
     constexpr RuleInput auto operator()(RuleInputRef auto&& input) const {
-        return (not_matched_yet{std::forward<decltype(input)>(input)} >> m).value;
+        return (not_matched_yet{FWD(input)} >> m).value;
     }
     constexpr RuleFixedInput auto operator()(RuleFixedInput auto input) const {
         m(input);
@@ -221,16 +222,16 @@ template<Rule auto p> struct hidden_rule {
     constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
         RuleOutput auto out = not_matched_yet{extract_text(nmy.value)} >> p;
         if constexpr (!out.is_matched) {
-            return std::forward<decltype(nmy)>(nmy);
+            return FWD(nmy);
         } else {
-            return out.rebind(rebind_text(std::forward<decltype(nmy)>(nmy).value, out.value));
+            return out.rebind(rebind_text(FWD(nmy).value, out.value));
         }
     }
     constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
         RuleOutput auto out = p(extract_text(t));
         // combine old augmentation with new text,
         // then combine new kind of tristate result with new augmented
-        return out.rebind(rebind_text(std::forward<decltype(t)>(t), out.value));
+        return out.rebind(rebind_text(FWD(t), out.value));
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
         return p(inplace_extract_text(t));
@@ -251,9 +252,9 @@ template<Str auto name, Rule auto p> struct facade_rule {
         // combine old augmentation with new text,
         // then combine new kind of tristate result with new augmented
         if constexpr (!out.is_matched) {
-            return std::forward<decltype(nmy)>(nmy);
+            return FWD(nmy);
         } else {
-            return out.rebind(update_text(std::forward<decltype(nmy)>(nmy).value, *this, out.value));
+            return out.rebind(update_text(FWD(nmy).value, *this, out.value));
         }
     }
     constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
@@ -261,9 +262,9 @@ template<Str auto name, Rule auto p> struct facade_rule {
         // combine old augmentation with new text,
         // then combine new kind of tristate result with new augmented
         if constexpr (!out.is_matched) {
-            return out.rebind(rebind_text(std::forward<decltype(t)>(t), out.value));
+            return out.rebind(rebind_text(FWD(t), out.value));
         } else {
-            return out.rebind(update_text(std::forward<decltype(t)>(t), *this, out.value));
+            return out.rebind(update_text(FWD(t), *this, out.value));
         }
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
@@ -296,7 +297,7 @@ CONCEPT(FacadeRule)
 (struct name { \
     REPRESENTS(Rule) \
     static constexpr auto impl = (p); \
-    constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const { return impl(std::forward<decltype(nmy)>(nmy)); } \
-    constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const { return impl(std::forward<decltype(t)>(t)); } \
+    constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const { return impl(FWD(nmy)); } \
+    constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const { return impl(FWD(t)); } \
     constexpr auto operator()(RuleFixedInput auto& t) const { return impl(t); } \
 }){}
