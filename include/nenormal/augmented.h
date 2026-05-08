@@ -19,9 +19,13 @@ template<class F>
 struct side_effect {
     REPRESENTS(Augmentation)
     F f;
-    constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) const {
+    constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) && {
         f(i, p, o);
         return side_effect{std::move(f)};
+    }
+    constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) const& {
+        f(i, p, o);
+        return side_effect{f};
     }
 
     constexpr bool operator == (side_effect const&) const { return true; }
@@ -33,7 +37,15 @@ struct cumulative_effect {
     F f;
     A a;
 
-    constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) const {
+    constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) && {
+        // moving both f and f(...) is a race condition.
+        // so we must evaluate the result first.
+        auto new_acc = f(std::move(a), i, p, o);
+        using new_acc_type = decltype(new_acc);
+        // CTAD does not work here because cumulative_effect{} corresponds to current
+        return cumulative_effect<F, new_acc_type>{std::move(f), std::move(new_acc)};
+    }
+    constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) const& {
         using new_acc_type = decltype(f(a, i, p, o));
         // CTAD does not work here because cumulative_effect{} corresponds to current
         return cumulative_effect<F, new_acc_type>{f, f(a, i, p, o)};
@@ -74,7 +86,16 @@ struct augmented_text {
         return text == v.text && aux == v.aux;
     }
 
-    constexpr auto update(auto p, CtStr auto new_text) const {
+    constexpr auto update(auto&& p, CtStr auto new_text) && {
+        using new_text_type = decltype(new_text);
+        using new_aux_type = decltype(std::move(aux)(text, p, new_text));
+        // CTAD does not work here because augmented_text{} corresponds to current
+        return augmented_text<new_text_type, new_aux_type>{
+            new_text,
+            std::move(aux)(text, p, new_text),
+        };
+    }
+    constexpr auto update(auto p, CtStr auto new_text) const& {
         using new_text_type = decltype(new_text);
         using new_aux_type = decltype(aux(text, p, new_text));
         // CTAD does not work here because augmented_text{} corresponds to current
@@ -83,7 +104,11 @@ struct augmented_text {
             aux(text, p, new_text),
         };
     }
-    constexpr auto rebind(CtStr auto new_text) const {
+
+    constexpr auto rebind(CtStr auto new_text) && {
+        return augmented_text<decltype(new_text), A>{new_text, std::move(aux)};
+    }
+    constexpr auto rebind(CtStr auto new_text) const& {
         return augmented_text<decltype(new_text), A>{new_text, aux};
     }
 };
