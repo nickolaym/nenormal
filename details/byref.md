@@ -42,7 +42,7 @@ not_matched_yet<T>::operator >> (auto&& f) && {
 - если выполнено - то новое значение нового типа (перемещая туда данные - текст и-или аугментацию).
 
 ```cpp
-auto do_nothing(RuleNotMatchedYetInputRef auto&& t) {
+decltype(auto) do_nothing(RuleNotMatchedYetInputRef auto&& t) {
     return std::move(t); // not_matched_yet<T>&&
 }
 auto do_something(RuleNotMatchedYetInputRef auto&& t) {
