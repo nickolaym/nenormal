@@ -95,6 +95,60 @@ TEST(augmented, pure_cumulative_effect) {
     static_assert(r.aux.a == 2);
 }
 
+TEST(augmented_move, empty) {
+    auto a = augmented_text{"a"_cts, empty{}};
+
+    auto b = std::move(a).update("rule goes here", "b"_cts);
+    static_assert(b.text == "b"_cts);
+
+    auto c = std::move(b).rebind("c"_cts);
+    static_assert(c.text == "c"_cts);
+}
+
+TEST(augmented_move, side_effect) {
+    struct moveable {
+        bool valid = false;
+        moveable(bool v) : valid{v} {}
+        moveable(moveable&& other) : valid{std::exchange(other.valid, false)} {}
+    };
+    auto f = [m=moveable(true)](auto...) {
+        EXPECT_TRUE(m.valid);
+    };
+
+    auto a = augmented_text{"a"_cts, side_effect{std::move(f)}};
+
+    auto b = std::move(a).update("rule goes here", "b"_cts);
+    static_assert(b.text == "b"_cts);
+
+    auto c = std::move(b).rebind("c"_cts);
+    static_assert(c.text == "c"_cts);
+}
+
+
+TEST(augmented_move, cumulative_effect) {
+    struct moveable {
+        bool valid = false;
+        constexpr moveable(bool v) : valid{v} {}
+        constexpr moveable(moveable&& other) : valid{std::exchange(other.valid, false)} {}
+    };
+    auto f = [m=moveable(true)](moveable a, auto...) {
+        EXPECT_TRUE(a.valid);
+        EXPECT_TRUE(m.valid);
+        return std::move(a);
+    };
+
+    auto a = augmented_text{"a"_cts, cumulative_effect{std::move(f), moveable{true}}};
+
+    auto b = std::move(a).update("rule goes here", "b"_cts);
+    static_assert(b.text == "b"_cts);
+    EXPECT_TRUE(b.aux.a.valid);
+
+    auto c = std::move(b).rebind("c"_cts);
+    static_assert(c.text == "c"_cts);
+    EXPECT_FALSE(b.aux.a.valid);
+    EXPECT_TRUE(c.aux.a.valid);
+}
+
 /// inplace
 
 TEST(inplace_augmented, empty) {

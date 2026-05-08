@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utility.h"
 #include "concepts.h"
 #include "ct.h"
 #include "str.h"
@@ -19,6 +20,10 @@
 
 // input: just CtStr
 template<class T> concept RuleInput = CtStr<T> || Augmented<T>;
+template<class R> concept RuleInputRef = RuleInput<std::remove_cvref_t<R>>;
+
+template<class T> concept RuleNotMatchedYetInput = NotMatchedYet<T> && RuleInput<typename T::type>;
+template<class R> concept RuleNotMatchedYetInputRef = RuleNotMatchedYetInput<std::remove_cvref_t<R>>;
 
 template<class T> concept RuleFixedInput = std::same_as<T, std::string> || InplaceAugmented<T>;
 template<class T> concept RuleInplaceArg = Inplace<T> && RuleFixedInput<typename T::type>;
@@ -64,17 +69,28 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
         return os;
     }
 
-    constexpr RuleOutput auto operator()(RuleInput auto t) const {
+    constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
+        MaybeCtStr auto mb = try_substitute(ct_search, ct_replace, extract_text(nmy.value));
+        if constexpr (!mb) {
+            return FWD(nmy);
+        } else {
+            if constexpr (state == regular_state) {
+                return matched_regular{update_text(nmy.value, rule{}, mb.value)};
+            } else {
+                return matched_final{update_text(nmy.value, rule{}, mb.value)};
+            }
+        }
+    }
+    constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
         MaybeCtStr auto mb = try_substitute(ct_search, ct_replace, extract_text(t));
         if constexpr (!mb) {
             // failed
-            return not_matched_yet{t};
+            return not_matched_yet{FWD(t)};
         } else {
-            RuleInput auto u = update_text(t, rule{}, mb.value);
             if constexpr (state == regular_state) {
-                return matched_regular{u};
+                return matched_regular{update_text(t, rule{}, mb.value)};
             } else {
-                return matched_final{u};
+                return matched_final{update_text(t, rule{}, mb.value)};
             }
         }
     }
@@ -101,8 +117,11 @@ template<Rule auto... ps> struct rules {
     constexpr rules() = default;
     constexpr rules(Rule auto...) {}
 
-    constexpr RuleOutput auto operator()(RuleInput auto t) const {
-        return (not_matched_yet{t} >> ... >> ps);
+    constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
+        return (FWD(nmy) >> ... >> ps).commit_alts();
+    }
+    constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
+        return (not_matched_yet{FWD(t)} >> ... >> ps);
     }
     constexpr inplace_state operator()(RuleFixedInput auto& t) const {
         inplace_argument<decltype(t)> a{t}; // reference to input
@@ -118,7 +137,12 @@ template<Rule ...Ps> rules(Ps...) -> rules<Ps{}...>;
 
 template<> struct rules<> {
     REPRESENTS(Rule)
-    constexpr RuleOutput auto operator()(RuleInput auto t) const { return not_matched_yet{t}; }
+    constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
+        return FWD(nmy);
+    }
+    constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
+        return not_matched_yet{FWD(t)};
+    }
     constexpr auto operator()(RuleFixedInput auto& t) const {
         return k_not_matched_yet;
     }
@@ -129,8 +153,11 @@ template<> struct rules<> {
 template<Rule auto p> struct rule_loop_body {
     REPRESENTS(Rule)
 
-    constexpr RuleOutput auto operator()(RuleInput auto t) const {
-        return p(t).commit();
+    constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
+        return p(FWD(nmy)).commit_loop();
+    }
+    constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
+        return p(FWD(t)).commit_loop();
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
         inplace_argument<decltype(t)> a{t}; // reference to input
@@ -143,9 +170,18 @@ template<Rule auto p> struct rule_loop_body {
 template<Rule auto p> struct rule_loop {
     REPRESENTS(Rule)
 
-    constexpr RuleOutput auto operator()(RuleInput auto t) const {
+    constexpr auto operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
         constexpr auto body = rule_loop_body<p>{};
-        return not_matched_yet{t}
+        return (FWD(nmy)
+            // unwrap the loop 10 times
+            >> body >> body >> body >> body >> body
+            >> body >> body >> body >> body >> body
+            >> rule_loop{}
+        ).commit_alts();
+    }
+    constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
+        constexpr auto body = rule_loop_body<p>{};
+        return not_matched_yet{FWD(t)}
             // unwrap the loop 10 times
             >> body >> body >> body >> body >> body
             >> body >> body >> body >> body >> body
@@ -169,8 +205,8 @@ template<Rule auto p> constexpr rule_loop<p> rule_loop_v{};
 // about regular / final state.
 
 template<Rule auto m> struct machine_fun {
-    constexpr RuleInput auto operator()(RuleInput auto input) const {
-        return m(input).value;
+    constexpr RuleInput auto operator()(RuleInputRef auto&& input) const {
+        return (not_matched_yet{FWD(input)} >> m).value;
     }
     constexpr RuleFixedInput auto operator()(RuleFixedInput auto input) const {
         m(input);
@@ -183,11 +219,19 @@ template<Rule auto m> constexpr machine_fun<m> machine_fun_v{};
 
 template<Rule auto p> struct hidden_rule {
     REPRESENTS(Rule)
-    constexpr RuleOutput auto operator()(RuleInput auto t) const {
+    constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
+        RuleOutput auto out = not_matched_yet{extract_text(nmy.value)} >> p;
+        if constexpr (!out.is_matched) {
+            return FWD(nmy);
+        } else {
+            return out.rebind(rebind_text(FWD(nmy).value, out.value));
+        }
+    }
+    constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
         RuleOutput auto out = p(extract_text(t));
         // combine old augmentation with new text,
         // then combine new kind of tristate result with new augmented
-        return out.rebind(rebind_text(t, out.value));
+        return out.rebind(rebind_text(FWD(t), out.value));
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
         return p(inplace_extract_text(t));
@@ -200,14 +244,27 @@ template<Str auto name, Rule auto p> struct facade_rule {
     REPRESENTS(FacadeRule)
 
     friend std::ostream& operator << (std::ostream& os, facade_rule const& v) { return os << name.view(); }
-    constexpr RuleOutput auto operator()(RuleInput auto t) const {
+
+    constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
+        // host rebound arg in a scope-persistent storage
+        RuleFailedOutput auto bare_nmy = not_matched_yet{extract_text(nmy.value)};
+        RuleOutput auto const& out = p(bare_nmy);
+        // combine old augmentation with new text,
+        // then combine new kind of tristate result with new augmented
+        if constexpr (!out.is_matched) {
+            return FWD(nmy);
+        } else {
+            return out.rebind(update_text(FWD(nmy).value, *this, out.value));
+        }
+    }
+    constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
         RuleOutput auto out = p(extract_text(t));
         // combine old augmentation with new text,
         // then combine new kind of tristate result with new augmented
-        if constexpr (NotMatchedYet<decltype(out)>) {
-            return out.rebind(rebind_text(t, out.value));
+        if constexpr (!out.is_matched) {
+            return out.rebind(rebind_text(FWD(t), out.value));
         } else {
-            return out.rebind(update_text(t, *this, out.value));
+            return out.rebind(update_text(FWD(t), *this, out.value));
         }
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
@@ -240,6 +297,7 @@ CONCEPT(FacadeRule)
 (struct name { \
     REPRESENTS(Rule) \
     static constexpr auto impl = (p); \
-    constexpr RuleOutput auto operator()(RuleInput auto t) const { return impl(t); } \
+    constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const { return impl(FWD(nmy)); } \
+    constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const { return impl(FWD(t)); } \
     constexpr auto operator()(RuleFixedInput auto& t) const { return impl(t); } \
 }){}
