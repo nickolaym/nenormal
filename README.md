@@ -13,6 +13,7 @@
 - [Примеры](examples/README.md)
 - [Троичная монада](details/tristate.md)
 - [Аугментация](details/augmentation.md)
+- [Передача значений](details/byref.md)
 
 ## Машина Нормального Алгорифма Маркова (НАМ-машина)
 
