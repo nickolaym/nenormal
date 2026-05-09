@@ -20,9 +20,17 @@ struct inplace_side_effect {
 template<class F, class A>
 struct inplace_cumulative_effect {
     REPRESENTS(InplaceAugmentation);
-    F f;
+    F f; // A f(A&& a, auto p, std::string const& t)
     A a;
     void operator()(auto p, std::string const& t) { a = f(a, p, t); }
+};
+
+template<class F, class A>
+struct inplace_modification_effect {
+    REPRESENTS(InplaceAugmentation);
+    F f; // void f(A& a, auto p, std::string const& t)
+    A a;
+    void operator()(auto p, std::string const& t) { f(a, p, t); }
 };
 
 CONCEPT(InplaceAugmented);

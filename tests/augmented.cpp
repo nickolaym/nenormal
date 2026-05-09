@@ -183,3 +183,14 @@ TEST(inplace_augmented, cumulative_effect) {
     EXPECT_EQ(t.text, "foo"); // stays unchanged
     EXPECT_EQ(t.aux.a, 1);
 }
+
+TEST(inplace_augmented, modification_effect) {
+    auto f = [](int& counter, auto p, std::string const& t) {
+        ++counter;
+    };
+    inplace_augmented_text t{"foo", inplace_modification_effect{f, 0}};
+    EXPECT_EQ(&inplace_extract_text(t), &t.text);
+    inplace_update_text(t, "rule goes here");
+    EXPECT_EQ(t.text, "foo"); // stays unchanged
+    EXPECT_EQ(t.aux.a, 1);
+}

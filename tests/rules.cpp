@@ -533,16 +533,17 @@ TEST(augmented, spurious_cctors) {
 
 /// inplace
 
-constexpr auto run_inplace(std::string t, auto&& p) {
-    inplace_argument<std::string> a{std::move(t)};
-    a.updated_by(p);
-    return a;
-}
-
 TEST(inplace, simple_check) {
     constexpr auto p = RULES(RULE("a","b"), FINAL_RULE("c","d"), RULE("e","f"));
     constexpr auto rl = RULE_LOOP(p);
     constexpr auto m = MACHINE_FROM_RULE(rl);
+
+    // pure input - rvalue return, for inline EXPECTs
+    constexpr auto run_inplace = [](std::string t, auto&& p) {
+        inplace_argument<std::string> a{std::move(t)};
+        a.updated_by(p);
+        return a;
+    };
 
     // single step
     EXPECT_EQ(
@@ -605,4 +606,71 @@ TEST(inplace, simple_check) {
         m(std::string{"aec"}),
         "bed"
     );
+}
+
+TEST(inplace, empty) {
+    constexpr auto m = MACHINE(RULES(RULE("a","b"), FINAL_RULE("c","d"), RULE("e","f")));
+    auto result = m(inplace_augmented_text{"aec", inplace_empty{}});
+    EXPECT_EQ(result.text, "bed");
+}
+
+TEST(inplace, side_effect) {
+    constexpr auto m = MACHINE(RULES(RULE("a","b"), FINAL_RULE("c","d"), RULE("e","f")));
+    int counter = 0;
+    auto result = m(inplace_augmented_text{
+        "aec",
+        inplace_side_effect{[&](auto, std::string const&) { ++counter; }}
+    });
+    EXPECT_EQ(result.text, "bed");
+    EXPECT_EQ(counter, 2);
+}
+
+TEST(inplace, cumulative_effect) {
+    constexpr auto m = MACHINE(RULES(RULE("a","b"), FINAL_RULE("c","d"), RULE("e","f")));
+    auto result = m(inplace_augmented_text{
+        "aec",
+        inplace_cumulative_effect{[](int c, auto, std::string const&) { return c + 1; }, 0}
+    });
+    EXPECT_EQ(result.text, "bed");
+    EXPECT_EQ(result.aux.a, 2);
+}
+
+TEST(inplace, modification_effect) {
+    constexpr auto m = MACHINE(RULES(RULE("a","b"), FINAL_RULE("c","d"), RULE("e","f")));
+    auto result = m(inplace_augmented_text{
+        "aec",
+        inplace_modification_effect{[](int& c, auto, std::string const&) { ++c; }, 0}
+    });
+    EXPECT_EQ(result.text, "bed");
+    EXPECT_EQ(result.aux.a, 2);
+}
+
+TEST(inplace, hidden_rule) {
+    // hidden_rule does not call the augmentation callback
+    constexpr auto m = MACHINE(RULES(
+        HIDDEN_RULE(RULE("a","b")),
+        HIDDEN_RULE(FINAL_RULE("c","d")),
+        HIDDEN_RULE(RULE("e","f"))
+    ));
+    auto result = m(inplace_augmented_text{
+        "aec",
+        inplace_modification_effect{[](int& c, auto, std::string const&) { ++c; }, 0}
+    });
+    EXPECT_EQ(result.text, "bed");
+    EXPECT_EQ(result.aux.a, 0);
+}
+
+TEST(inplace, facade_rule) {
+    // facade_rule calls the callback with the facade_rule itself
+    constexpr auto m = MACHINE(RULES(
+        FACADE_RULE("r1", RULE("a","b")),
+        FACADE_RULE("r2", FINAL_RULE("c","d")),
+        FACADE_RULE("r3", RULE("e","f"))
+    ));
+    auto result = m(inplace_augmented_text{
+        "aec",
+        inplace_modification_effect{[](int& c, FacadeRule auto rule, std::string const&) { ++c; }, 0}
+    });
+    EXPECT_EQ(result.text, "bed");
+    EXPECT_EQ(result.aux.a, 2);
 }
