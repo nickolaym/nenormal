@@ -1,7 +1,7 @@
 #include "./program.h"
 #include <gtest/gtest.h>
 
-namespace nn {
+namespace examples::collatz_unary {
 
 TEST(collatz, stop_cases) {
     static_assert(machine(CTSTR("")) == CTSTR(""));
@@ -17,7 +17,7 @@ TEST(collatz, case_2) {
 }
 
 TEST(collatz, case_3) {
-    constexpr auto step = [](CtStr auto s) { return program(s).value; };
+    constexpr auto step = [](::nn::CtStr auto s) { return program(s).value; };
 
     // 3 -> 3x+1 = 10
     constexpr auto t0 = CTSTR("<111>");
@@ -34,17 +34,17 @@ TEST(collatz, case_3) {
 }
 
 TEST(collatz, runtime) {
-    auto print_text = [](CtStr auto t) {
+    auto print_text = [](::nn::CtStr auto t) {
         std::string_view v = t.value.view();
         bool milestone = !v.starts_with("<:");
         std::cout << (milestone ? "- " : "  ") << v << std::endl;
     };
-    auto trace = [&](CtStr auto src, SingleRule auto p, CtStr auto dst) {
+    auto trace = [&](::nn::CtStr auto src, ::nn::SingleRule auto p, ::nn::CtStr auto dst) {
         print_text(dst);
     };
-    auto show = [&](CtStr auto src) {
+    auto show = [&](::nn::CtStr auto src) {
         print_text(src);
-        auto dst = printable_machine(augmented_text{src, side_effect{trace}}).text;
+        auto dst = printable_machine(::nn::augmented_text{src, ::nn::side_effect{trace}}).text;
         std::string_view v = dst.value.view();
         std::cout << v.size() << " iterations" << std::endl;
         std::cout << std::endl;
@@ -56,4 +56,4 @@ TEST(collatz, runtime) {
     show(CTSTR("<1111111>")); // 7 - 22 - 11 - 34 - 17 - 52 - 13 - 40 - 20 - 10 - 5 - 16 - 8 - 4 - 2 - 1
 }
 
-} // namespace nn
+} // namespace examples::collatz_unary

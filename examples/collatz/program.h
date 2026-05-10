@@ -2,7 +2,7 @@
 
 #include "nenormal/nenormal.h"
 
-namespace nn {
+namespace examples::collatz_unary {
 
 // input: "<111...11>" with N 1's
 // output: "<1>2323232" - it stops with N = 1, logging what it did.
@@ -64,4 +64,4 @@ constexpr auto printable_program = RULES(
 
 constexpr auto printable_machine = MACHINE(printable_program);
 
-} // namespace nn
+} // namespace examples::collatz_unary
