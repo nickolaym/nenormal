@@ -2,8 +2,6 @@
 
 #include "nenormal/nenormal.h"
 
-namespace nn {
-
 TEST(HelloWorld, HelloWorld) {
     constexpr auto text = CTSTR("hello, world!");
     constexpr auto program = RULES(
@@ -15,5 +13,3 @@ TEST(HelloWorld, HelloWorld) {
     std::cout << text << " -> " << result << std::endl;
     static_assert(result == CTSTR("privet, mir!"));
 }
-
-} // namespace nn
