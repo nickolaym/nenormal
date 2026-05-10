@@ -1,6 +1,8 @@
 #include "./program.h"
 #include <gtest/gtest.h>
 
+namespace nn {
+
 TEST(collatz, stop_cases) {
     static_assert(machine(CTSTR("")) == CTSTR(""));
     static_assert(machine(CTSTR("<1>")) == CTSTR(""));
@@ -54,3 +56,4 @@ TEST(collatz, runtime) {
     show(CTSTR("<1111111>")); // 7 - 22 - 11 - 34 - 17 - 52 - 13 - 40 - 20 - 10 - 5 - 16 - 8 - 4 - 2 - 1
 }
 
+} // namespace nn

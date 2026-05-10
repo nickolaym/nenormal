@@ -2,6 +2,8 @@
 
 #include "./program.h"
 
+namespace nn {
+
 TEST(arithmetics, one_digit) {
     static_assert(machine(CTSTR("1+1=")) == CTSTR("2"));
     static_assert(machine(CTSTR("2+3=")) == CTSTR("5"));
@@ -23,3 +25,5 @@ TEST(arithmetics, big_nums) {
     static_assert(machine(CTSTR("12345+67890=")) == CTSTR("80235"));
     static_assert(machine(CTSTR("98765+66666=")) == CTSTR("165431"));
 }
+
+} // namespace nn

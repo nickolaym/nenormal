@@ -2,6 +2,8 @@
 
 #include "nenormal/nenormal.h"
 
+namespace nn {
+
 // input:  "X+Y=" where X and Y are nonnegative decimal numbers
 // output: "Z" where Z is nonnegative decimal number (their sum)
 
@@ -305,3 +307,5 @@ constexpr auto program = NAMED_RULE(program_t, RULES(
 ));
 
 constexpr auto machine = MACHINE(program);
+
+} // namespace nn

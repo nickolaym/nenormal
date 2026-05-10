@@ -4,6 +4,8 @@
 #include "compose.h"
 #include <ostream>
 
+namespace nn {
+
 CONCEPT(NotMatchedYet);
 CONCEPT(MatchedRegular);
 CONCEPT(MatchedFinal);
@@ -130,3 +132,5 @@ template<class T> struct matched_final_halted {
     // return Tristate of same kind, with new value
     constexpr auto rebind(auto v) const { return matched_final_halted<decltype(v)>{v}; }
 };
+
+} // namespace nn

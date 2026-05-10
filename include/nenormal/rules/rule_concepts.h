@@ -2,6 +2,8 @@
 
 #include "arg_types.h"
 
+namespace nn {
+
 CONCEPT(Rule)
 
 template<class T> concept RuleRequires =
@@ -23,3 +25,5 @@ template<class T> concept RuleRequires =
 
 CONCEPT(SingleRule)
 CONCEPT(FacadeRule)
+
+} // namespace nn

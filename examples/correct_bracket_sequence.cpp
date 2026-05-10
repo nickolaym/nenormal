@@ -2,6 +2,8 @@
 
 #include "nenormal/nenormal.h"
 
+namespace nn {
+
 constexpr auto reduce_pairs = NAMED_RULE(reduce_pairs, RULES(
     RULE("()", ""),
     RULE("[]", ""),
@@ -209,3 +211,5 @@ TEST(correct_bracket_sequence, alternating_patterns) {
     static_assert(machine(")()("_cts) == error_str);
     static_assert(machine("()())"_cts) == error_str);
 }
+
+} // namespace nn

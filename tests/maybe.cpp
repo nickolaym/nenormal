@@ -3,6 +3,8 @@
 #include <sstream>
 #include <string>
 
+namespace nn {
+
 constexpr auto undefined = [](auto... args) {
     static_assert(sizeof...(args) < 0);
 };
@@ -32,3 +34,5 @@ TEST(maybe, stringize) {
     EXPECT_EQ(str(nothing{}), "nothing");
     EXPECT_EQ(str(just{123}), "just{123}");
 }
+
+} // namespace nn

@@ -3,6 +3,8 @@
 #include "concepts.h"
 #include <iostream>
 
+namespace nn {
+
 // monad Either
 
 CONCEPT(Left); // stops a chain
@@ -65,3 +67,5 @@ constexpr auto right = []<class T>(T t) { return right_type<T>{t}; };
 
 // deconstructor of Either (left only, because right values are temporary)
 constexpr auto fromLeft(Left auto lt) { return lt.value; }
+
+} // namespace nn

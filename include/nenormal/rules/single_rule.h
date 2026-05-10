@@ -4,9 +4,10 @@
 #include "../utility.h"
 #include "../substitute.h"
 
-
 #include <iostream>
 #include <iomanip>
+
+namespace nn {
 
 // single rule is a primary element of the NAM.
 // it matches and modifies the text state of the NAM-machine.
@@ -87,3 +88,5 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
 };
 
 template<Str auto s, Str auto r, rule_state_t state> constexpr rule<s, r, state> rule_v{};
+
+} // namespace nn

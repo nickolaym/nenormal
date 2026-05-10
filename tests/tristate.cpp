@@ -3,6 +3,8 @@
 #include "nenormal/str.h"
 #include <gtest/gtest.h>
 
+namespace nn {
+
 constexpr auto mismatch    = [](auto&& x) constexpr -> decltype(auto) { return std::forward<decltype(x)>(x); };
 constexpr auto regular_inc = [](auto&& x) constexpr { return matched_regular{x.value + 1}; };
 constexpr auto final_inc   = [](auto&& x) constexpr { return matched_final{x.value + 10}; };
@@ -158,3 +160,5 @@ TEST(tristate_inplace, alternatives) {
     EXPECT_EQ(run_inplace(z, inplace_mismatch, inplace_regular_inc, inplace_regular_inc), inplace_matched_regular(1));
     EXPECT_EQ(run_inplace(z, inplace_mismatch, inplace_final_inc, inplace_regular_inc), inplace_matched_final(10));
 }
+
+} // namespace nn

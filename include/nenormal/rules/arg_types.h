@@ -8,6 +8,8 @@
 #include "../inplace/inplace_augmented.h"
 #include "../inplace/inplace_tristate.h"
 
+namespace nn {
+
 // naming conventions
 // SomeConceptName corresponds to a value type
 // SomeConceptNameRef is an universal reference,
@@ -36,3 +38,5 @@ template<class T> concept RuleFailedOutput = RuleOutput<T> && NotMatchedYet<T>;
 
 template<class T> concept RuleFixedInput = std::same_as<T, std::string> || InplaceAugmented<T>;
 template<class T> concept RuleInplaceArg = Inplace<T> && RuleFixedInput<typename T::type>;
+
+} // namespace nn

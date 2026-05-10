@@ -2,6 +2,8 @@
 #include <gtest/gtest.h>
 #include "./utils.h"
 
+namespace nn {
+
 TEST(str, compile_time_properties) {
     constexpr Str auto s = str{"abc"};
     Str auto const& ref = s;
@@ -93,3 +95,5 @@ TEST(ct_str, compile_time) {
 TEST(ct_str, literal) {
     static_assert("abc"_cts == ct<str{"abc"}>{});
 }
+
+} // namespace nn

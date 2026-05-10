@@ -3,6 +3,8 @@
 #include "nenormal/compose.h"
 #include "nenormal/ct.h"
 
+namespace nn {
+
 template<int D> struct digit_t {
     constexpr auto operator()(arg<int> ax) const { return arg{ax.value * 10 + D}; }
 };
@@ -81,3 +83,5 @@ TEST(compose, endless) {
 
     static_assert(arg{ctv<5'000>} >> extending_endless_loop{countdown} == stop{0});
 }
+
+} // namespace nn

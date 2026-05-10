@@ -3,6 +3,8 @@
 #include "rule_concepts.h"
 #include "../utility.h"
 
+namespace nn {
+
 // rule loop repeatedly applies its body until reached some final state.
 // to provide that, special wrapper rule_loop_body translates result of nested rule:
 // - not_matched_yet - to matched_final_halted (to prevent endless loop)
@@ -61,3 +63,5 @@ template<Rule auto p> struct rule_loop {
 };
 
 template<Rule auto p> constexpr rule_loop<p> rule_loop_v{};
+
+} // namespace nn

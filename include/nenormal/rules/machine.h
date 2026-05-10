@@ -2,6 +2,8 @@
 
 #include "rule_concepts.h"
 
+namespace nn {
+
 // machine is a function string -> string,
 // without technical details about regular / final state.
 // it just puts data into Tristate monad, runs it there, and takes result back.
@@ -21,3 +23,5 @@ template<Rule auto p> struct machine_fun {
 };
 
 template<Rule auto m> constexpr machine_fun<m> machine_fun_v{};
+
+} // namespace nn

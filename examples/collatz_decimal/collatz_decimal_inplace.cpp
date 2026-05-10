@@ -1,6 +1,8 @@
 #include "program_decimal.h"
 #include <gtest/gtest.h>
 
+namespace nn {
+
 TEST(inplace, complete_run) {
     constexpr auto m = MACHINE(program);
 
@@ -20,3 +22,5 @@ TEST(inplace, complete_run) {
         run(t);
     }
 }
+
+} // namespace nn

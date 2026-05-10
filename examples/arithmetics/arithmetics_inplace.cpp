@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "./program.h"
 
+namespace nn {
+
 TEST(arithmetics, inplace) {
     auto q = [](const std::string& s) { return std::quoted(s); };
     auto show = [&](const std::string& src) {
@@ -38,3 +40,5 @@ TEST(arithmetics, inplace) {
     show("12345+67890=");
     show("98765+66666=");
 }
+
+} // namespace nn

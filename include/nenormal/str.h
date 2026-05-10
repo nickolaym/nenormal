@@ -7,6 +7,8 @@
 #include <iostream>
 #include <iomanip>
 
+namespace nn {
+
 template<size_t N> using charbuf = char[N];
 
 template<size_t N> struct str {
@@ -46,3 +48,5 @@ template<class T> concept CtStr = Ct<T> && Str<typename T::type>;
 // string literals
 template<str s> constexpr auto operator""_ss() { return s; }
 template<str s> constexpr auto operator""_cts() { return ct<s>{}; }
+
+} // namespace nn

@@ -2,6 +2,8 @@
 
 #include "rule_concepts.h"
 
+namespace nn {
+
 // hidden_rule wrapper hides nested rule from augmentation.
 // nested rule deals with bare string, and the result mixes with old augmentation data.
 // this allows hide intermediate iterations of given NAM program off the view.
@@ -27,4 +29,7 @@ template<Rule auto p> struct hidden_rule {
         return p(inplace_extract_text(t));
     }
 };
+
 template<Rule auto p> constexpr hidden_rule<p> hidden_rule_v{};
+
+} // namespace nn

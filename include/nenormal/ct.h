@@ -5,6 +5,8 @@
 #include "concepts.h"
 #include <iostream>
 
+namespace nn {
+
 template<auto V> struct ct {
     using type = std::remove_const_t<decltype(V)>;
     static constexpr auto value = V;
@@ -21,3 +23,5 @@ CONCEPT(Ct)
 template<class T, class U> concept CtOf = Ct<T> && std::same_as<typename T::type, U>;
 
 template<auto V> constexpr auto ctv = ct<V>{};
+
+} // namespace nn

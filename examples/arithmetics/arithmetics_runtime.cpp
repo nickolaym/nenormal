@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "./program.h"
 
+namespace nn {
+
 TEST(arithmetics, runtime) {
     auto q = [](CtStr auto cts) { return std::quoted(cts.value.view()); };
     auto show = [&](CtStr auto src) {
@@ -33,3 +35,5 @@ TEST(arithmetics, runtime) {
     show(CTSTR("12345+67890="));
     show(CTSTR("98765+66666="));
 }
+
+} // namespace nn

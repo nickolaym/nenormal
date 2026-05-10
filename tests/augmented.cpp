@@ -2,6 +2,8 @@
 #include "nenormal/inplace/inplace_augmented.h"
 #include <gtest/gtest.h>
 
+namespace nn {
+
 template<class T> struct foo {
     T t;
     auto rebind(auto u) const { return foo<decltype(u)>{u}; }
@@ -194,3 +196,5 @@ TEST(inplace_augmented, modification_effect) {
     EXPECT_EQ(t.text, "foo"); // stays unchanged
     EXPECT_EQ(t.aux.a, 1);
 }
+
+} // namespace nn

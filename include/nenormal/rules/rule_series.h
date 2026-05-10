@@ -3,6 +3,8 @@
 #include "rule_concepts.h"
 #include "../utility.h"
 
+namespace nn {
+
 // series of rules is a sequence of alternatives
 // it takes first applicable rule and applies it
 
@@ -49,3 +51,5 @@ template<> struct rules<> {
 // (check out the trailing comma)
 
 template<Rule ...Ps> rules(Ps...) -> rules<Ps{}...>;
+
+} // namespace nn

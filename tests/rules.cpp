@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "nenormal/nenormal.h"
 
+namespace nn {
+
 #define NOT_MATCHED(s) (not_matched_yet{CTSTR(s)})
 #define REGULAR(s) (matched_regular{CTSTR(s)})
 #define FINAL(s) (matched_final{CTSTR(s)})
@@ -674,3 +676,5 @@ TEST(inplace, facade_rule) {
     EXPECT_EQ(result.text, "bed");
     EXPECT_EQ(result.aux.a, 2);
 }
+
+} // namespace nn

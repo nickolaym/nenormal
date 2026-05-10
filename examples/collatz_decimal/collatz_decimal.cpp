@@ -1,6 +1,8 @@
 #include "program_decimal.h"
 #include <gtest/gtest.h>
 
+namespace nn {
+
 constexpr auto print_text = [](CtStr auto text) {
     std::cout << "- " << text.value.view() << std::endl;
 };
@@ -145,3 +147,5 @@ TEST(sequence, complete_run) {
     EXPECT_EQ(show(prg, CTSTR("<3>")), CTSTR("7")); // 3-10-5-16-8-4-1
     EXPECT_EQ(show(prg, CTSTR("<7>")), CTSTR("16")); // 7-22-11-34-17-52-13-40-20-10-5-16-8-4-2-1
 }
+
+} // namespace nn
