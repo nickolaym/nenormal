@@ -2,8 +2,6 @@
 
 #include "nenormal/nenormal.h"
 
-namespace nn {
-
 using namespace nn::literals;
 
 constexpr auto reduce_pairs = NAMED_RULE(reduce_pairs, RULES(
@@ -33,7 +31,7 @@ constexpr auto program = NAMED_RULE(program, RULES(
     error_message,
     FINAL_RULE("-", "-"), // for test purposes
     ok_message,
-    rules<>{}
+    RULES()
 ));
 
 constexpr auto machine = MACHINE(program);
@@ -42,8 +40,8 @@ constexpr auto ok_str = "OK"_cts;
 constexpr auto error_str = "ERROR"_cts;
 
 TEST(program, final_step) {
-    static_assert(program(""_cts) == matched_final{ok_str});
-    static_assert(program("_"_cts) == matched_final{error_str});
+    static_assert(program(""_cts) == ::nn::matched_final{ok_str});
+    static_assert(program("_"_cts) == ::nn::matched_final{error_str});
 }
 
 // note that '-' does not belong to the domain of the program.
@@ -213,5 +211,3 @@ TEST(correct_bracket_sequence, alternating_patterns) {
     static_assert(machine(")()("_cts) == error_str);
     static_assert(machine("()())"_cts) == error_str);
 }
-
-} // namespace nn
