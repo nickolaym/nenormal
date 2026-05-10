@@ -39,6 +39,18 @@ add_test_executable(test_substitute tests/substitute.cpp)
 add_test_executable(test_either tests/either.cpp)
 add_test_executable(test_tristate tests/tristate.cpp)
 
+add_custom_target(unittests
+    DEPENDS
+        test_str
+        test_augmented
+        test_compose
+        test_rules
+        test_maybe
+        test_substitute
+        test_either
+        test_tristate
+)
+
 # test examples
 add_test_executable(test_hello_world examples/hello_world.cpp)
 add_test_executable(test_correct_bracket_sequence examples/correct_bracket_sequence.cpp)
@@ -47,8 +59,34 @@ add_test_executable(test_arithmetics examples/arithmetics/arithmetics.cpp)
 add_test_executable(test_arithmetics_runtime examples/arithmetics/arithmetics_runtime.cpp)
 add_test_executable(test_arithmetics_inplace examples/arithmetics/arithmetics_inplace.cpp)
 
+add_custom_target(arithmetics_all
+    DEPENDS
+        test_arithmetics
+        test_arithmetics_runtime
+        test_arithmetics_inplace
+)
+
 add_test_executable(test_collatz examples/collatz/collatz.cpp)
 add_test_executable(test_collatz_decimal examples/collatz_decimal/collatz_decimal.cpp)
 add_test_executable(test_collatz_decimal_inplace examples/collatz_decimal/collatz_decimal_inplace.cpp)
 
+add_custom_target(collatz_decimal_all
+    DEPENDS
+        test_collatz_decimal
+        test_collatz_decimal_inplace
+)
+
+add_custom_target(examples
+    DEPENDS
+        test_hello_world
+        test_correct_bracket_sequence
+        test_arithmetics
+        test_arithmetics_runtime
+        test_arithmetics_inplace
+        test_collatz
+        test_collatz_decimal
+        test_collatz_decimal_inplace
+)
+
+# experiments
 add_test_executable(test_monadic experimental/monadic.cpp)
