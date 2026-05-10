@@ -3,6 +3,8 @@
 
 namespace nn {
 
+using namespace nn::literals;
+
 // ad-hoc stateful:
 // extract_text(Stateful) -> Str
 // update_text(Stateful, Rule, Str) -> Stateful

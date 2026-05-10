@@ -45,8 +45,17 @@ template<size_t N> str(const charbuf<N>&) -> str<N>;
 CONCEPT(Str)
 template<class T> concept CtStr = Ct<T> && Str<typename T::type>;
 
+namespace literals {
+
 // string literals
 template<str s> constexpr auto operator""_ss() { return s; }
 template<str s> constexpr auto operator""_cts() { return ct<s>{}; }
 
+} // namespace literals
+
 } // namespace nn
+
+// functional form of string literals
+#define STR(s) (::nn::str{s}) // s##_ss
+#define CTSTR(s) (::nn::ct<STR(s)>{}) // s##_cts
+// note that these macros return rvalues, not constexpr lvalues

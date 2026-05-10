@@ -4,6 +4,8 @@
 
 namespace nn {
 
+using namespace nn::literals;
+
 template<class T> struct foo {
     T t;
     auto rebind(auto u) const { return foo<decltype(u)>{u}; }

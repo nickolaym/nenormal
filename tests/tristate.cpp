@@ -5,6 +5,8 @@
 
 namespace nn {
 
+using namespace nn::literals;
+
 constexpr auto mismatch    = [](auto&& x) constexpr -> decltype(auto) { return std::forward<decltype(x)>(x); };
 constexpr auto regular_inc = [](auto&& x) constexpr { return matched_regular{x.value + 1}; };
 constexpr auto final_inc   = [](auto&& x) constexpr { return matched_final{x.value + 10}; };

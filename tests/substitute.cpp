@@ -3,6 +3,8 @@
 
 namespace nn {
 
+using namespace nn::literals;
+
 TEST(substitute, failed) {
     static_assert(try_substitute("abc"_cts, "!"_cts, ""_cts) == nothing{});
     static_assert(try_substitute("abc"_cts, "!"_cts, "ab"_cts) == nothing{});

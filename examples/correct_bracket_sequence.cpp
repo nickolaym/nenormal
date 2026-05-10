@@ -4,6 +4,8 @@
 
 namespace nn {
 
+using namespace nn::literals;
+
 constexpr auto reduce_pairs = NAMED_RULE(reduce_pairs, RULES(
     RULE("()", ""),
     RULE("[]", ""),

@@ -1,9 +1,5 @@
 #pragma once
 
-// functional form of string literals
-#define STR(s) (::nn::str{s}) // s##_ss
-#define CTSTR(s) (::nn::ct<STR(s)>{}) // s##_cts
-
 // single rule
 #define RULE(s, r) (::nn::rule_v<STR(s), STR(r), ::nn::regular_state>)
 #define FINAL_RULE(s, r) (::nn::rule_v<STR(s), STR(r), ::nn::final_state>)
