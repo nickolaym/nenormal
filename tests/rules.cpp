@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "nenormal/nenormal.h"
 
+namespace nn {
+
 #define NOT_MATCHED(s) (not_matched_yet{CTSTR(s)})
 #define REGULAR(s) (matched_regular{CTSTR(s)})
 #define FINAL(s) (matched_final{CTSTR(s)})
@@ -177,7 +179,7 @@ TEST(rule_loop, step_by_step) {
 }
 
 TEST(augmented, single_rule) {
-    constexpr RuleInput auto input = augmented_text{"aaa"_cts, empty{}};
+    constexpr RuleInput auto input = augmented_text{CTSTR("aaa"), empty{}};
     using input_type = std::remove_const_t<decltype(input)>;
     static_assert(Augmented<input_type>);
     static_assert(RuleInput<input_type>);
@@ -187,12 +189,12 @@ TEST(augmented, single_rule) {
     constexpr auto output_data = output.value;
     using output_data_type = std::remove_const_t<decltype(output_data)>;
     static_assert(Augmented<output_data_type>);
-    static_assert(output_data.text == "baa"_cts);
+    static_assert(output_data.text == CTSTR("baa"));
     static_assert(std::same_as<decltype(output_data.aux), empty>);
 }
 
 TEST(single_rule, augmented_fail) {
-    constexpr RuleInput auto input = augmented_text{"aaa"_cts, empty{}};
+    constexpr RuleInput auto input = augmented_text{CTSTR("aaa"), empty{}};
     constexpr Rule auto p = RULE("c", "d");
     constexpr RuleFailedOutput auto output = p(input);
     constexpr RuleInput auto output_data = output.value;
@@ -200,32 +202,32 @@ TEST(single_rule, augmented_fail) {
 }
 
 TEST(augmented, rules) {
-    constexpr auto input = augmented_text{"aaa"_cts, empty{}};
+    constexpr auto input = augmented_text{CTSTR("aaa"), empty{}};
     constexpr auto p = RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f"));
     constexpr RuleMatchedOutput auto output = p(input);
-    static_assert(output.value == augmented_text{"baa"_cts, empty{}});
+    static_assert(output.value == augmented_text{CTSTR("baa"), empty{}});
 }
 
 TEST(augmented, rules_fail) {
-    constexpr auto input = augmented_text{"xxx"_cts, empty{}};
+    constexpr auto input = augmented_text{CTSTR("xxx"), empty{}};
     constexpr auto p = RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f"));
     constexpr RuleFailedOutput auto output = p(input);
     static_assert(output.value == input);
 }
 
 TEST(augmented, rule_loop) {
-    constexpr auto input = augmented_text{"aaa"_cts, empty{}};
+    constexpr auto input = augmented_text{CTSTR("aaa"), empty{}};
     constexpr auto p = RULE_LOOP(RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f")));
     constexpr RuleMatchedOutput auto output = p(input);
     constexpr auto t = output.value.text;
-    static_assert(output.value == augmented_text{"bbb"_cts, empty{}});
+    static_assert(output.value == augmented_text{CTSTR("bbb"), empty{}});
 }
 
 TEST(augmented, machine) {
-    constexpr auto input = augmented_text{"aaa"_cts, empty{}};
+    constexpr auto input = augmented_text{CTSTR("aaa"), empty{}};
     constexpr auto p = MACHINE(RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f")));
     constexpr auto output = p(input);
-    static_assert(output.text == "bbb"_cts);
+    static_assert(output.text == CTSTR("bbb"));
 }
 
 TEST(augmented, single_rule_runtime) {
@@ -233,7 +235,7 @@ TEST(augmented, single_rule_runtime) {
     auto trace = [&](CtStr auto input, SingleRule auto p, CtStr auto output) {
         ++count;
     };
-    auto input = augmented_text{"aaa"_cts, side_effect{trace}};
+    auto input = augmented_text{CTSTR("aaa"), side_effect{trace}};
     constexpr auto p = RULE("a", "b");
     p(input);
     EXPECT_EQ(count, 1);
@@ -244,7 +246,7 @@ TEST(augmented, rules_runtime) {
     auto trace = [&](CtStr auto input, SingleRule auto p, CtStr auto output) {
         ++count;
     };
-    auto input = augmented_text{"aaa"_cts, side_effect{trace}};
+    auto input = augmented_text{CTSTR("aaa"), side_effect{trace}};
     constexpr auto p = RULES(RULE("a", "b"), RULE("c", "d"));
     p(input);
     EXPECT_EQ(count, 1);
@@ -255,10 +257,10 @@ TEST(augmented, rule_loop_runtime) {
     auto trace = [&](CtStr auto input, SingleRule auto p, CtStr auto output) {
         ++count;
     };
-    auto input = augmented_text{"aaa"_cts, side_effect{trace}};
+    auto input = augmented_text{CTSTR("aaa"), side_effect{trace}};
     constexpr auto p = RULE_LOOP(RULE("a", "b"));
     auto output = p(input);
-    static_assert(output.value.text == "bbb"_cts);
+    static_assert(output.value.text == CTSTR("bbb"));
     EXPECT_EQ(count, 3);
 }
 
@@ -267,10 +269,10 @@ TEST(augmented, machine_runtime) {
     auto trace = [&](CtStr auto input, SingleRule auto p, CtStr auto output) {
         ++count;
     };
-    auto input = augmented_text{"aaa"_cts, side_effect{trace}};
+    auto input = augmented_text{CTSTR("aaa"), side_effect{trace}};
     constexpr auto p = MACHINE(RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f")));
     auto output = p(input);
-    static_assert(output.text == "bbb"_cts);
+    static_assert(output.text == CTSTR("bbb"));
     EXPECT_EQ(count, 3);
 }
 
@@ -674,3 +676,5 @@ TEST(inplace, facade_rule) {
     EXPECT_EQ(result.text, "bed");
     EXPECT_EQ(result.aux.a, 2);
 }
+
+} // namespace nn

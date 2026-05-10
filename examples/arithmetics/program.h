@@ -2,6 +2,8 @@
 
 #include "nenormal/nenormal.h"
 
+namespace examples::arithmetics {
+
 // input:  "X+Y=" where X and Y are nonnegative decimal numbers
 // output: "Z" where Z is nonnegative decimal number (their sum)
 
@@ -36,7 +38,7 @@ constexpr auto take_digit = RULES(
     RULE("7+", "+[7]"),
     RULE("8+", "+[8]"),
     RULE("9+", "+[9]"),
-    rules<>{}
+    RULES()
 );
 
 // continue moving x to the right...
@@ -151,7 +153,7 @@ constexpr auto move_digit_to_the_right = RULES(
     RULE("[9]8", "8[9]"),
     RULE("[9]9", "9[9]"),
 
-    rules<>{}
+    RULES()
 );
 
 // "y[x]=" - add x+y with shift-out and carry
@@ -266,7 +268,7 @@ constexpr auto add_digits = RULES(
     RULE("8[9]=", "^=7"),
     RULE("9[9]=", "^=8"),
 
-    rules<>{}
+    RULES()
 );
 
 // propagate carry "y^" -> "u" or "^u"
@@ -282,15 +284,13 @@ constexpr auto add_carry = RULES(
     RULE("8^", "9"),
     RULE("9^", "^0"),
 
-    RULE("+^", "+1"),
-    rules<>{}
+    RULE("+^", "+1")
 );
 
 // no more rules, - addition stopped.
 constexpr auto cleanup = RULES(
     RULE("+", ""),
-    RULE("=", ""),
-    rules<>{}
+    RULE("=", "")
 );
 
 constexpr auto program = NAMED_RULE(program_t, RULES(
@@ -300,8 +300,9 @@ constexpr auto program = NAMED_RULE(program_t, RULES(
     FACADE_RULE("plus nothing +=    :     ", plus_nothing),
     FACADE_RULE("take digit   x+    : +[x]", take_digit),
     FACADE_RULE("cleanup      +/=   :     ", cleanup),
-    FACADE_RULE("that's all folks!        ", FINAL_RULE("", "")),
-    rules{}
+    FACADE_RULE("that's all folks!        ", FINAL_RULE("", ""))
 ));
 
 constexpr auto machine = MACHINE(program);
+
+} // namespace examples::arithmetics

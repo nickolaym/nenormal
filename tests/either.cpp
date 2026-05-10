@@ -1,6 +1,8 @@
 #include "nenormal/either.h"
 #include <gtest/gtest.h>
 
+namespace nn {
+
 TEST(either, compare) {
     static_assert(left(1) == left(1));
     static_assert(left(1) != right(1));
@@ -9,7 +11,7 @@ TEST(either, compare) {
     static_assert(left(left(1)) != left(1));
     static_assert(left(right(1)) != left(1));
     static_assert(left(right(1)) != right(1));
-    
+
     static_assert(right(1) == right(1));
     static_assert(right(1) != left(1));
     static_assert(right(1) != right(2));
@@ -44,3 +46,5 @@ TEST(either, chain) {
 
     static_assert(left(1) >> plus10r >> plus10r >> plus10l >> plus10r == left(1));
 }
+
+} // namespace nn

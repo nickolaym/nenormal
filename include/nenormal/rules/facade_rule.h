@@ -3,6 +3,8 @@
 #include "rule_concepts.h"
 #include <iostream>
 
+namespace nn {
+
 // facade_rule wrapper masks its nested rule for the augmentation callback.
 // like in hidden_rule, the nested rule deals with bare string.
 // but in case of success, facade rule triggers augmentation with itself.
@@ -46,3 +48,5 @@ template<Str auto name, Rule auto p> struct facade_rule {
 };
 
 template<Str auto name, Rule auto p> constexpr facade_rule<name, p> facade_rule_v{};
+
+} // namespace nn

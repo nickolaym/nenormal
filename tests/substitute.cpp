@@ -1,6 +1,10 @@
 #include "nenormal/substitute.h"
 #include <gtest/gtest.h>
 
+namespace nn {
+
+using namespace nn::literals;
+
 TEST(substitute, failed) {
     static_assert(try_substitute("abc"_cts, "!"_cts, ""_cts) == nothing{});
     static_assert(try_substitute("abc"_cts, "!"_cts, "ab"_cts) == nothing{});
@@ -72,3 +76,5 @@ TEST(substitute_opt, grow) {
     EXPECT_EQ(try_substitute_opt("abc"_cts, "<-->"_cts, "deabcfg"), optional_string{"de<-->fg"});
     EXPECT_EQ(try_substitute_opt("abc"_cts, "<-->"_cts, "defgabc"), optional_string{"defg<-->"});
 }
+
+} // namespace nn

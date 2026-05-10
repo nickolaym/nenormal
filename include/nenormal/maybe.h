@@ -3,6 +3,8 @@
 #include "concepts.h"
 #include <iostream>
 
+namespace nn {
+
 CONCEPT(Nothing); // stops a chain
 CONCEPT(Just); // continues a chain
 template<class T> concept Maybe = Nothing<T> || Just<T>;
@@ -46,3 +48,5 @@ struct just {
 
 template<class T, class V> concept JustOf = Just<T> && std::same_as<T, V>;
 template<class T, class V> concept MaybeOf = Nothing<T> || JustOf<T, V>;
+
+} // namespace nn

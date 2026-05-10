@@ -1,6 +1,8 @@
 #include "program_decimal.h"
 #include <gtest/gtest.h>
 
+namespace examples::collatz_decimal {
+
 TEST(inplace, complete_run) {
     constexpr auto m = MACHINE(program);
 
@@ -12,7 +14,7 @@ TEST(inplace, complete_run) {
     };
     auto run = [&](std::string t) {
         print_text(t);
-        auto r = m(inplace_augmented_text{t, inplace_side_effect{trace}}).text;
+        auto r = m(::nn::inplace_augmented_text{t, ::nn::inplace_side_effect{trace}}).text;
         std::cout << t << " --> " << r << std::endl << std::endl;
         return t;
     };
@@ -20,3 +22,5 @@ TEST(inplace, complete_run) {
         run(t);
     }
 }
+
+} // namespace examples::collatz_decimal

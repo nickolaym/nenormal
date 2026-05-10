@@ -1,6 +1,10 @@
 #include "nenormal/nenormal.h"
 #include <gtest/gtest.h>
 
+namespace nn {
+
+using namespace nn::literals;
+
 // ad-hoc stateful:
 // extract_text(Stateful) -> Str
 // update_text(Stateful, Rule, Str) -> Stateful
@@ -264,3 +268,5 @@ TEST(monadic, runtime) {
     rl(augmented("()()()((()))"_cts));
     rl(augmented("()()())))((()))(("_cts));
 }
+
+} // namespace nn

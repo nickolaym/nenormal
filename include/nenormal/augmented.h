@@ -3,6 +3,8 @@
 #include "concepts.h"
 #include "str.h"
 
+namespace nn {
+
 // augmentation is a self-updating function of a single rule "p"
 
 CONCEPT(Augmentation)
@@ -133,3 +135,5 @@ constexpr CtStr auto rebind_text(CtStr auto i, CtStr auto o) {
 constexpr Augmented auto rebind_text(AugmentedRef auto&& i, CtStr auto o) {
     return i.rebind(o);
 }
+
+} // namespace nn

@@ -2,6 +2,8 @@
 #include <gtest/gtest.h>
 #include "./utils.h"
 
+namespace nn {
+
 TEST(str, compile_time_properties) {
     constexpr Str auto s = str{"abc"};
     Str auto const& ref = s;
@@ -70,8 +72,8 @@ TEST(str, multi_char) {
     static_assert(WILL_NOT_RESOLVE(s = str{"h"}));
 }
 
-
 TEST(str, literal) {
+    using namespace nn::literals;
     static_assert(""_ss == str{""});
     static_assert("abc"_ss == str{"abc"});
 }
@@ -91,5 +93,8 @@ TEST(ct_str, compile_time) {
 }
 
 TEST(ct_str, literal) {
+    using namespace nn::literals;
     static_assert("abc"_cts == ct<str{"abc"}>{});
 }
+
+} // namespace nn

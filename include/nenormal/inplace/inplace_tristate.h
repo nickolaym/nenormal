@@ -4,6 +4,8 @@
 #include <iostream>
 #include <cassert>
 
+namespace nn {
+
 enum inplace_state {
     k_not_matched_yet,
     k_matched_regular,
@@ -59,3 +61,5 @@ struct inplace_argument {
 };
 CONCEPT(Inplace);
 template<class T, class V> concept InplaceOf = Inplace<T> && std::same_as<typename T::type, V>;
+
+} // namespace nn

@@ -2,6 +2,8 @@
 
 #include "nenormal/nenormal.h"
 
+namespace examples::collatz_decimal {
+
 // multiplication works as follows
 // let N = nnn * 10 + x
 // N*3 = (nnn * 3) * 10 + x * 3
@@ -214,3 +216,5 @@ constexpr auto program = RULES(
     stop_on_unit,
     HIDDEN_RULE(start)
 );
+
+} // namespace examples::collatz_decimal

@@ -2,6 +2,8 @@
 
 #include "concepts.h"
 
+namespace nn {
+
 // functional compostions with fold expressions
 
 CONCEPT(Arg);
@@ -105,3 +107,5 @@ struct extending_endless_loop {
         return a >> impl<1>{f};
     }
 };
+
+} // namespace nn

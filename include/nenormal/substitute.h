@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <optional>
 
+namespace nn {
+
 template<class T> concept JustCtStr = Just<T> && CtStr<typename T::type>;
 template<class T> concept MaybeCtStr = Nothing<T> || JustCtStr<T>;
 
@@ -75,3 +77,5 @@ optional_string try_substitute_opt(CtStr auto cts, CtStr auto ctr, std::string t
         return {};
     }
 }
+
+} // namespace nn

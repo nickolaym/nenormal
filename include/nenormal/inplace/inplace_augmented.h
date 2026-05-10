@@ -3,6 +3,8 @@
 #include "../concepts.h"
 #include <string>
 
+namespace nn {
+
 CONCEPT(InplaceAugmentation)
 
 struct inplace_empty {
@@ -47,3 +49,5 @@ constexpr std::string& inplace_extract_text(InplaceAugmented auto& t) { return t
 
 constexpr void inplace_update_text(std::string& t, auto p) {}
 constexpr void inplace_update_text(InplaceAugmented auto& t, auto p) { t.aux(p, t.text); }
+
+} // namespace nn
