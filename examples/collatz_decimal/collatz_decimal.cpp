@@ -1,9 +1,9 @@
 #include "program_decimal.h"
 #include <gtest/gtest.h>
 
-namespace nn {
+namespace examples::collatz_decimal {
 
-constexpr auto print_text = [](CtStr auto text) {
+constexpr auto print_text = [](::nn::CtStr auto text) {
     std::cout << "- " << text.value.view() << std::endl;
 };
 
@@ -11,10 +11,10 @@ constexpr auto trace = [](auto input, auto p, auto output) {
     print_text(output);
 };
 
-constexpr auto show = [](auto prg, CtStr auto input) -> CtStr auto {
+constexpr auto show = [](auto prg, ::nn::CtStr auto input) -> ::nn::CtStr auto {
     constexpr auto machine = MACHINE(prg);
 
-    constexpr auto augmented_input = augmented_text{input, side_effect{trace}};
+    constexpr auto augmented_input = ::nn::augmented_text{input, ::nn::side_effect{trace}};
     print_text(input);
     auto augmented_output = machine(augmented_input);
     std::cout << std::endl;
@@ -148,4 +148,4 @@ TEST(sequence, complete_run) {
     EXPECT_EQ(show(prg, CTSTR("<7>")), CTSTR("16")); // 7-22-11-34-17-52-13-40-20-10-5-16-8-4-2-1
 }
 
-} // namespace nn
+} // namespace examples::collatz_decimal

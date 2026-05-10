@@ -2,7 +2,7 @@
 
 #include "nenormal/nenormal.h"
 
-namespace nn {
+namespace examples::collatz_decimal {
 
 // multiplication works as follows
 // let N = nnn * 10 + x
@@ -217,4 +217,4 @@ constexpr auto program = RULES(
     HIDDEN_RULE(start)
 );
 
-} // namespace nn
+} // namespace examples::collatz_decimal
