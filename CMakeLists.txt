@@ -66,6 +66,7 @@ add_custom_target(arithmetics_all
         test_arithmetics_inplace
 )
 
+add_test_executable(test_collatz_mini examples/collatz_mini/collatz_mini.cpp)
 add_test_executable(test_collatz examples/collatz/collatz.cpp)
 add_test_executable(test_collatz_decimal examples/collatz_decimal/collatz_decimal.cpp)
 add_test_executable(test_collatz_decimal_inplace examples/collatz_decimal/collatz_decimal_inplace.cpp)
