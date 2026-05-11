@@ -743,7 +743,7 @@ template<auto p> struct facade_rule {
 
 ### От однородной монады Writer - к смеси Writer | Id
 
-Во-первых, если hidden_rule или facade_rule, - или даже пользователь с самого начала, -
+Во-первых, если `hidden_rule` или `facade_rule`, - или даже пользователь с самого начала, -
 передаёт внутрь вырожденный колбек `empty{}`, - то компилятор, а затем и рантайм,
 создаёт все эти структуры с вырожденными данными, порождая гору ненужных типов,
 применяет вырожденные колбеки, выводя тип результата, - и тратит довольно много сил.
@@ -754,7 +754,7 @@ template<auto p> struct facade_rule {
 чтобы тот одинаково работал как с `Writer Str`, так и с `Str` (по сути, `Id Str`)
 
 Для этого нам нужны две перегруженные функции:
-- извлечь текст из монады (Id или Writer)
+- извлечь текст из монады (`Id` или `Writer`)
 - запихать в монаду новый текст и все данные для вызова колбека
 
 ```cpp
@@ -772,8 +772,8 @@ Augmented auto update_text(Augmented auto old, CtStr auto new_text, auto... args
 ### От тотальных функций - к частным
 
 Во-вторых, если правила (и их наборы и обёртки) - это тотальные функции `Something -> Tristate Something`
-то при их вызове мы каждый раз расшиваем not_matched_yet, извлекая оттуда пусть даже ссылку на значение,
-а при выходе из них - при неудаче, - вынужденно создаём новую копию not_matched_yet.
+то при их вызове мы каждый раз расшиваем `not_matched_yet`, извлекая оттуда пусть даже ссылку на значение,
+а при выходе из них - при неудаче, - вынужденно создаём новую копию `not_matched_yet`.
 
 Даже если переписать всё с move-семантикой, мы делаем столько конструкторов,
 сколько у нас есть элементарных правил, наборов правил, обёрток над наборами,
@@ -803,22 +803,22 @@ template<auto... ps> struct rules {
 
 ### От возврату по значению - к тонкому управлению ссылками
 
-Что это за commit_alts, зачем он?!
+Что это за `commit_alts`, зачем он?!
 
 А дело вот в чём.
 
-На входе у нас nmy (ссылка на not_matched_yet).
+На входе у нас nmy (ссылка на `not_matched_yet`).
 
-- Если по результатам забега мы получили ссылку на not_matched_yet, то мы клянёмся, что это та же самая ссылка.
+- Если по результатам забега мы получили ссылку на `not_matched_yet`, то мы клянёмся, что это та же самая ссылка.
   Возвращаем эту ссылку.
-- Если получили значение (например, matched_regular) - то decltype(auto) будет rvalue matched_regular.
+- Если получили значение (например, `matched_regular`) - то `decltype(auto)` будет rvalue `matched_regular`.
   Возвращаем значение, тут всё ок.
-- Если же внутри забега получили значение matched_regular, то его `operator >>` вернёт rvalue-refarence, то есть, ссылку... и decltype(auto) тоже будет ссылкой.
+- Если же внутри забега получили значение `matched_regular`, то его `operator >>` вернёт rvalue-refarence, то есть, ссылку... и `decltype(auto)` тоже будет ссылкой.
   Ссылкой на локальный временный объект, который сдохнет после выхода из полного выражения!
 
 Вот чтобы такого не было, мы для каждого типа из Tristate определим разное поведение -
 каким способом завершать забег `>> ... >>`
-- not_matched_yet - возвращает себя по ссылке
+- `not_matched_yet` - возвращает себя по ссылке
 - все остальные - возвращают себя по значению
 
 ```cpp
@@ -830,5 +830,131 @@ template<class T> struct not_matched_yet {
 template<class T> struct matched_regular {
     constexpr auto commit_alts() const& { return *this; }
     constexpr auto commit_alts() && { return *this; }
+};
+```
+
+## Технические детали: концепты
+
+В проекте вовсю используются концепты. Причин для этого несколько:
+
+- Попросту для улучшения читаемости.
+  Программирование на шаблонах, где много `<class T>` и `auto` слишком сильно стирает подробности,
+  и нужно давать `long_mnemonic_identifiers`, чтобы подсказать читателю, что же стоит за каждым
+  параметром или аргументом.
+- Для ошибкобезопасности. Если подсунуть неправильный тип, то компилятор может споткнуться
+  или сразу же в точке вызова, или очень глубоко внутри, - сформировав длиннющую и невменяеемую ошибку
+- Для разрешения перегрузок. По меньшей мере, приходится отличать голые строки от аугментированных.
+
+Можно ли по-старинке вместо `void f(Some auto x, Another auto y)`
+писать `template<.....> void f(some<...> x, another<...> y)` ?
+
+Можно, но!
+- это очень громоздко
+- особенно, когда типы аргументов параметризованы значениями, а не типами
+- для шаблонов типов, параметризованных шаблонными значениями, невозможно (попросту некуда) вынести
+  именованные параметры шаблонов их типов.
+
+```cpp
+// C++20, concepts
+template<Some auto v> struct another {.....};
+
+// C++17
+template<class T, some<T> v> struct another {.....};
+
+constexpr some<U> s{123};
+constexpr another< U, s > a;  // придётся указать никому не нужную зависимосить - тип U
+```
+
+Кроме прочего, концепты позволяют объединять несколько типов в один тайпкласс.
+Конечно, не так строго, как в хаскелле, но лучше так, чем никак.
+
+### Ограничение концептов
+
+Концепт может быть параметризован.
+
+Например, есть универсальный зависимый тип ct (compile-time)
+```cpp
+template<auto V> struct ct {
+    static constexpr auto value = V;
+    using type = std::remove_cv_t<decltype(V)>;
+};
+
+// какой угодно ct
+template<class T> concept Ct = /* проверить, что T = ct<???> */;
+
+// ct конкнетного типа
+template<class T, class VT> concept CtOf = Ct<T> && std::same_as<typename T::type, VT>;
+```
+но, к сожалению, параметром концепта может быть только тип.
+
+Сделать концепт, параметризованный концептом, нельзя.
+
+Придётся руками расписывать
+```cpp
+template<size_t N> struct str { ..... };
+
+template<class T> concept Str = /* T = str<N> */;
+
+template<class T> concept CtStr = Ct<T> && Str<typename T::type>;
+// вместо того, чтобы было
+template<class T> concept CtStr = CtOfConcept<T, Str>;
+```
+
+Конечно, можно было бы выкрутиться, заведя параллельно каждому концепту метафункцию
+```cpp
+template<class T> struct is_str_t : std::false_type {};
+template<size_t N> struct is_str_t<str<N>> : std::true_type {};
+template<class T> concept Str = is_str_t<T>::value;
+
+template<class T> struct is_ct_t : std::false_type {};
+template<auto V> struct is_ct_t<ct<V>> : std::true_type {};
+template<class T> concept Ct = is_ct_t<T>::value;
+
+template<class T, class P> concept CtOfPredicate = Ct<T> && P<typename T::type>::value;
+template<class T, class P> using is_ct_of_predicate_t = std::bool_constant<CtOfPredicate<T, P>>;
+
+template<class T> concept CtStr = CtOfPredicate<T, is_str_t>;
+template<class T> using is_ct_str = std::bool_constant<CtStr<T>>;
+```
+
+Поскольку структур и концептов в проекте много, то я предпочёл вариант с минимумом писанины.
+
+```cpp
+#define CONCEPT(name) template<class T> concept name = T::this_is_##name;
+
+#define REPRESENTS(name) static constexpr bool this_is_##name = true;
+
+CONCEPT(Foo);
+
+struct foo1 {
+    REPRESENTS(Foo);
+};
+struct foo2 {
+    REPRESENTS(Foo);
+};
+```
+
+Кроме прочего, этот способ проверки избавляет от проблем с правилами видимости и порядком объявлений.
+
+Если бы, например, делать на специализации метафункции,
+```cpp
+template<class T> struct is_foo_t : std::false_type {};
+
+template<class T> concept Foo = is_foo_t<T>::value;
+
+template<class X, class Y> struct foo1 {};
+template<class X, class Y> struct is_foo_t<foo1<X, Y>> : std::true_type {};
+```
+то объявление концпета и связанной метафункции должно строго предшествовать объявлению представителей.
+
+А использование (первое инстанцирование) концепта для данного типа - строго следовать.
+
+Из-за чего не получится без выкрутасов применять конецепт самого себя внутри класса.
+
+С другой стороны, мой подход неустойчив к опечаткам.
+```cpp
+CONCEPT(Abracadabra);
+struct abracadabra {
+    REPRESENTS(Abbbracacabra);
 };
 ```
