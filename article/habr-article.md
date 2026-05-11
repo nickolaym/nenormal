@@ -288,6 +288,8 @@ matched_final   x = Left (Left x) -- вышли из for и из while
 
 А главное, теперь у нас вместо неочевидных `Left (Right x)` - внятно именованные типы.
 
+Монада Tristate - это тот же Either, только узкоспециализированный.
+
 ## Итого
 
 У нас получились следующие детальки
@@ -656,3 +658,177 @@ constexpr auto kollatz = MACHINE(RULES(
 - когда обе цифры оказались рядом с маркером конца строки, - выполняем сложение с переносом
 
 (а перенос - это частный случай умножение на 1, смотри выше).
+
+## Аугментация
+
+Чистая функция времени компиляции - на входе строка, на выходе строка -
+это просто такой способ заставить компилятор (возможно, очень долго) вычислить константу.
+
+Но чтобы посмотреть на промежуточные шаги, мы прибегнем к монаде Writer.
+
+Вместо `Tristate Str` запустим `Tristate (Writer Str)`.
+
+И каждый раз, когда элементарное правило выполняет подстановку,
+оно заодно дёргает колбек, который обновляет значение аугментации.
+
+Естественно, универсальный Writer нам не нужен, сделаем специально под задачу.
+
+Три основных сценария
+- ничего не делать, - колбек вырожденный, состояние вырожденное
+- выполнять побочный эффект (при этом машина может пересть быть constexpr, но по-прежнему выводит тип-и-значение во время компиляции)
+- обновить состояние: `a' = f(a, ...)` (при этом если колбек - чистая constexpr-функция, то и машина - чистая)
+
+Помимо прочего, у нас открываются новые возможности: хакнуть программу.
+
+- обёртка hidden_rule - делает так, что замена текста производится, но колбек не применяется
+- обёртка facade_rule - делает так, что если замена текста произошла, то колбек применяется не к элементарному правилу где-то внутри, а непосредственно к фасаду
+
+Для этого они расшивают `Writer Str` до - отдельно Writer, отдельно Str (ну или заменяют Writer на вырожденный), передают управление внутрь, а потом сшивают их обратно.
+
+```cpp
+template<auto s, auto r, auto k> struct rule {
+    constexpr auto operator()(auto input) const { // Augmented -> Tristate Augmented
+        constexpr auto input_text = input.text;
+        constexpr auto result_text = this->do_it(input_text); // Tristate Str
+        if constexpr (result_text is not_matched_yet) {
+            return not_matched_yet{input};
+        } else {
+            return result_text.replace_value(
+                augmented_text{
+                    result_text.value,
+                    // вызываем колбек - обновляем Writer
+                    input.aux(input_text, *this, result_text.value)
+                }
+            );
+        }
+    }
+};
+
+template<auto p> struct hidden_rule {
+    constexpr auto operator()(auto input) const { // Augmented -> Tristate Augmented
+        constexpr auto bare_input = augmented_text{input.text, empty{}};
+        constexpr auto bare_output = p(bare_input); // Tristate
+        return bare_output.replace_value(
+            augmented_text{bare_output.value.text, input.aux}
+        );
+    }
+};
+
+template<auto p> struct facade_rule {
+    constexpr auto operator()(auto input) const { // Augmented -> Tristate Augmented
+        constexpr auto bare_input = augmented_text{input.text, empty{}};
+        constexpr auto bare_output = p(bare_input); // Tristate Augmented Empty
+        if constexpr (bare_output is not_matched_yet) {
+            // как hidden
+            return bare_output.replace_value(
+                augmented_text{bare_output.value.text, input.aux}
+            );
+        } else {
+            return bare_output.replace_value(
+                augmented_text{
+                    bare_output.value.text,
+                    // вызываем колбек - обновляем Writer
+                    input.aux(input.text, *this, bare_output.value.text)
+                }
+            );
+
+        }
+    }
+};
+```
+
+### Что тут не очень хорошо?
+
+Это всё хорошо, но оказалось, что мы заставляем компилятор делать кучу лишней работы.
+
+### От однородной монады Writer - к смеси Writer | Id
+
+Во-первых, если hidden_rule или facade_rule, - или даже пользователь с самого начала, -
+передаёт внутрь вырожденный колбек `empty{}`, - то компилятор, а затем и рантайм,
+создаёт все эти структуры с вырожденными данными, порождая гору ненужных типов,
+применяет вырожденные колбеки, выводя тип результата, - и тратит довольно много сил.
+
+Особенно, если нам в конкретном случае вовсе не нужна была аугментация.
+
+Выход очень простой: сделать перегрузку оператора (или его внутренностей),
+чтобы тот одинаково работал как с `Writer Str`, так и с `Str` (по сути, `Id Str`)
+
+Для этого нам нужны две перегруженные функции:
+- извлечь текст из монады (Id или Writer)
+- запихать в монаду новый текст и все данные для вызова колбека
+
+```cpp
+CtStr auto extract_text(CtStr auto t) { return t; }
+CtStr auto extract_text(Augmented auto t) { return t.text; }
+
+CtStr auto update_text(CtStr auto old, CtStr auto new_text, auto... args) {
+    return new_text;
+}
+Augmented auto update_text(Augmented auto old, CtStr auto new_text, auto... args) {
+    return augmented_text{new_text, old.aux(old.text, args..., new_text)};
+}
+```
+
+### От тотальных функций - к частным
+
+Во-вторых, если правила (и их наборы и обёртки) - это тотальные функции `Something -> Tristate Something`
+то при их вызове мы каждый раз расшиваем not_matched_yet, извлекая оттуда пусть даже ссылку на значение,
+а при выходе из них - при неудаче, - вынужденно создаём новую копию not_matched_yet.
+
+Даже если переписать всё с move-семантикой, мы делаем столько конструкторов,
+сколько у нас есть элементарных правил, наборов правил, обёрток над наборами,
+плюс тело цикла, плюс цикл целиком, - помножить на количество тактов.
+
+Это очень, очень много.
+
+А вот если перейдём к частичным функциям, - принимающим и возвращающим Tristate,
+но при этом поклянёмся, что на вход приходят только `not_matched_yet`, -
+то сможем, аккуратно возвращая ссылки на аргумент, полученный по ссылке, резко сократить расход памяти.
+
+(А память-то в компайл-тайме очень дорогая).
+
+Теперь `rules<ps...>` выглядит вот так
+```cpp
+template<auto... ps> struct rules {
+    // было
+    constexpr auto operator()(auto input) const {
+        return not_matched_yet{std::move(input)} >> ... >> ps;
+    }
+    // стало
+    constexpr decltype(auto) operator()(auto&& nmy) const {
+        return (nmy >> ... >> ps).commit_alts();
+    }
+};
+```
+
+### От возврату по значению - к тонкому управлению ссылками
+
+Что это за commit_alts, зачем он?!
+
+А дело вот в чём.
+
+На входе у нас nmy (ссылка на not_matched_yet).
+
+- Если по результатам забега мы получили ссылку на not_matched_yet, то мы клянёмся, что это та же самая ссылка.
+  Возвращаем эту ссылку.
+- Если получили значение (например, matched_regular) - то decltype(auto) будет rvalue matched_regular.
+  Возвращаем значение, тут всё ок.
+- Если же внутри забега получили значение matched_regular, то его `operator >>` вернёт rvalue-refarence, то есть, ссылку... и decltype(auto) тоже будет ссылкой.
+  Ссылкой на локальный временный объект, который сдохнет после выхода из полного выражения!
+
+Вот чтобы такого не было, мы для каждого типа из Tristate определим разное поведение -
+каким способом завершать забег `>> ... >>`
+- not_matched_yet - возвращает себя по ссылке
+- все остальные - возвращают себя по значению
+
+```cpp
+template<class T> struct not_matched_yet {
+    constexpr decltype(auto) commit_alts() const& { return *this; }
+    constexpr decltype(auto) commit_alts() && { return *this; }
+};
+
+template<class T> struct matched_regular {
+    constexpr auto commit_alts() const& { return *this; }
+    constexpr auto commit_alts() && { return *this; }
+};
+```
