@@ -95,7 +95,11 @@ template<auto V> struct ct {
 ```cpp
 auto /* nothing | just<ct<str<N>{...}>> */
 /* выведем тип из аргументов... внутри, на if-constexpr */
-try_substitute(auto /*ct<str<N>{...}>*/ src, auto /*ct<str<M>{...}>*/ search, auto /*ct<str<N>{...}>*/ replace) {
+try_substitute(
+    auto /*ct<str<N1>{...}>*/ src,
+    auto /*ct<str<N2>{...}>*/ search,
+    auto /*ct<str<N3>{...}>*/ replace
+) {
     if constexpr (/* не смогли подставить */)
         return nothing{};
     else if constexpr (/* подстановка тривиальная */)
