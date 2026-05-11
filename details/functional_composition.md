@@ -186,7 +186,7 @@ arg >> fun >> fun >> while_loop
 
 Мы умеем превращать их в `Str -> Either (Either Str Str) Str` (сопоставили / продолжаем сопоставлять).
 
-А теперь хотим пропихнуть туда кортеж `(Str, Aux)` = `State Aux Str`
+А теперь хотим пропихнуть туда кортеж `(Str, Aux)` = `Writer Aux Str`
 
 Просто заменили Str на (Str, Aux).
 

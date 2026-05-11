@@ -7,7 +7,7 @@ Rule : string -> fail | success{string, state}
 Machine : string -> string
 ```
 
-Дополение в духе монады State выглядит следующим образом
+Дополение в духе монады Writer выглядит следующим образом
 
 ```
 Rule : Augmented string -> fail | success(Augmented string, state)
