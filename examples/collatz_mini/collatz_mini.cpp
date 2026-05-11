@@ -61,13 +61,15 @@ constexpr auto machine = MACHINE(program);
 ::std::string show_rule(::nn::SingleRule auto rule) {
     constexpr auto s = rule.ct_search.value.view();
     constexpr auto r = rule.ct_replace.value.view();
-    constexpr auto k = rule.ct_state.value;
+    constexpr auto k = rule.ct_kind.value;
 
     switch (k) {
-    case ::nn::regular_state:
+    case ::nn::rule_kind::regular:
         return ::std::format("{} -> {}", s, r);
-    case ::nn::final_state:
+    case ::nn::rule_kind::final:
         return ::std::format("{} ->. {}", s, r);
+    default:
+        ::std::unreachable();
     }
 }
 

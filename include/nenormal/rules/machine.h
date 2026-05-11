@@ -5,7 +5,7 @@
 namespace nn {
 
 // machine is a function string -> string,
-// without technical details about regular / final state.
+// without technical details about reaching a final rule or halt with missing any rules.
 // it just puts data into Tristate monad, runs it there, and takes result back.
 
 // typical use is a wrapping rules with rule_loop and machine_fun.

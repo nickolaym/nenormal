@@ -10,38 +10,37 @@
 namespace nn {
 
 // single rule is a primary element of the NAM.
-// it matches and modifies the text state of the NAM-machine.
+// it matches and modifies the text k of the NAM-machine.
 
 // a rule is parametrized with
 // - search string "s"
 // - replace string "r"
 // - kind: regular or final
 
-enum rule_state_t {
-    regular_state,
-    final_state,
+enum class rule_kind {
+    regular,
+    final,
 };
-template<class T> concept CtState = CtOf<T, rule_state_t>;
+template<class T> concept CtRuleKind = CtOf<T, rule_kind>;
 
 // single search-and-replace function
 
-template<Str auto s, Str auto r, rule_state_t state> struct rule {
+template<Str auto s, Str auto r, rule_kind k> struct rule {
     REPRESENTS(Rule)
     REPRESENTS(SingleRule)
     static_assert(
-        !(state == regular_state && s == r),
+        !(k == rule_kind::regular && s == r),
         "same search and replace is meaningless: either inaccessible or results in an endless loop");
 
     static constexpr auto ct_search = ct<s>{};
     static constexpr auto ct_replace = ct<r>{};
-    static constexpr auto ct_state = ct<state>{};
+    static constexpr auto ct_kind = ct<k>{};
 
     friend std::ostream& operator << (std::ostream& os, rule const& v) {
         os
-            << (state == regular_state ? "rule" : "final_rule")
             << "("
             << std::quoted(s.view())
-            << " -> "
+            << (k == rule_kind::regular ? " -> " : " ->. ")
             << std::quoted(r.view())
             << ")";
         return os;
@@ -52,7 +51,7 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
         if constexpr (!mb) {
             return FWD(nmy);
         } else {
-            if constexpr (state == regular_state) {
+            if constexpr (k == rule_kind::regular) {
                 return matched_regular{update_text(nmy.value, rule{}, mb.value)};
             } else {
                 return matched_final{update_text(nmy.value, rule{}, mb.value)};
@@ -65,7 +64,7 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
             // failed
             return not_matched_yet{FWD(t)};
         } else {
-            if constexpr (state == regular_state) {
+            if constexpr (k == rule_kind::regular) {
                 return matched_regular{update_text(t, rule{}, mb.value)};
             } else {
                 return matched_final{update_text(t, rule{}, mb.value)};
@@ -78,7 +77,7 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
             return k_not_matched_yet;
         } else {
             inplace_update_text(t, rule{});
-            if (state == regular_state) {
+            if (k == rule_kind::regular) {
                 return k_matched_regular;
             } else {
                 return k_matched_final;
@@ -87,6 +86,6 @@ template<Str auto s, Str auto r, rule_state_t state> struct rule {
     }
 };
 
-template<Str auto s, Str auto r, rule_state_t state> constexpr rule<s, r, state> rule_v{};
+template<Str auto s, Str auto r, rule_kind k> constexpr rule<s, r, k> rule_v{};
 
 } // namespace nn

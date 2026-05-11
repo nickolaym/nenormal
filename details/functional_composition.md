@@ -98,7 +98,7 @@ auto left_fold(auto arg, auto ... fs) {
 
 ## Как сделать подпрограмму на свёртке?
 
-В нашей задаче уже известно, что правила - `CtStr -> success{CtStr,state} | fail`.
+В нашей задаче уже известно, что правила - `CtStr -> success{CtStr,kind} | fail`.
 
 Фактически, это монада `Maybe`.
 
@@ -166,9 +166,9 @@ arg >> fun >> fun >> while_loop
 
 - `make_arg(s) = arg{s}` - тут ничего необычного
 - `make_fun(rule)` - пусть `res = rule(s)`
-  - `success{r, regular_state}` превращает в `arg{r}` - продолжаем цикл
-  - `success{r, final_state}` превращает в `stop{res}` = `stop{success{r, final_state}}`
-  - `fail{}` - превращает в `stop{success{s, regular_state}}`
+  - `success{r, rule_kind::regular}` превращает в `arg{r}` - продолжаем цикл
+  - `success{r, rule_kind::final}` превращает в `stop{res}` = `stop{success{r, rule_kind::final}}`
+  - `fail{}` - превращает в `stop{success{s, rule_kind::regular}}`
 - `take_res(stop{res}) = res` - заметим, что у бесконечного цикла не может быть `arg` на выходе.
 
 На самом деле, мы можем немного упростить себе жизнь, если подсунем в цикл программу,
