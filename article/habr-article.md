@@ -529,42 +529,42 @@ constexpr auto kollatz = MACHINE(RULES(
 
 3 - 10 - 5 - 16 - 8 - 4 - 2 - 1 - STOP
 
-```
-111 - n = 3 - div_start
-1[div]1 - n = 1*2+1 - mul_start
-1[mul]1111 - mul_continue
-[mul]1111111111 - mul_end
-1111111111 - n = 10 - div_start
-1[div]11111111 - div_continue
-11[div]111111 - div_continue
-111[div]1111 - div_continue
-1111[div]11 - div_continue
-11111[div] - div_end
-11111 - n = 5 - div_start
-1[div]111 - div_continue
-11[div]1 - n = 2*2 + 1 - mul_start
-11[mul]1111 - mul_continue
-1[mul]1111111111 - mul_continue
-[mul]1111111111111111 - mul_end
-1111111111111111 - n = 16 - div_start
-1[div]11111111111111 - div_continue
-11[div]111111111111 - div_continue
-111[div]1111111111 - div_continue
-1111[div]11111111 - div_continue
-11111[div]111111 - div_continue
-111111[div]1111 - div_continue
-1111111[div]11 - div_continue
-11111111[div] - div_end
-11111111 - n = 8 - div_start
-1[div]111111 - div_continue
-11[div]1111 - div_continue
-111[div]11 - div_continue
-1111[div] - div_end
-1111 - n = 4 - div_start
-1[div]11 - div_continue
-11[div] - div_end
-11 - n = 2 - div_start
-1[div] - div_end
-1 - n = 1 - stop
-STOP
-```
+| шаг| текст                   | N      | правило      |
+|----|-------------------------|--------|--------------|
+|  0 | `111`                   | 3      | div_start    |
+|  1 | `1[div]1`               | 1*2+1  | mul_start    |
+|  2 | `1[mul]1111`            | 1*6+4  | mul_continue |
+|  3 | `[mul]1111111111`       | 0*6+10 | mul_end      |
+|  4 | `1111111111`            | 10     | div_start    |
+|  5 | `1[div]11111111`        | 1*2+8  | div_continue |
+|  6 | `11[div]111111`         | 2*2+6  | div_continue |
+|  7 | `111[div]1111`          | 3*2+4  | div_continue |
+|  8 | `1111[div]11`           | 4*2+2  | div_continue |
+|  9 | `11111[div]`            | 5*2+0  | div_end      |
+| 10 | `11111`                 | 5      | div_start    |
+| 11 | `1[div]111`             | 1*2+3  | div_continue |
+| 12 | `11[div]1`              | 2*2+1  | mul_start    |
+| 13 | `11[mul]1111`           | 2*6+4  | mul_continue |
+| 14 | `1[mul]1111111111`      | 1*6+10 | mul_continue |
+| 15 | `[mul]1111111111111111` | 0*6+16 | mul_end      |
+| 16 | `1111111111111111`      | 16     | div_start    |
+| 17 | `1[div]11111111111111`  | 1*2+14 | div_continue |
+| 18 | `11[div]111111111111`   | 2*2+12 | div_continue |
+| 19 | `111[div]1111111111`    | 3*2+10 | div_continue |
+| 20 | `1111[div]11111111`     | 4*2+8  | div_continue |
+| 21 | `11111[div]111111`      | 5*2+6  | div_continue |
+| 22 | `111111[div]1111`       | 6*2+4  | div_continue |
+| 23 | `1111111[div]11`        | 7*2+2  | div_continue |
+| 24 | `11111111[div]`         | 8*2+0  | div_end      |
+| 25 | `11111111`              | 8      | div_start    |
+| 26 | `1[div]111111`          | 1*2+6  | div_continue |
+| 27 | `11[div]1111`           | 2*2+4  | div_continue |
+| 28 | `111[div]11`            | 3*2+2  | div_continue |
+| 29 | `1111[div]`             | 4*2+0  | div_end      |
+| 30 | `1111`                  | 4      | div_start    |
+| 31 | `1[div]11`              | 1*2+2  | div_continue |
+| 32 | `11[div]`               | 2*2+0  | div_end      |
+| 33 | `11`                    | 2      | div_start    |
+| 34 | `1[div]`                | 1*2+0  | div_end      |
+| 35 | `1`                     | 1      | stop         |
+| 36 | `STOP`                  |        |              |
