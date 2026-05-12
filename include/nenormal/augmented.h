@@ -68,6 +68,10 @@ struct cumulative_effect {
 // - update augmentation (invoke side effect function)
 // - simply rebind without application
 
+CONCEPT(Augmented)
+// concept of universal reference: f(AugmentedRef auto&& a)
+template<class R> concept AugmentedRef = Augmented<std::remove_cvref_t<R>>;
+
 template<CtStr T, Augmentation A>
 struct augmented_text {
     REPRESENTS(Augmented)
@@ -114,8 +118,6 @@ struct augmented_text {
         return augmented_text<decltype(new_text), A>{new_text, aux};
     }
 };
-CONCEPT(Augmented)
-template<class R> concept AugmentedRef = Augmented<std::remove_cvref_t<R>>;
 
 // extract and restore text from an augmented type
 

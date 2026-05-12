@@ -13,6 +13,9 @@ enum inplace_state {
     k_matched_final_halted,
 };
 
+CONCEPT(Inplace);
+template<class T, class V> concept InplaceOf = Inplace<T> && std::same_as<typename T::type, V>;
+
 template<class T>
 struct inplace_argument {
     REPRESENTS(Inplace);
@@ -59,7 +62,5 @@ struct inplace_argument {
         return *this;
     }
 };
-CONCEPT(Inplace);
-template<class T, class V> concept InplaceOf = Inplace<T> && std::same_as<typename T::type, V>;
 
 } // namespace nn

@@ -20,11 +20,13 @@ namespace nn {
 // - augmented string
 
 template<class T> concept RuleInput = CtStr<T> || Augmented<T>;
+// concept of universal reference: f(RuleInputRef auto&& a)
 template<class R> concept RuleInputRef = RuleInput<std::remove_cvref_t<R>>;
 
 // Tristate input is a subclass of Tristate of RuleInput, namely NotMatchedYet
 
 template<class T> concept RuleNotMatchedYetInput = NotMatchedYet<T> && RuleInput<typename T::type>;
+// concept of universal reference: f(RuleNotMatchedYetInputRef auto&& a)
 template<class R> concept RuleNotMatchedYetInputRef = RuleNotMatchedYetInput<std::remove_cvref_t<R>>;
 
 // output
