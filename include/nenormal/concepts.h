@@ -12,5 +12,6 @@ template<class T> concept ValueType = !::std::is_const_v<T> && !::std::is_refere
 
 } // namespace nn
 
+#define REPRESENTS_COND(Name, cond) static constexpr bool this_is_##Name = (cond);
 #define REPRESENTS(Name) static constexpr bool this_is_##Name = true;
 #define CONCEPT(Name) template<class T> concept Name = ::nn::ValueType<T> && (T::this_is_##Name == true);
