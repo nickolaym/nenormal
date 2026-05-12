@@ -3,15 +3,15 @@
 Изначально НАМ-машина работает со строками.
 
 ```
-Rule : string -> fail | success{string, state}
-Machine : string -> string
+Rule : NotReadyYet CtStr -> Tristate CtStr
+Machine : CtStr -> CtStr
 ```
 
-Дополение в духе монады State выглядит следующим образом
+Дополение в духе монады Writer выглядит следующим образом
 
 ```
-Rule : Augmented string -> fail | success(Augmented string, state)
-Machine : Augmented string -> augmented string
+Rule : NotReadyYet (Augmented CtStr) -> Tristate (Augmented CtStr)
+Machine : Augmented CtStr -> Augmented CtStr
 ```
 
 Строка оборачивается в структуру `augmented_text` вместе с произвольным аргументом `aux`.
@@ -27,15 +27,15 @@ Machine : Augmented string -> augmented string
 Элементарное правило (`rule`)
 - извлекает текст из структуры,
 - выполняет подстановку (которая может закончиться неудачей)
-- при неудаче возвращает `fail` как обычно
-- при успехе собирает новый `augmented_text` с результатом подстановки и результатом обработки `aux`, и всё это вместе оборачивает в `success`
+- при неудаче возвращает `not_ready_yet` как обычно
+- при успехе собирает новый `augmented_text` с результатом подстановки и результатом обработки `aux`, и всё это вместе оборачивает в `matched_regular` или `matched_final`
 
 ### Скрытое правило
 
 Скрытое правило (`hidden_rule<Rule auto p>`)
 - извлекает текст из структуры,
 - применяет к нему своё вложенное правило
-- в случае успеха собирает новый `augmented_text` - с новым текстом и старым `aux`, и всё это вместе оборачивает в `success`
+- в случае успеха собирает новый `augmented_text` - с новым текстом и старым `aux`, и всё это вместе оборачивает в `matched_regular` / `matched_final`
 
 Почему это названо "скрытым"? И в чём его смысл?
 

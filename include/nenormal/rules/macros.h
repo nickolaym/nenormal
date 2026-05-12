@@ -1,8 +1,8 @@
 #pragma once
 
 // single rule
-#define RULE(s, r) (::nn::rule_v<STR(s), STR(r), ::nn::regular_state>)
-#define FINAL_RULE(s, r) (::nn::rule_v<STR(s), STR(r), ::nn::final_state>)
+#define RULE(s, r) (::nn::rule_v<STR(s), STR(r), ::nn::rule_kind::regular>)
+#define FINAL_RULE(s, r) (::nn::rule_v<STR(s), STR(r), ::nn::rule_kind::final>)
 
 // rule series
 #define RULES(...) (::nn::rules_v<__VA_ARGS__>)

@@ -22,8 +22,9 @@ target_include_directories(nenormal_headers INTERFACE ${CMAKE_SOURCE_DIR}/includ
 link_libraries(nenormal_headers)
 
 # Function to create test executable with gtest_discover_tests
-function(add_test_executable name source)
-    add_executable(${name} ${source})
+function(add_test_executable name)
+    set(sources ${ARGN})
+    add_executable(${name} ${sources})
     target_link_libraries(${name} GTest::gtest_main)
     include(GoogleTest)
     gtest_discover_tests(${name})
@@ -66,6 +67,10 @@ add_custom_target(arithmetics_all
         test_arithmetics_inplace
 )
 
+add_test_executable(test_collatz_mini
+    examples/collatz_mini/collatz_mini.cpp
+    examples/collatz_mini/collatz_mini_2.cpp
+)
 add_test_executable(test_collatz examples/collatz/collatz.cpp)
 add_test_executable(test_collatz_decimal examples/collatz_decimal/collatz_decimal.cpp)
 add_test_executable(test_collatz_decimal_inplace examples/collatz_decimal/collatz_decimal_inplace.cpp)

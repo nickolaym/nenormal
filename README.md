@@ -82,7 +82,7 @@ auto bar(Foo auto f)
 
 Призак продолжения/финиша - чтобы не запутаться в булевых флажках сделан как
 ```cpp
-enum rule_state_t { regular_state, final_state };
+enum rule_kind { rule_kind::regular, rule_kind::final };
 ```
 
 Каждая инструкция машины - это функция
@@ -113,7 +113,7 @@ enum rule_state_t { regular_state, final_state };
 
 Так как любая функция подстановки параметризована строками поиска и замены, то получаем шаблон
 ```cpp
-template<Str auto search, Str auto replace, rule_state_t state> struct rule {
+template<Str auto search, Str auto replace, rule_kind kind> struct rule {
     constexpr
     /*RuleOutput*/ decltype(auto)
     operator()(RuleNotMatchedYetInputRef auto&& text) const
@@ -233,7 +233,7 @@ while (true) {
 
 ### Запрещённые правила
 
-Правила вида `rule<S, S, regular_state>` явно запрещены.
+Правила вида `rule<S, S, rule_kind::regular>` явно запрещены.
 
 Они либо недостижимы в данной предметной области, либо немедленно приведут к зацикливанию.
 

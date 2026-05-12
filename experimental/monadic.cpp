@@ -72,15 +72,15 @@ constexpr Either auto simplify_loopout(MonadicEitherFinishedOrContinued auto o) 
 // replacer : str -> maybe str'
 // kind: regular/final = right/left
 
-// mapping ad-hoc rule_state_t constants to constructors of Either as we need
+// mapping ad-hoc rule_kind constants to constructors of Either as we need
 template<class> struct incomplete;
-template<rule_state_t s> constexpr auto rule_output_kind = incomplete<ct<s>>{};
-template<> constexpr auto rule_output_kind<regular_state> = right;
-template<> constexpr auto rule_output_kind<final_state> = left;
+template<rule_kind s> constexpr auto rule_output_kind = incomplete<ct<s>>{};
+template<> constexpr auto rule_output_kind<rule_kind::regular> = right;
+template<> constexpr auto rule_output_kind<rule_kind::final> = left;
 
 // implement rule function using monadic tools only
 // (still with extract_text / update_text, TODO rewrite that)
-template<Str auto S, Str auto R, rule_state_t C>
+template<Str auto S, Str auto R, rule_kind C>
 constexpr auto monadic_rule(rule<S,R,C> r) {
     constexpr auto f = [](MonadicDomain auto src) -> MonadicOutput auto {
         constexpr auto kind = rule_output_kind<C>;
