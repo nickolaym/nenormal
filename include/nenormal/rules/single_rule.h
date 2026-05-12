@@ -72,15 +72,15 @@ template<Str auto s, Str auto r, rule_kind k> struct rule {
         }
     }
 
-    constexpr inplace_state operator()(RuleFixedInput auto& t) const {
+    constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
         if (!try_substitute_inplace(ct_search, ct_replace, inplace_extract_text(t))) {
-            return k_not_matched_yet;
+            return tristate_kind::not_matched_yet;
         } else {
             inplace_update_text(t, rule{});
             if (k == rule_kind::regular) {
-                return k_matched_regular;
+                return tristate_kind::matched_regular;
             } else {
-                return k_matched_final;
+                return tristate_kind::matched_final;
             }
         }
     }

@@ -23,10 +23,10 @@ template<Rule auto... ps> struct rules {
     constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
         return (not_matched_yet{FWD(t)} >> ... >> ps);
     }
-    constexpr inplace_state operator()(RuleFixedInput auto& t) const {
+    constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
         inplace_argument<decltype(t)> a{t}; // reference to input
         (a || ... || a.updated_by(ps));
-        return a.state;
+        return a.kind;
     }
 };
 
@@ -43,7 +43,7 @@ template<> struct rules<> {
         return not_matched_yet{FWD(t)};
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
-        return k_not_matched_yet;
+        return tristate_kind::not_matched_yet;
     }
 };
 

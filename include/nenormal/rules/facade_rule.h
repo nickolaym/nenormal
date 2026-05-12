@@ -40,7 +40,7 @@ template<Str auto name, Rule auto p> struct facade_rule {
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
         auto res = p(inplace_extract_text(t));
-        if (res != k_not_matched_yet) {
+        if (res != tristate_kind::not_matched_yet) {
             inplace_update_text(t, *this);
         }
         return res;

@@ -550,41 +550,41 @@ TEST(inplace, simple_check) {
     // single step
     EXPECT_EQ(
         run_inplace("zzz", p),
-        (inplace_argument{"zzz", k_not_matched_yet})
+        (inplace_argument{"zzz", tristate_kind::not_matched_yet})
     );
     EXPECT_EQ(
         run_inplace("aaa", p),
-        (inplace_argument{"baa", k_matched_regular})
+        (inplace_argument{"baa", tristate_kind::matched_regular})
     );
     EXPECT_EQ(
         run_inplace("ccc", p),
-        (inplace_argument{"dcc", k_matched_final})
+        (inplace_argument{"dcc", tristate_kind::matched_final})
     );
     EXPECT_EQ(
         run_inplace("eee", p),
-        (inplace_argument{"fee", k_matched_regular})
+        (inplace_argument{"fee", tristate_kind::matched_regular})
     );
 
     // loop
     EXPECT_EQ(
         run_inplace("zzz", rl),
-        (inplace_argument{"zzz", k_matched_final_halted})
+        (inplace_argument{"zzz", tristate_kind::matched_final_halted})
     );
     EXPECT_EQ(
         run_inplace("aaa", rl),
-        (inplace_argument{"bbb", k_matched_final_halted})
+        (inplace_argument{"bbb", tristate_kind::matched_final_halted})
     );
     EXPECT_EQ(
         run_inplace("ccc", rl),
-        (inplace_argument{"dcc", k_matched_final})
+        (inplace_argument{"dcc", tristate_kind::matched_final})
     );
     EXPECT_EQ(
         run_inplace("eee", rl),
-        (inplace_argument{"fff", k_matched_final_halted})
+        (inplace_argument{"fff", tristate_kind::matched_final_halted})
     );
     EXPECT_EQ(
         run_inplace("aec", rl),
-        (inplace_argument{"bed", k_matched_final})
+        (inplace_argument{"bed", tristate_kind::matched_final})
     );
 
     // machine
