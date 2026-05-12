@@ -7,6 +7,33 @@ namespace nn {
 
 using namespace nn::literals;
 
+TEST(tristate, concepts) {
+    using nmy_t = not_matched_yet<int>;
+    using reg_t = matched_regular<int>;
+    using fin_t = matched_final<int>;
+    using hlt_t = matched_final_halted<int>;
+
+    static_assert(Tristate<nmy_t>);
+    static_assert(NotMatchedYet<nmy_t>);
+    static_assert(!MatchedRegular<nmy_t>);
+    static_assert(!MatchedFinal<nmy_t>);
+
+    static_assert(Tristate<reg_t>);
+    static_assert(!NotMatchedYet<reg_t>);
+    static_assert(MatchedRegular<reg_t>);
+    static_assert(!MatchedFinal<reg_t>);
+
+    static_assert(Tristate<fin_t>);
+    static_assert(!NotMatchedYet<fin_t>);
+    static_assert(!MatchedRegular<fin_t>);
+    static_assert(MatchedFinal<fin_t>);
+
+    static_assert(Tristate<hlt_t>);
+    static_assert(!NotMatchedYet<hlt_t>);
+    static_assert(!MatchedRegular<hlt_t>);
+    static_assert(MatchedFinal<hlt_t>);
+}
+
 constexpr auto mismatch    = [](auto&& x) constexpr -> decltype(auto) { return std::forward<decltype(x)>(x); };
 constexpr auto regular_inc = [](auto&& x) constexpr { return matched_regular{x.value + 1}; };
 constexpr auto final_inc   = [](auto&& x) constexpr { return matched_final{x.value + 10}; };

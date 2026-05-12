@@ -14,6 +14,8 @@ using namespace nn::literals;
 // Handler: (Str, Rule, Str) -> Handler
 // construct_state(Handler, Str) -> Stateful
 
+CONCEPT(Stateful);
+
 template<class T, class A>
 struct stateful {
     REPRESENTS(Stateful)
@@ -23,7 +25,6 @@ struct stateful {
     T value;
     A aux;
 };
-CONCEPT(Stateful);
 
 // rule input: domain
 // rule output:

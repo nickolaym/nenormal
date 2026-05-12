@@ -8,7 +8,7 @@
 
 #define NAMED_RULE_TYPE(name, p) \
 struct name { \
-    REPRESENTS(Rule) \
+    REPRESENTS(::nn::Rule) \
     static constexpr auto impl = (p); \
     constexpr decltype(auto) operator()(::nn::RuleNotMatchedYetInputRef auto&& nmy) const { return impl(FWD(nmy)); } \
     constexpr ::nn::RuleOutput auto operator()(::nn::RuleInputRef auto&& t) const { return impl(FWD(t)); } \
