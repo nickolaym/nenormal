@@ -7,8 +7,7 @@
 
 namespace nn {
 
-CONCEPT(Ct)
-template<class T, class U> concept CtOf = Ct<T> && std::same_as<typename T::type, U>;
+CONCEPT_WITH_TYPE(Ct)
 
 template<auto V> struct ct {
     using type = std::remove_const_t<decltype(V)>;

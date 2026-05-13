@@ -10,7 +10,9 @@
 namespace nn {
 
 CONCEPT(Str)
-template<class T> concept CtStr = Ct<T> && Str<typename T::type>;
+
+template<class T> concept CtStr = CtOfTraits<T, is_Str>;
+CONCEPT_TYPECHECKER(CtStr)
 
 template<size_t N> using charbuf = char[N];
 

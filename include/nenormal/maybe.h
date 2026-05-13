@@ -6,7 +6,7 @@
 namespace nn {
 
 CONCEPT(Nothing); // stops a chain
-CONCEPT(Just); // continues a chain
+CONCEPT_WITH_TYPE(Just); // continues a chain
 template<class T> concept Maybe = Nothing<T> || Just<T>;
 
 struct nothing;

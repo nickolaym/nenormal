@@ -8,7 +8,7 @@
 
 namespace nn {
 
-template<class T> concept JustCtStr = Just<T> && CtStr<typename T::type>;
+template<class T> concept JustCtStr = JustOfTraits<T, is_CtStr>;
 template<class T> concept MaybeCtStr = Nothing<T> || JustCtStr<T>;
 
 // search, replace, text -> maybe new text

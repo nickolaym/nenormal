@@ -6,8 +6,7 @@
 
 namespace nn {
 
-CONCEPT(Inplace);
-template<class T, class V> concept InplaceOf = Inplace<T> && std::same_as<typename T::type, V>;
+CONCEPT_WITH_TYPE(Inplace);
 
 template<class T>
 struct inplace_argument {

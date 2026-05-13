@@ -6,10 +6,11 @@
 
 namespace nn {
 
-CONCEPT(Tristate);
-CONCEPT(NotMatchedYet);
-CONCEPT(MatchedRegular);
-CONCEPT(MatchedFinal);
+CONCEPT_WITH_TYPE(Tristate);
+CONCEPT_WITH_TYPE(NotMatchedYet);
+CONCEPT_WITH_TYPE(Matched);
+CONCEPT_WITH_TYPE(MatchedRegular);
+CONCEPT_WITH_TYPE(MatchedFinal);
 
 enum class tristate_kind {
     not_matched_yet,
@@ -26,6 +27,7 @@ template<tristate_kind kind, class T> struct tristate {
 
     REPRESENTS(Tristate);
     REPRESENTS_COND(NotMatchedYet, NMY);
+    REPRESENTS_COND(Matched, MAT);
     REPRESENTS_COND(MatchedRegular, REG);
     REPRESENTS_COND(MatchedFinal, FIN);
 

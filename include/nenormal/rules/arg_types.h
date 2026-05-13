@@ -20,25 +20,27 @@ namespace nn {
 // - augmented string
 
 template<class T> concept RuleInput = CtStr<T> || Augmented<T>;
+CONCEPT_TYPECHECKER(RuleInput)
 // concept of universal reference: f(RuleInputRef auto&& a)
 template<class R> concept RuleInputRef = RuleInput<std::remove_cvref_t<R>>;
 
 // Tristate input is a subclass of Tristate of RuleInput, namely NotMatchedYet
 
-template<class T> concept RuleNotMatchedYetInput = NotMatchedYet<T> && RuleInput<typename T::type>;
+template<class T> concept RuleNotMatchedYetInput = NotMatchedYetOfTraits<T, is_RuleInput>;
 // concept of universal reference: f(RuleNotMatchedYetInputRef auto&& a)
 template<class R> concept RuleNotMatchedYetInputRef = RuleNotMatchedYetInput<std::remove_cvref_t<R>>;
 
 // output
 
-template<class T> concept RuleOutput = Tristate<T> && RuleInput<typename T::type>;
-template<class T> concept RuleMatchedOutput = RuleOutput<T> && !NotMatchedYet<T>;
-template<class T> concept RuleFailedOutput = RuleOutput<T> && NotMatchedYet<T>;
+template<class T> concept RuleOutput        = TristateOfTraits<T, is_RuleInput>;
+template<class T> concept RuleMatchedOutput = MatchedOfTraits<T, is_RuleInput>;
+template<class T> concept RuleFailedOutput  = NotMatchedYetOfTraits<T, is_RuleInput>;
 // Note that RuleNotMatchedYetInput == RuleFailedOutput
 
 // inplace in-out arg
 
 template<class T> concept RuleFixedInput = std::same_as<T, std::string> || InplaceAugmented<T>;
-template<class T> concept RuleInplaceArg = Inplace<T> && RuleFixedInput<typename T::type>;
+CONCEPT_TYPECHECKER(RuleFixedInput);
+template<class T> concept RuleInplaceArg = InplaceOfTraits<T, is_RuleFixedInput>;
 
 } // namespace nn

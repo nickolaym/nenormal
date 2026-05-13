@@ -21,7 +21,7 @@ enum class rule_kind {
     regular,
     final,
 };
-template<class T> concept CtRuleKind = CtOf<T, rule_kind>;
+template<class T> concept CtRuleKind = CtOfType<T, rule_kind>;
 
 // single search-and-replace function
 
