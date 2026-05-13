@@ -7,10 +7,13 @@
 
 Не пытайтесь использовать этот код в продакшене! Он вынесет мозг компилятору!!!
 
+[Черновик статьи](article/habr-article.md)
+
 ## Список документации
 
 - [TODO](TODO.md)
 - [Примеры](examples/README.md)
+- [Концепты](details/concepts.md)
 - [Троичная монада](details/tristate.md)
 - [Аугментация](details/augmentation.md)
 - [Передача значений](details/byref.md)
@@ -35,8 +38,8 @@
 
 ## Детали реализации
 
-Подробнее о том, как устроен код - в тексте
-- [details/functional_composition.md](details/functional_composition.md)
+УСТАРЕВШИЙ РАССКАЗ о том, как устроен код - в тексте
+[details/functional_composition.md](details/functional_composition.md)
 
 Но проще всего сразу смотреть на **[примеры](examples/README.md)**
 
@@ -54,6 +57,8 @@ template<XXXXX> auto bar(foo<XXXXX> f)
 ```cpp
 auto bar(Foo auto f)
 ```
+
+Подробнее о концептах - в тексте [Концепты](details/concepts.md)
 
 ### Зависимые типы
 
@@ -102,7 +107,7 @@ enum rule_kind { rule_kind::regular, rule_kind::final };
 
 Для однородности, возвращаемая строка тоже `CtStr`. На самом деле, можно было бы возвращать `constexpr Str auto` - но мы немедленно переводили бы её в `CtStr` для передачи в другие правила.
 
-Возвращаемый результат `RuleOutput` - это обёртка над `RuleInput`, - одна из структур, образующих семейство. Подробнее см. [TriState](details/tristate.md)
+Возвращаемый результат `RuleOutput` - это обёртка над `RuleInput`, - одна из структур, образующих семейство. Подробнее см. [Tristate](details/tristate.md)
 
 Аргументом является не непосредственно RuleInput, а частный случай RuleOutput - `RuleNotMatchedYetInput` - то есть, `not_matched_yet<T>`, где T - RuleInput.
 

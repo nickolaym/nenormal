@@ -10,6 +10,12 @@ namespace nn {
 
 template<class T> concept ValueType = !::std::is_const_v<T> && !::std::is_reference_v<T>;
 
+template<class T, class U>
+concept HasTypeOfType = std::same_as<typename T::type, U>;
+
+template<class T, template<class>class C>
+concept HasTypeOfTraits = C<typename T::type>::value;
+
 } // namespace nn
 
 // Foo_concept_probe is a helper structure
@@ -18,14 +24,41 @@ template<class T> concept ValueType = !::std::is_const_v<T> && !::std::is_refere
 #define CONCEPT_PROBE_NAME_(Name) Name##_concept_probe
 #define CONCEPT_PROBE_NAME(Name) CONCEPT_PROBE_NAME_(Name)
 
+// is_Foo is a metafuntion type - template<class>class : std::bool_constant
+#define IS_CONCEPT_NAME_(Name) is_##Name
+#define IS_CONCEPT_NAME(Name) IS_CONCEPT_NAME_(Name)
+// is_Foo_v is corresponding metafunction value - tempate<class> constexpr bool
+#define IS_CONCEPT_NAME_V_(Name) is_##Name##_v
+#define IS_CONCEPT_NAME_V(Name) IS_CONCEPT_NAME_V_(Name)
+
+// define arbitrary typechecker - struct is_Name and constexpr is_Name_v = (expr of T)
+#define DEFINE_TYPECHECKER(Name, T, expr) \
+    template<class T> \
+    using IS_CONCEPT_NAME(Name) = std::bool_constant<(expr)>; \
+    template<class T> \
+    constexpr bool IS_CONCEPT_NAME_V(Name) = (expr);
+
+// defines typechecker from given concept
+#define CONCEPT_TYPECHECKER(Name) \
+    DEFINE_TYPECHECKER(Name, T, (Name<T>))
+
 // defines a concept of a structure types
 #define CONCEPT(Name) \
-    struct CONCEPT_PROBE_NAME(Name) : std::true_type{}; \
+    struct CONCEPT_PROBE_NAME(Name) {}; \
     template<class T> \
     concept Name = \
-        (::nn::ValueType<T>) && \
-        requires { T::represents_concept(CONCEPT_PROBE_NAME(Name){}); } \
-        ;
+        /* (::nn::ValueType<T>) && */ \
+        requires { T::represents_concept(CONCEPT_PROBE_NAME(Name){}); }; \
+    CONCEPT_TYPECHECKER(Name)
+
+#define CONCEPT_WITH_TYPE(Name) \
+    CONCEPT(Name); \
+    template<class T, class V> \
+    concept Name##OfType = \
+        Name<T> && ::nn::HasTypeOfType<T, V>; \
+    template<class T, template<class>class C> \
+    concept Name##OfTraits = \
+        Name<T> && ::nn::HasTypeOfTraits<T, C>;
 
 // assertion that the concept is defined
 // (compiler errors, if not true)
