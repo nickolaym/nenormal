@@ -839,6 +839,8 @@ template<class T> struct matched_regular {
 
 ## Технические детали: концепты
 
+(подробнее о концептах см. в статье [Концепты](/details/concepts.md))
+
 В проекте вовсю используются концепты. Причин для этого несколько:
 
 - Попросту для улучшения читаемости.
@@ -887,48 +889,26 @@ template<auto V> struct ct {
 template<class T> concept Ct = /* проверить, что T = ct<???> */;
 
 // ct конкнетного типа
-template<class T, class VT> concept CtOf = Ct<T> && std::same_as<typename T::type, VT>;
-```
-но, к сожалению, параметром концепта может быть только тип.
+template<class T, class VT>
+concept CtOfType = Ct<T> && std::same_as<typename T::type, VT>;
 
-Сделать концепт, параметризованный концептом, нельзя.
-
-Придётся руками расписывать
-```cpp
-template<size_t N> struct str { ..... };
-
-template<class T> concept Str = /* T = str<N> */;
-
-template<class T> concept CtStr = Ct<T> && Str<typename T::type>;
-// вместо того, чтобы было
-template<class T> concept CtStr = CtOfConcept<T, Str>;
+// ct типа, удовлетворяющего предикату
+template<class T, template<class>class C>
+concept CtOfTraits = Ct<T> && C<typename T::type>::value;
 ```
 
-Конечно, можно было бы выкрутиться, заведя параллельно каждому концепту метафункцию
-```cpp
-template<class T> struct is_str_t : std::false_type {};
-template<size_t N> struct is_str_t<str<N>> : std::true_type {};
-template<class T> concept Str = is_str_t<T>::value;
-
-template<class T> struct is_ct_t : std::false_type {};
-template<auto V> struct is_ct_t<ct<V>> : std::true_type {};
-template<class T> concept Ct = is_ct_t<T>::value;
-
-template<class T, class P> concept CtOfPredicate = Ct<T> && P<typename T::type>::value;
-template<class T, class P> using is_ct_of_predicate_t = std::bool_constant<CtOfPredicate<T, P>>;
-
-template<class T> concept CtStr = CtOfPredicate<T, is_str_t>;
-template<class T> using is_ct_str = std::bool_constant<CtStr<T>>;
-```
-
-Поскольку структур и концептов в проекте много, то я предпочёл вариант с минимумом писанины.
+Поскольку структур и концептов в проекте много, то я использую макросы.
 
 ```cpp
-#define CONCEPT(name) template<class T> concept name = T::this_is_##name;
+#define CONCEPT(name) .....
+#define REPRESENTS(name) .....
+#define REPRESENTS_COND(name, cond) ..... // для представительства по условию
 
-#define REPRESENTS(name) static constexpr bool this_is_##name = true;
-
-CONCEPT(Foo);
+CONCEPT(Foo)
+// вводит концепт и шаблоны метафункций - класса и константы
+template<class T> concept Foo = /* детали */;
+template<class T> using is_Foo = std::bool_constant<Foo<T>>;
+template<class T> static constexpr bool is_Foo_v = Foo<T>;
 
 struct foo1 {
     REPRESENTS(Foo);
@@ -937,28 +917,23 @@ struct foo2 {
     REPRESENTS(Foo);
 };
 ```
+Если структура - это шаблон-контейнер, то по договорённости она содержит
+`using type = T` (где T - параметр шаблона).
 
-Кроме прочего, этот способ проверки избавляет от проблем с правилами видимости и порядком объявлений.
-
-Если бы, например, делать на специализации метафункции,
+В таком случае соответствующий концепт объявляется макросом
 ```cpp
-template<class T> struct is_foo_t : std::false_type {};
-
-template<class T> concept Foo = is_foo_t<T>::value;
-
-template<class X, class Y> struct foo1 {};
-template<class X, class Y> struct is_foo_t<foo1<X, Y>> : std::true_type {};
+CONCEPT_WITH_TYPE(Foo)
+// что вводит
+template<class T> concept Foo = /* детали */;  // CONCEPT(Foo)
+template<class T, class U> concept FooOfType =
+    Foo<T> && HasTypeOfType<T, U>;
+template<class T, template<class>class C> concept FooOfTraits =
+    Foo<T> && HasTypeOfTraits<T, C>;
 ```
-то объявление концпета и связанной метафункции должно строго предшествовать объявлению представителей.
-
-А использование (первое инстанцирование) концепта для данного типа - строго следовать.
-
-Из-за чего не получится без выкрутасов применять конецепт самого себя внутри класса.
-
-С другой стороны, мой подход неустойчив к опечаткам.
+для чего существуют вспомогательные концепты
 ```cpp
-CONCEPT(Abracadabra);
-struct abracadabra {
-    REPRESENTS(Abbbracacabra);
-};
+template<class T, class U> concept HasTypeOfType =
+    std::same_as<typename T::type, U>;
+template<class T, template<class>class C> HasTypeOfTraits =
+    C<typename T::type>::value;
 ```
