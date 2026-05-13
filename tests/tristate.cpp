@@ -7,6 +7,33 @@ namespace nn {
 
 using namespace nn::literals;
 
+TEST(tristate, concepts) {
+    using nmy_t = not_matched_yet<int>;
+    using reg_t = matched_regular<int>;
+    using fin_t = matched_final<int>;
+    using hlt_t = matched_final_halted<int>;
+
+    static_assert(Tristate<nmy_t>);
+    static_assert(NotMatchedYet<nmy_t>);
+    static_assert(!MatchedRegular<nmy_t>);
+    static_assert(!MatchedFinal<nmy_t>);
+
+    static_assert(Tristate<reg_t>);
+    static_assert(!NotMatchedYet<reg_t>);
+    static_assert(MatchedRegular<reg_t>);
+    static_assert(!MatchedFinal<reg_t>);
+
+    static_assert(Tristate<fin_t>);
+    static_assert(!NotMatchedYet<fin_t>);
+    static_assert(!MatchedRegular<fin_t>);
+    static_assert(MatchedFinal<fin_t>);
+
+    static_assert(Tristate<hlt_t>);
+    static_assert(!NotMatchedYet<hlt_t>);
+    static_assert(!MatchedRegular<hlt_t>);
+    static_assert(MatchedFinal<hlt_t>);
+}
+
 constexpr auto mismatch    = [](auto&& x) constexpr -> decltype(auto) { return std::forward<decltype(x)>(x); };
 constexpr auto regular_inc = [](auto&& x) constexpr { return matched_regular{x.value + 1}; };
 constexpr auto final_inc   = [](auto&& x) constexpr { return matched_final{x.value + 10}; };
@@ -93,18 +120,18 @@ TEST(tristate, alternatives) {
 
 /// inplace
 
-constexpr auto inplace_mismatch    = [](int& x) constexpr { return k_not_matched_yet; };
-constexpr auto inplace_regular_inc = [](int& x) constexpr { x += 1; return k_matched_regular; };
-constexpr auto inplace_final_inc   = [](int& x) constexpr { x += 10; return k_matched_final; };
+constexpr auto inplace_mismatch    = [](int& x) constexpr { return tristate_kind::not_matched_yet; };
+constexpr auto inplace_regular_inc = [](int& x) constexpr { x += 1; return tristate_kind::matched_regular; };
+constexpr auto inplace_final_inc   = [](int& x) constexpr { x += 10; return tristate_kind::matched_final; };
 
 constexpr auto run_inplace(Inplace auto z, auto&& ... fs) {
     (z || ... || z.updated_by(fs));
     return z;
 }
-constexpr auto inplace_not_matched_yet(auto x) { return inplace_argument{x, k_not_matched_yet}; }
-constexpr auto inplace_matched_regular(auto x) { return inplace_argument{x, k_matched_regular}; }
-constexpr auto inplace_matched_final(auto x) { return inplace_argument{x, k_matched_final}; }
-constexpr auto inplace_matched_final_halted(auto x) { return inplace_argument{x, k_matched_final_halted}; }
+constexpr auto inplace_not_matched_yet(auto x) { return inplace_argument{x, tristate_kind::not_matched_yet}; }
+constexpr auto inplace_matched_regular(auto x) { return inplace_argument{x, tristate_kind::matched_regular}; }
+constexpr auto inplace_matched_final(auto x) { return inplace_argument{x, tristate_kind::matched_final}; }
+constexpr auto inplace_matched_final_halted(auto x) { return inplace_argument{x, tristate_kind::matched_final_halted}; }
 constexpr auto inplace_commit(auto x) { x.commit(); return x; }
 
 TEST(tristate_inplace, not_matched_yet) {

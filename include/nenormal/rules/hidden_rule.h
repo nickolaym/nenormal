@@ -11,7 +11,7 @@ namespace nn {
 template<Rule auto p> struct hidden_rule {
     REPRESENTS(Rule)
 
-    constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
+    constexpr RuleOutput decltype(auto) operator()(RuleNotMatchedYetInput auto&& nmy) const {
         RuleOutput auto out = not_matched_yet{extract_text(nmy.value)} >> p;
         if constexpr (!out.is_matched) {
             return FWD(nmy);
@@ -19,7 +19,7 @@ template<Rule auto p> struct hidden_rule {
             return out.rebind(rebind_text(FWD(nmy).value, out.value));
         }
     }
-    constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
+    constexpr RuleOutput auto operator()(RuleInput auto&& t) const {
         RuleOutput auto out = p(extract_text(t));
         // combine old augmentation with new text,
         // then combine new kind of tristate result with new augmented

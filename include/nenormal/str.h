@@ -9,6 +9,11 @@
 
 namespace nn {
 
+CONCEPT(Str)
+
+template<class T> concept CtStr = CtOfTraits<T, is_Str>;
+CONCEPT_TYPECHECKER(CtStr)
+
 template<size_t N> using charbuf = char[N];
 
 template<size_t N> struct str {
@@ -41,9 +46,6 @@ template<size_t N> struct str {
 };
 // CTAD
 template<size_t N> str(const charbuf<N>&) -> str<N>;
-
-CONCEPT(Str)
-template<class T> concept CtStr = Ct<T> && Str<typename T::type>;
 
 namespace literals {
 

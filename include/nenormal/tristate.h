@@ -6,131 +6,86 @@
 
 namespace nn {
 
-CONCEPT(NotMatchedYet);
-CONCEPT(MatchedRegular);
-CONCEPT(MatchedFinal);
-template<class T> concept Tristate =
-    NotMatchedYet<T> || // will continue
-    MatchedRegular<T> || // will stop matching, but restart the loop
-    MatchedFinal<T>; // will stop the loop
+CONCEPT_WITH_TYPE(Tristate);
+CONCEPT_WITH_TYPE(NotMatchedYet);
+CONCEPT_WITH_TYPE(Matched);
+CONCEPT_WITH_TYPE(MatchedRegular);
+CONCEPT_WITH_TYPE(MatchedFinal);
 
-template<class T> struct not_matched_yet;
-template<class T> struct matched_regular;
-template<class T> struct matched_final;
-template<class T> struct matched_final_halted; // special case of final
+enum class tristate_kind {
+    not_matched_yet,
+    matched_regular,
+    matched_final,
+    matched_final_halted,
+};
 
-template<class T> struct not_matched_yet {
-    REPRESENTS(NotMatchedYet);
+template<tristate_kind kind, class T> struct tristate {
+    static constexpr bool NMY = kind == tristate_kind::not_matched_yet;
+    static constexpr bool MAT = !NMY;
+    static constexpr bool REG = kind == tristate_kind::matched_regular;
+    static constexpr bool FIN = !NMY && !REG;
+
+    REPRESENTS(Tristate);
+    REPRESENTS_COND(NotMatchedYet, NMY);
+    REPRESENTS_COND(Matched, MAT);
+    REPRESENTS_COND(MatchedRegular, REG);
+    REPRESENTS_COND(MatchedFinal, FIN);
+
     using type = T;
     T value;
-    constexpr bool operator == (not_matched_yet const&) const = default;
-    constexpr bool operator == (Tristate auto const&) const { return false; }
-    friend std::ostream& operator << (std::ostream& os, not_matched_yet const& v) {
-        return os << "not_matched_yet{" << v.value << "}";
-    }
+    static constexpr bool is_matched = MAT;
 
-    static constexpr bool is_matched = false;
+    // comparable with itself or with same kind
+
+    constexpr bool operator == (const tristate&) const
+        requires std::equality_comparable<T>
+        = default;
+
+    template<class T1>
+    constexpr bool operator == (const tristate<kind, T1>& other) const
+        requires std::equality_comparable<T>
+        { return value == other.value; }
+
+    template<tristate_kind k1, class T1>
+    constexpr bool operator == (const tristate<k1, T1>& other) const
+        { return false; }
 
     // not_matched_yet will be passed to next rule in the sequence
-    constexpr decltype(auto) operator >> (auto&& f) && { return f(std::move(*this)); }
-    constexpr decltype(auto) operator >> (auto&& f) const& { return f(*this); }
+    constexpr decltype(auto) operator >> (auto&& f) &&     requires NMY { return f(std::move(*this)); }
+    constexpr decltype(auto) operator >> (auto&& f) const& requires NMY { return f(*this); }
+    // others break the sequence
+    constexpr decltype(auto) operator >> (auto&& f) &&     requires MAT { return std::move(*this); }
+    constexpr decltype(auto) operator >> (auto&& f) const& requires MAT { return (*this); }
 
     // not-matched-yet result of (nmy >> p1 >> p2 >> p3) is nmy itself
-    constexpr decltype(auto) commit_alts() && { return std::move(*this); }
-    constexpr decltype(auto) commit_alts() const& { return *this; }
+    constexpr decltype(auto) commit_alts() &&     requires NMY { return std::move(*this); }
+    constexpr decltype(auto) commit_alts() const& requires NMY { return *this; }
+    // others should copy
+    constexpr auto           commit_alts() &&     requires MAT { return std::move(*this); }
+    constexpr auto           commit_alts() const& requires MAT { return *this; }
 
     // not_matched_yet breaks the loop
-    constexpr auto commit_loop() && { return matched_final_halted{std::move(value)}; }
-    constexpr auto commit_loop() const& { return matched_final_halted{value}; }
-
-    // return Tristate of same kind, with new value
-    constexpr auto rebind(auto v) const { return not_matched_yet<decltype(v)>{v}; }
-};
-
-template<class T> struct matched_regular {
-    REPRESENTS(MatchedRegular);
-    using type = T;
-    T value;
-    constexpr bool operator == (matched_regular const&) const = default;
-    constexpr bool operator == (Tristate auto const&) const { return false; }
-    friend std::ostream& operator << (std::ostream& os, matched_regular const& v) {
-        return os << "matched_regular{" << v.value << "}";
-    }
-
-    static constexpr bool is_matched = true;
-
-    // matched_regular breaks the sequence
-    // return by reference to avoid copying
-    constexpr decltype(auto) operator >> (auto&& f) && { return std::move(*this); }
-    constexpr decltype(auto) operator >> (auto&& f) const& { return *this; }
-
-    // matched-somewhere result of (nmy >> p1 >> p2 >> p3) is temporary
-    constexpr auto commit_alts() && { return std::move(*this); }
-    constexpr auto commit_alts() const& { return *this; }
-
+    constexpr auto commit_loop() &&     requires NMY { return tristate<tristate_kind::matched_final_halted, T>{std::move(value)}; }
+    constexpr auto commit_loop() const& requires NMY { return tristate<tristate_kind::matched_final_halted, T>{value}; }
     // matched_regular restarts the loop
-    constexpr auto commit_loop() && { return not_matched_yet{std::move(value)}; }
-    constexpr auto commit_loop() const& { return not_matched_yet{value}; }
+    constexpr auto commit_loop() &&     requires REG { return tristate<tristate_kind::not_matched_yet, T>{std::move(value)}; }
+    constexpr auto commit_loop() const& requires REG { return tristate<tristate_kind::not_matched_yet, T>{value}; }
+    // others break the loop with themselves
+    constexpr auto commit_loop() &&     requires FIN { return tristate{std::move(value)}; }
+    constexpr auto commit_loop() const& requires FIN { return tristate{value}; }
 
-    // return Tristate of same kind, with new value
-    constexpr auto rebind(auto v) const { return matched_regular<decltype(v)>{v}; }
+    // rebind the wrapper with another value
+    template<class V>
+    constexpr auto rebind(V v) const { return tristate<kind, V>{std::move(v)}; }
 };
 
-template<class T> struct matched_final {
-    REPRESENTS(MatchedFinal);
-    using type = T;
-    T value;
-    constexpr bool operator == (matched_final const&) const = default;
-    constexpr bool operator == (Tristate auto const&) const { return false; }
-    friend std::ostream& operator << (std::ostream& os, matched_final const& v) {
-        return os << "matched_final{" << v.value << "}";
-    }
+template<class T> using not_matched_yet = tristate<tristate_kind::not_matched_yet, T>;
+template<class T> using matched_regular = tristate<tristate_kind::matched_regular, T>;
+template<class T> using matched_final = tristate<tristate_kind::matched_final, T>;
+template<class T> using matched_final_halted = tristate<tristate_kind::matched_final_halted, T>; // special case of final
 
-    static constexpr bool is_matched = true;
+static_assert(Tristate<not_matched_yet<int>>);
+static_assert(NotMatchedYet<not_matched_yet<int>>);
 
-    // matched_final breaks the sequence
-    // return by reference to avoid copying
-    constexpr decltype(auto) operator >> (auto&& f) && { return std::move(*this); }
-    constexpr decltype(auto) operator >> (auto&& f) const& { return *this; }
-
-    // matched-somewhere result of (nmy >> p1 >> p2 >> p3) is temporary
-    constexpr auto commit_alts() && { return std::move(*this); }
-    constexpr auto commit_alts() const& { return *this; }
-
-    // matched_final breaks the loop
-    constexpr auto commit_loop() && { return std::move(*this); }
-    constexpr auto commit_loop() const& { return *this; }
-
-    // return Tristate of same kind, with new value
-    constexpr auto rebind(auto v) const { return matched_final<decltype(v)>{v}; }
-};
-
-template<class T> struct matched_final_halted {
-    REPRESENTS(MatchedFinal);
-    using type = T;
-    T value;
-    constexpr bool operator == (matched_final_halted const&) const = default;
-    constexpr bool operator == (Tristate auto const&) const { return false; }
-    friend std::ostream& operator << (std::ostream& os, matched_final_halted const& v) {
-        return os << "matched_halted{" << v.value << "}";
-    }
-
-    static constexpr bool is_matched = true;
-
-    // matched_final_halted breaks the sequence
-    constexpr decltype(auto) operator >> (auto&& f) && { return std::move(*this); }
-    constexpr decltype(auto) operator >> (auto&& f) const& { return *this; }
-
-    // matched-somewhere result of (nmy >> p1 >> p2 >> p3) is temporary
-    constexpr auto commit_alts() && { return std::move(*this); }
-    constexpr auto commit_alts() const& { return *this; }
-
-    // matched_final breaks the loop
-    constexpr auto commit_loop() && { return std::move(*this); }
-    constexpr auto commit_loop() const& { return *this; }
-
-    // return Tristate of same kind, with new value
-    constexpr auto rebind(auto v) const { return matched_final_halted<decltype(v)>{v}; }
-};
 
 } // namespace nn

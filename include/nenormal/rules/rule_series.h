@@ -17,16 +17,16 @@ template<Rule auto... ps> struct rules {
     constexpr rules() = default;
     constexpr rules(Rule auto...) {}
 
-    constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
+    constexpr RuleOutput decltype(auto) operator()(RuleNotMatchedYetInput auto&& nmy) const {
         return (FWD(nmy) >> ... >> ps).commit_alts();
     }
-    constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
+    constexpr RuleOutput auto operator()(RuleInput auto&& t) const {
         return (not_matched_yet{FWD(t)} >> ... >> ps);
     }
-    constexpr inplace_state operator()(RuleFixedInput auto& t) const {
+    constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
         inplace_argument<decltype(t)> a{t}; // reference to input
         (a || ... || a.updated_by(ps));
-        return a.state;
+        return a.kind;
     }
 };
 
@@ -36,14 +36,14 @@ template<Rule auto... ps> constexpr rules<ps...> rules_v{};
 
 template<> struct rules<> {
     REPRESENTS(Rule)
-    constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
+    constexpr RuleOutput decltype(auto) operator()(RuleNotMatchedYetInput auto&& nmy) const {
         return FWD(nmy);
     }
-    constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
+    constexpr RuleOutput auto operator()(RuleInput auto&& t) const {
         return not_matched_yet{FWD(t)};
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
-        return k_not_matched_yet;
+        return tristate_kind::not_matched_yet;
     }
 };
 

@@ -41,7 +41,7 @@ TEST(compose, chain_of_chains) {
 TEST(compose, repeat) {
     constexpr auto inc = [](arg<int> ax) { return arg{ax.value + 1}; };
 
-    constexpr auto testcase = [inc](CtOf<int> auto ctn) {
+    constexpr auto testcase = [inc](CtOfType<int> auto ctn) {
         constexpr int n = ctn.value;
         static_assert(arg{0} >> repeat<n>(inc) == arg{n});
     };
@@ -69,7 +69,7 @@ TEST(compose, repeat_with_side_effect) {
 }
 
 TEST(compose, endless) {
-    auto countdown = []<CtOf<int> T>(arg<T> a) {
+    auto countdown = []<CtOfType<int> T>(arg<T> a) {
         constexpr int n = a.value.value;
         if constexpr (n == 0)
             return stop{0};

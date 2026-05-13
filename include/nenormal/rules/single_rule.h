@@ -21,7 +21,7 @@ enum class rule_kind {
     regular,
     final,
 };
-template<class T> concept CtRuleKind = CtOf<T, rule_kind>;
+template<class T> concept CtRuleKind = CtOfType<T, rule_kind>;
 
 // single search-and-replace function
 
@@ -46,7 +46,7 @@ template<Str auto s, Str auto r, rule_kind k> struct rule {
         return os;
     }
 
-    constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
+    constexpr RuleOutput decltype(auto) operator()(RuleNotMatchedYetInput auto&& nmy) const {
         MaybeCtStr auto mb = try_substitute(ct_search, ct_replace, extract_text(nmy.value));
         if constexpr (!mb) {
             return FWD(nmy);
@@ -58,7 +58,7 @@ template<Str auto s, Str auto r, rule_kind k> struct rule {
             }
         }
     }
-    constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
+    constexpr RuleOutput auto operator()(RuleInput auto&& t) const {
         MaybeCtStr auto mb = try_substitute(ct_search, ct_replace, extract_text(t));
         if constexpr (!mb) {
             // failed
@@ -72,15 +72,15 @@ template<Str auto s, Str auto r, rule_kind k> struct rule {
         }
     }
 
-    constexpr inplace_state operator()(RuleFixedInput auto& t) const {
+    constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
         if (!try_substitute_inplace(ct_search, ct_replace, inplace_extract_text(t))) {
-            return k_not_matched_yet;
+            return tristate_kind::not_matched_yet;
         } else {
             inplace_update_text(t, rule{});
             if (k == rule_kind::regular) {
-                return k_matched_regular;
+                return tristate_kind::matched_regular;
             } else {
-                return k_matched_final;
+                return tristate_kind::matched_final;
             }
         }
     }
