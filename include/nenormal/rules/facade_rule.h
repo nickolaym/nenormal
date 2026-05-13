@@ -28,16 +28,6 @@ template<Str auto name, Rule auto p> struct facade_rule {
             return out.rebind(update_text(FWD(nmy).value, *this, out.value));
         }
     }
-    constexpr RuleOutput auto operator()(RuleInput auto&& t) const {
-        RuleOutput auto out = p(extract_text(t));
-        // combine old augmentation with new text,
-        // then combine new kind of tristate result with new augmented
-        if constexpr (!out.is_matched) {
-            return out.rebind(rebind_text(FWD(t), out.value));
-        } else {
-            return out.rebind(update_text(FWD(t), *this, out.value));
-        }
-    }
     constexpr auto operator()(RuleFixedInput auto& t) const {
         auto res = p(inplace_extract_text(t));
         if (res != tristate_kind::not_matched_yet) {

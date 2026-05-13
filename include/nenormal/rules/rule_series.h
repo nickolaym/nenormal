@@ -20,9 +20,6 @@ template<Rule auto... ps> struct rules {
     constexpr RuleOutput decltype(auto) operator()(RuleNotMatchedYetInput auto&& nmy) const {
         return (FWD(nmy) >> ... >> ps).commit_alts();
     }
-    constexpr RuleOutput auto operator()(RuleInput auto&& t) const {
-        return (not_matched_yet{FWD(t)} >> ... >> ps);
-    }
     constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
         inplace_argument<decltype(t)> a{t}; // reference to input
         (a || ... || a.updated_by(ps));
@@ -38,9 +35,6 @@ template<> struct rules<> {
     REPRESENTS(Rule)
     constexpr RuleOutput decltype(auto) operator()(RuleNotMatchedYetInput auto&& nmy) const {
         return FWD(nmy);
-    }
-    constexpr RuleOutput auto operator()(RuleInput auto&& t) const {
-        return not_matched_yet{FWD(t)};
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
         return tristate_kind::not_matched_yet;

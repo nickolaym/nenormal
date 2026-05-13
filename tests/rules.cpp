@@ -18,10 +18,6 @@ TEST(rule_concepts, acceptance) {
     constexpr auto nmy_str_fun = [&]{ return nmy_str; };
     constexpr auto nmy_augmented_fun = [&]{ return nmy_augmented; };
 
-    auto take_rule_input = [](RuleInput auto) {};
-    static_assert(requires { take_rule_input(bare_str); });
-    static_assert(requires { take_rule_input(augmented_str); });
-
     auto take_rule_nmy_byval = [](RuleNotMatchedYetInput auto) {};
     static_assert(requires { take_rule_nmy_byval(nmy_str); });
     static_assert(requires { take_rule_nmy_byval(nmy_augmented); });
@@ -50,29 +46,29 @@ TEST(rule_concepts, acceptance) {
 }
 
 TEST(single_rule, fails) {
-    static_assert(RULE("a", "b")(CTSTR("")) == NOT_MATCHED(""));
-    static_assert(RULE("a", "b")(CTSTR("b")) == NOT_MATCHED("b"));
-    static_assert(RULE("aaa", "b")(CTSTR("aa")) == NOT_MATCHED("aa"));
+    static_assert(RULE("a", "b")(NOT_MATCHED("")) == NOT_MATCHED(""));
+    static_assert(RULE("a", "b")(NOT_MATCHED("b")) == NOT_MATCHED("b"));
+    static_assert(RULE("aaa", "b")(NOT_MATCHED("aa")) == NOT_MATCHED("aa"));
 }
 
 TEST(single_rule, when_text_is_same_as_search) {
-    static_assert(RULE("foo", "bar")(CTSTR("foo")) == REGULAR("bar"));
+    static_assert(RULE("foo", "bar")(NOT_MATCHED("foo")) == REGULAR("bar"));
 }
 
 TEST(single_rule, when_search_and_replace_differ_by_size) {
-    static_assert(RULE("foo", "")(CTSTR("<<<foo>>>")) == REGULAR("<<<>>>"));
-    static_assert(RULE("foo", "br")(CTSTR("<<<foo>>>")) == REGULAR("<<<br>>>"));
-    static_assert(RULE("foo", "bar")(CTSTR("<<<foo>>>")) == REGULAR("<<<bar>>>"));
-    static_assert(RULE("foo", "baar")(CTSTR("<<<foo>>>")) == REGULAR("<<<baar>>>"));
+    static_assert(RULE("foo", "")(NOT_MATCHED("<<<foo>>>")) == REGULAR("<<<>>>"));
+    static_assert(RULE("foo", "br")(NOT_MATCHED("<<<foo>>>")) == REGULAR("<<<br>>>"));
+    static_assert(RULE("foo", "bar")(NOT_MATCHED("<<<foo>>>")) == REGULAR("<<<bar>>>"));
+    static_assert(RULE("foo", "baar")(NOT_MATCHED("<<<foo>>>")) == REGULAR("<<<baar>>>"));
 }
 
 TEST(single_rule, replaces_first_occurence) {
-    static_assert(RULE("a", "b")(CTSTR("aaa")) == REGULAR("baa"));
-    static_assert(RULE("a", "b")(CTSTR("caa")) == REGULAR("cba"));
+    static_assert(RULE("a", "b")(NOT_MATCHED("aaa")) == REGULAR("baa"));
+    static_assert(RULE("a", "b")(NOT_MATCHED("caa")) == REGULAR("cba"));
 }
 
 TEST(single_rule, of_final_type) {
-    static_assert(FINAL_RULE("a", "b")(CTSTR("a")) == FINAL("b"));
+    static_assert(FINAL_RULE("a", "b")(NOT_MATCHED("a")) == FINAL("b"));
 }
 
 TEST(rules, ctad) {
@@ -81,8 +77,8 @@ TEST(rules, ctad) {
         RULE("c", "d"),
         RULE("e", "f"),
     };
-    static_assert(program(CTSTR("abc")) == REGULAR("bbc"));
-    static_assert(program(CTSTR("def")) == REGULAR("dff"));
+    static_assert(program(NOT_MATCHED("abc")) == REGULAR("bbc"));
+    static_assert(program(NOT_MATCHED("def")) == REGULAR("dff"));
 }
 
 TEST(rules, only_earlier_acts_regular) {
@@ -91,10 +87,10 @@ TEST(rules, only_earlier_acts_regular) {
         RULE("b", "2"),
         RULE("c", "3")
     );
-    static_assert(program(CTSTR("cbabc")) == REGULAR("cb1bc"));
-    static_assert(program(CTSTR("cbdbc")) == REGULAR("c2dbc"));
-    static_assert(program(CTSTR("cdddc")) == REGULAR("3dddc"));
-    static_assert(program(CTSTR("ddddd")) == NOT_MATCHED("ddddd"));
+    static_assert(program(NOT_MATCHED("cbabc")) == REGULAR("cb1bc"));
+    static_assert(program(NOT_MATCHED("cbdbc")) == REGULAR("c2dbc"));
+    static_assert(program(NOT_MATCHED("cdddc")) == REGULAR("3dddc"));
+    static_assert(program(NOT_MATCHED("ddddd")) == NOT_MATCHED("ddddd"));
 }
 
 TEST(rules, only_earlier_acts_final) {
@@ -103,10 +99,10 @@ TEST(rules, only_earlier_acts_final) {
         FINAL_RULE("b", "2"),
         FINAL_RULE("c", "3")
     );
-    static_assert(program(CTSTR("cbabc")) == FINAL("cb1bc"));
-    static_assert(program(CTSTR("cbdbc")) == FINAL("c2dbc"));
-    static_assert(program(CTSTR("cdddc")) == FINAL("3dddc"));
-    static_assert(program(CTSTR("ddddd")) == NOT_MATCHED("ddddd"));
+    static_assert(program(NOT_MATCHED("cbabc")) == FINAL("cb1bc"));
+    static_assert(program(NOT_MATCHED("cbdbc")) == FINAL("c2dbc"));
+    static_assert(program(NOT_MATCHED("cdddc")) == FINAL("3dddc"));
+    static_assert(program(NOT_MATCHED("ddddd")) == NOT_MATCHED("ddddd"));
 }
 
 TEST(rules, only_earlier_acts_mixed) {
@@ -116,10 +112,10 @@ TEST(rules, only_earlier_acts_mixed) {
         FINAL_RULE("b", "Z"),
         FINAL_RULE("c", "3")
     );
-    static_assert(program(CTSTR("cbabc")) == FINAL("cb1bc"));
-    static_assert(program(CTSTR("cbdbc")) == REGULAR("c2dbc"));
-    static_assert(program(CTSTR("cdddc")) == FINAL("3dddc"));
-    static_assert(program(CTSTR("ddddd")) == NOT_MATCHED("ddddd"));
+    static_assert(program(NOT_MATCHED("cbabc")) == FINAL("cb1bc"));
+    static_assert(program(NOT_MATCHED("cbdbc")) == REGULAR("c2dbc"));
+    static_assert(program(NOT_MATCHED("cdddc")) == FINAL("3dddc"));
+    static_assert(program(NOT_MATCHED("ddddd")) == NOT_MATCHED("ddddd"));
 }
 
 TEST(rule_loop, step_by_step) {
@@ -179,8 +175,8 @@ TEST(rule_loop, step_by_step) {
         NOT_MATCHED("bbbe"),
         FINAL("bbbf"),
         FINAL("bbbf"));
-    static_assert(rl(CTSTR("aaaaaaaaaaaaaaaa")) == HALTED("bbbbbbbbbbbbbbbb"));
-    static_assert(rl(CTSTR("eaaaaaaaaaaaaaaa")) == FINAL("fbbbbbbbbbbbbbbb"));
+    static_assert(rl(NOT_MATCHED("aaaaaaaaaaaaaaaa")) == HALTED("bbbbbbbbbbbbbbbb"));
+    static_assert(rl(NOT_MATCHED("eaaaaaaaaaaaaaaa")) == FINAL("fbbbbbbbbbbbbbbb"));
 }
 
 TEST(augmented, single_rule) {
@@ -189,7 +185,7 @@ TEST(augmented, single_rule) {
     static_assert(Augmented<input_type>);
     static_assert(RuleInput<input_type>);
     constexpr Rule auto p = RULE("a", "b");
-    constexpr RuleMatchedOutput auto output = p(input); // matched_regular{augmented_test{...}}
+    constexpr RuleMatchedOutput auto output = p(not_matched_yet{input}); // matched_regular{augmented_test{...}}
     using output_type = std::remove_const_t<decltype(output)>;
     constexpr auto output_data = output.value;
     using output_data_type = std::remove_const_t<decltype(output_data)>;
@@ -201,7 +197,7 @@ TEST(augmented, single_rule) {
 TEST(single_rule, augmented_fail) {
     constexpr RuleInput auto input = augmented_text{CTSTR("aaa"), empty{}};
     constexpr Rule auto p = RULE("c", "d");
-    constexpr RuleFailedOutput auto output = p(input);
+    constexpr RuleFailedOutput auto output = p(not_matched_yet{input});
     constexpr RuleInput auto output_data = output.value;
     static_assert(input == output_data);
 }
@@ -209,21 +205,21 @@ TEST(single_rule, augmented_fail) {
 TEST(augmented, rules) {
     constexpr auto input = augmented_text{CTSTR("aaa"), empty{}};
     constexpr auto p = RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f"));
-    constexpr RuleMatchedOutput auto output = p(input);
+    constexpr RuleMatchedOutput auto output = p(not_matched_yet{input});
     static_assert(output.value == augmented_text{CTSTR("baa"), empty{}});
 }
 
 TEST(augmented, rules_fail) {
     constexpr auto input = augmented_text{CTSTR("xxx"), empty{}};
     constexpr auto p = RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f"));
-    constexpr RuleFailedOutput auto output = p(input);
+    constexpr RuleFailedOutput auto output = p(not_matched_yet{input});
     static_assert(output.value == input);
 }
 
 TEST(augmented, rule_loop) {
     constexpr auto input = augmented_text{CTSTR("aaa"), empty{}};
     constexpr auto p = RULE_LOOP(RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f")));
-    constexpr RuleMatchedOutput auto output = p(input);
+    constexpr RuleMatchedOutput auto output = p(not_matched_yet{input});
     constexpr auto t = output.value.text;
     static_assert(output.value == augmented_text{CTSTR("bbb"), empty{}});
 }
@@ -242,7 +238,7 @@ TEST(augmented, single_rule_runtime) {
     };
     auto input = augmented_text{CTSTR("aaa"), side_effect{trace}};
     constexpr auto p = RULE("a", "b");
-    p(input);
+    p(not_matched_yet{input});
     EXPECT_EQ(count, 1);
 }
 
@@ -253,7 +249,7 @@ TEST(augmented, rules_runtime) {
     };
     auto input = augmented_text{CTSTR("aaa"), side_effect{trace}};
     constexpr auto p = RULES(RULE("a", "b"), RULE("c", "d"));
-    p(input);
+    p(not_matched_yet{input});
     EXPECT_EQ(count, 1);
 }
 
@@ -264,7 +260,7 @@ TEST(augmented, rule_loop_runtime) {
     };
     auto input = augmented_text{CTSTR("aaa"), side_effect{trace}};
     constexpr auto p = RULE_LOOP(RULE("a", "b"));
-    auto output = p(input);
+    auto output = p(not_matched_yet{input});
     static_assert(output.value.text == CTSTR("bbb"));
     EXPECT_EQ(count, 3);
 }
@@ -275,27 +271,27 @@ TEST(augmented, machine_runtime) {
         ++count;
     };
     auto input = augmented_text{CTSTR("aaa"), side_effect{trace}};
-    constexpr auto p = MACHINE(RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f")));
-    auto output = p(input);
+    constexpr auto m = MACHINE(RULES(RULE("c", "d"), RULE("a", "b"), RULE("e", "f")));
+    auto output = m(input);
     static_assert(output.text == CTSTR("bbb"));
     EXPECT_EQ(count, 3);
 }
 
 TEST(hidden, text) {
     constexpr auto p = HIDDEN_RULE(RULE("a", "b"));
-    static_assert(p(CTSTR("")) == NOT_MATCHED(""));
-    static_assert(p(CTSTR("aaa")) == REGULAR("baa"));
+    static_assert(p(NOT_MATCHED("")) == NOT_MATCHED(""));
+    static_assert(p(NOT_MATCHED("aaa")) == REGULAR("baa"));
 }
 
 TEST(hidden, empty_augmentation) {
     constexpr auto p = HIDDEN_RULE(RULE("a", "b"));
 
     constexpr RuleInput auto bad_input = augmented_text{CTSTR(""), empty{}};
-    constexpr RuleFailedOutput auto bad_output = p(bad_input);
+    constexpr RuleFailedOutput auto bad_output = p(not_matched_yet{bad_input});
     static_assert(bad_output.value == bad_input);
 
     constexpr RuleInput auto good_input = augmented_text{CTSTR("aaa"), empty{}};
-    constexpr RuleMatchedOutput auto good_output = p(good_input);
+    constexpr RuleMatchedOutput auto good_output = p(not_matched_yet{good_input});
     static_assert(good_output.value == augmented_text{CTSTR("baa"), empty{}});
 }
 
@@ -306,16 +302,16 @@ TEST(hidden, cumulative_augmentation) {
     constexpr auto inc = [](int n, auto...) { return n + 1; };
 
     constexpr RuleInput auto bad_input = augmented_text{CTSTR(""), cumulative_effect{inc, 0}};
-    constexpr RuleFailedOutput auto bad_output = h(bad_input);
+    constexpr RuleFailedOutput auto bad_output = h(not_matched_yet{bad_input});
     static_assert(bad_output.value == bad_input);
 
     constexpr RuleInput auto good_input = augmented_text{CTSTR("aaa"), cumulative_effect{inc, 0}};
-    constexpr RuleMatchedOutput auto good_output = h(good_input);
+    constexpr RuleMatchedOutput auto good_output = h(not_matched_yet{good_input});
     static_assert(good_output.value.text == CTSTR("baa"));
     static_assert(good_output.value.aux == cumulative_effect{inc, 0});
 
     // in contrast, non-hidden rule updates the accumulator
-    constexpr RuleMatchedOutput auto good_updated_output = p(good_input);
+    constexpr RuleMatchedOutput auto good_updated_output = p(not_matched_yet{good_input});
     static_assert(good_updated_output.value.text == CTSTR("baa"));
     static_assert(good_updated_output.value.aux == cumulative_effect{inc, 1});
 }
@@ -328,26 +324,48 @@ TEST(facade, bare_vs_wrapped_match) {
     constexpr auto p = RULE("a", "b");
     constexpr auto f = FACADE_RULE("my_rule", p);
 
-    static_assert(p(CTSTR("aaa")) == f(CTSTR("aaa")));
-    static_assert(p(CTSTR("a")) == f(CTSTR("a")));
-    static_assert(p(CTSTR("ba")) == f(CTSTR("ba")));
+    static_assert(p(NOT_MATCHED("aaa")) == f(NOT_MATCHED("aaa")));
+    static_assert(p(NOT_MATCHED("a")) == f(NOT_MATCHED("a")));
+    static_assert(p(NOT_MATCHED("ba")) == f(NOT_MATCHED("ba")));
 }
 
 TEST(facade, bare_vs_wrapped_no_match) {
     constexpr auto p = RULE("x", "y");
     constexpr auto f = FACADE_RULE("my_rule", p);
 
-    static_assert(p(CTSTR("aaa")) == f(CTSTR("aaa")));
-    static_assert(p(CTSTR("zzz")) == f(CTSTR("zzz")));
-    static_assert(p(CTSTR("")) == f(CTSTR("")));
+    static_assert(p(NOT_MATCHED("aaa")) == f(NOT_MATCHED("aaa")));
+    static_assert(p(NOT_MATCHED("zzz")) == f(NOT_MATCHED("zzz")));
+    static_assert(p(NOT_MATCHED("")) == f(NOT_MATCHED("")));
 }
 
 TEST(facade, bare_vs_wrapped_final) {
     constexpr auto p = FINAL_RULE("a", "b");
     constexpr auto f = FACADE_RULE("final_rule", p);
 
-    static_assert(p(CTSTR("aaa")) == f(CTSTR("aaa")));
-    static_assert(p(CTSTR("a")) == f(CTSTR("a")));
+    static_assert(p(NOT_MATCHED("aaa")) == f(NOT_MATCHED("aaa")));
+    static_assert(p(NOT_MATCHED("a")) == f(NOT_MATCHED("a")));
+}
+
+namespace named_rules_ns {
+
+// named rules should be defined in a namespace scope
+// and should have distinct names
+constexpr auto p_nothing = NAMED_RULE(nothing, RULES());
+constexpr auto p_something = NAMED_RULE(something, RULE("a", "b"));
+
+constexpr auto m_nothing = MACHINE(p_nothing);
+constexpr auto m_something = MACHINE(p_something);
+
+} // namespace named_rules_ns
+
+TEST(named_rule, ctstr) {
+    static_assert(named_rules_ns::m_nothing(CTSTR("aaa")) == CTSTR("aaa"));
+    static_assert(named_rules_ns::m_something(CTSTR("aaa")) == CTSTR("bbb"));
+}
+
+TEST(named_rule, inplace) {
+    EXPECT_EQ(named_rules_ns::m_nothing(std::string{"aaa"}), "aaa");
+    EXPECT_EQ(named_rules_ns::m_something(std::string{"aaa"}), "bbb");
 }
 
 // Test 2: verify callback receives correct rule type
@@ -369,12 +387,11 @@ TEST(facade, facade_rule_invokes_callback_with_facade_type) {
         CTSTR("aaa"),
         cumulative_effect{inc, 0}
     };
-    constexpr auto output = f(input);
+    constexpr auto output = f(not_matched_yet{input});
     static_assert(output.value.aux.a == 1); // callback was invoked, accumulator incremented
 }
 
-/// count spurious copy ctors
-
+/// count ctors
 struct ctor_tracker {
     int copies = 0;
     int moves = 0;
@@ -413,7 +430,7 @@ struct ctor_tracker_arg {
 };
 
 
-TEST(augmented, spurious_cctors) {
+TEST(augmented, no_extra_ctors) {
     auto pass = [](ctor_tracker_arg const& a, auto...) {
         return ctor_tracker_arg{a.t, a.s+1};
     };
@@ -453,89 +470,89 @@ TEST(augmented, spurious_cctors) {
         };
     };
 
-    auto examine = [&](const char* title, auto s, auto p, int ec, int em) {
+    auto examine = [&](const char* title, auto s, auto p, int expected_moves) {
         t = {};
         std::cout << title << " ";
         auto steps = p(nmy(s)).value.aux.a.s;
         std::cout << "\n    " << t << std::endl;
-        EXPECT_EQ(t.copies, ec);
-        EXPECT_EQ(t.moves, em);
+        EXPECT_EQ(t.copies, 0); // we shall use moves only!
+        EXPECT_EQ(t.moves, expected_moves);
         EXPECT_EQ(t.inits, steps);
         std::cout << std::endl;
     };
-    auto examine_m = [&](const char* title, auto s, auto m, int ec, int em) {
+    auto examine_m = [&](const char* title, auto s, auto m, int expected_moves) {
         t = {};
         std::cout << title << " ";
         auto steps = m(nmy(s).value).aux.a.s;
         std::cout << "\n    " << t << std::endl;
-        EXPECT_EQ(t.copies, ec);
-        EXPECT_EQ(t.moves, em);
+        EXPECT_EQ(t.copies, 0);
+        EXPECT_EQ(t.moves, expected_moves);
         EXPECT_EQ(t.inits, steps);
         std::cout << std::endl;
     };
 
     auto s3 = CTSTR("aaa");
 
-    examine("simple-miss", s3, RULES(RULES(RULES(p_miss))), 0, 0);
+    examine("simple-miss", s3, RULES(RULES(RULES(p_miss))), 0);
 
     // +1 move per each level of depth from matched rule (return by value)
-    examine("simple-match", s3, RULES(RULES(RULES(p_match))), 0, 3);
-    examine("match,etc...", s3, RULES(p_match, p_miss, p_miss, p_miss, p_miss), 0, 1);
-    examine("many-misses", s3, prog_mismatch, 0, 0);
-    examine("miss,match,etc...", s3, RULES(p_miss, p_match, p_miss, p_miss, p_miss), 0, 1);
+    examine("simple-match", s3, RULES(RULES(RULES(p_match))), 3);
+    examine("match,etc...", s3, RULES(p_match, p_miss, p_miss, p_miss, p_miss), 1);
+    examine("many-misses", s3, prog_mismatch, 0);
+    examine("miss,match,etc...", s3, RULES(p_miss, p_match, p_miss, p_miss, p_miss), 1);
 
     // parts of loop
-    examine("loop-body-0", s3, rule_loop_body<p_miss>{}, 0, 1);
+    examine("loop-body-0", s3, rule_loop_body<p_miss>{}, 1);
 
     // each iteration takes +2 move (rule_loop_body and rule_loop)
     // +1 per each level of nesting (10 iterations or less) - return by value
-    examine("mismatch-loop", s3, RULE_LOOP(p_miss5), 0, 2);
+    examine("mismatch-loop", s3, RULE_LOOP(p_miss5), 2);
     // loop does +1 move per iteration
-    examine("match-loop-1",  CTSTR("a"), RULE_LOOP(p_match), 0, 1+2);
-    examine("match-loop-3",  CTSTR("aaa"), RULE_LOOP(p_match), 0, 3+2);
-    examine("match-loop-9",  CTSTR("aaaaaaaaa"), RULE_LOOP(p_match), 0, 9+2);
-    examine("match-loop-10", CTSTR("aaaaaaaaaa"), RULE_LOOP(p_match), 0, 10+3);
-    examine("match-loop-11", CTSTR("aaaaaaaaaaa"), RULE_LOOP(p_match), 0, 11+3);
-    examine("match-loop-13", CTSTR("aaaaaaaaaaaaa"), RULE_LOOP(p_match), 0, 13+3);
-    examine("match-loop-19", CTSTR("aaaaaaaaaaaaaaaaaaa"), RULE_LOOP(p_match), 0, 19+3);
-    examine("match-loop-20", CTSTR("aaaaaaaaaaaaaaaaaaaa"), RULE_LOOP(p_match), 0, 20+4);
-    examine("match-loop-23", CTSTR("aaaaaaaaaaaaaaaaaaaaaaa"), RULE_LOOP(p_match), 0, 23+4);
+    examine("match-loop-1",  CTSTR("a"), RULE_LOOP(p_match), 1+2);
+    examine("match-loop-3",  CTSTR("aaa"), RULE_LOOP(p_match), 3+2);
+    examine("match-loop-9",  CTSTR("aaaaaaaaa"), RULE_LOOP(p_match), 9+2);
+    examine("match-loop-10", CTSTR("aaaaaaaaaa"), RULE_LOOP(p_match), 10+3);
+    examine("match-loop-11", CTSTR("aaaaaaaaaaa"), RULE_LOOP(p_match), 11+3);
+    examine("match-loop-13", CTSTR("aaaaaaaaaaaaa"), RULE_LOOP(p_match), 13+3);
+    examine("match-loop-19", CTSTR("aaaaaaaaaaaaaaaaaaa"), RULE_LOOP(p_match), 19+3);
+    examine("match-loop-20", CTSTR("aaaaaaaaaaaaaaaaaaaa"), RULE_LOOP(p_match), 20+4);
+    examine("match-loop-23", CTSTR("aaaaaaaaaaaaaaaaaaaaaaa"), RULE_LOOP(p_match), 23+4);
 
-    examine("final-loop-!", CTSTR("."), RULE_LOOP(p_final), 0, 1+2);
+    examine("final-loop-!", CTSTR("."), RULE_LOOP(p_final), 1+2);
     // each iteration here takes +2 move (rules, rule_loop_body)
     // each nesting still takes +1 move
     // +1 overall
-    examine("final-loop-1",  CTSTR("."), RULE_LOOP(p_mf), 0, 1*2+2);
-    examine("final-loop-2",  CTSTR("a."), RULE_LOOP(p_mf), 0, 2*2+2);
-    examine("final-loop-3",  CTSTR("aa."), RULE_LOOP(p_mf), 0, 3*2+2);
-    examine("final-loop-5",  CTSTR("aaaa."), RULE_LOOP(p_mf), 0, 5*2+2);
-    examine("final-loop-9",  CTSTR("aaaaaaaa."), RULE_LOOP(p_mf), 0, 9*2+2);
-    examine("final-loop-10", CTSTR("aaaaaaaaa."), RULE_LOOP(p_mf), 0, 10*2+3);
-    examine("final-loop-11", CTSTR("aaaaaaaaaa."), RULE_LOOP(p_mf), 0, 11*2+3);
-    examine("final-loop-19", CTSTR("aaaaaaaaaaaaaaaaaa."), RULE_LOOP(p_mf), 0, 19*2+3);
-    examine("final-loop-20", CTSTR("aaaaaaaaaaaaaaaaaaa."), RULE_LOOP(p_mf), 0, 20*2+4);
-    examine("final-loop-23", CTSTR("aaaaaaaaaaaaaaaaaaaaaa."), RULE_LOOP(p_mf), 0, 23*2+4);
+    examine("final-loop-1",  CTSTR("."), RULE_LOOP(p_mf), 1*2+2);
+    examine("final-loop-2",  CTSTR("a."), RULE_LOOP(p_mf), 2*2+2);
+    examine("final-loop-3",  CTSTR("aa."), RULE_LOOP(p_mf), 3*2+2);
+    examine("final-loop-5",  CTSTR("aaaa."), RULE_LOOP(p_mf), 5*2+2);
+    examine("final-loop-9",  CTSTR("aaaaaaaa."), RULE_LOOP(p_mf), 9*2+2);
+    examine("final-loop-10", CTSTR("aaaaaaaaa."), RULE_LOOP(p_mf), 10*2+3);
+    examine("final-loop-11", CTSTR("aaaaaaaaaa."), RULE_LOOP(p_mf), 11*2+3);
+    examine("final-loop-19", CTSTR("aaaaaaaaaaaaaaaaaa."), RULE_LOOP(p_mf), 19*2+3);
+    examine("final-loop-20", CTSTR("aaaaaaaaaaaaaaaaaaa."), RULE_LOOP(p_mf), 20*2+4);
+    examine("final-loop-23", CTSTR("aaaaaaaaaaaaaaaaaaaaaa."), RULE_LOOP(p_mf), 23*2+4);
 
     // each iteration here takes +4 move (3 rules and rule_loop_body)
     // each nesting still takes +1 move
     // +1 overall
-    examine("deep-loop-1",  CTSTR("a"), RULE_LOOP(p_match3), 0, 1*4+2);
-    examine("deep-loop-3",  CTSTR("aaa"), RULE_LOOP(p_match3), 0, 3*4+2);
-    examine("deep-loop-5",  CTSTR("aaaaa"), RULE_LOOP(p_match3), 0, 5*4+2);
-    examine("deep-loop-9",  CTSTR("aaaaaaaaa"), RULE_LOOP(p_match3), 0, 9*4+2);
-    examine("deep-loop-10", CTSTR("aaaaaaaaaa"), RULE_LOOP(p_match3), 0, 10*4+3);
-    examine("deep-loop-11", CTSTR("aaaaaaaaaaa"), RULE_LOOP(p_match3), 0, 11*4+3);
+    examine("deep-loop-1",  CTSTR("a"), RULE_LOOP(p_match3), 1*4+2);
+    examine("deep-loop-3",  CTSTR("aaa"), RULE_LOOP(p_match3), 3*4+2);
+    examine("deep-loop-5",  CTSTR("aaaaa"), RULE_LOOP(p_match3), 5*4+2);
+    examine("deep-loop-9",  CTSTR("aaaaaaaaa"), RULE_LOOP(p_match3), 9*4+2);
+    examine("deep-loop-10", CTSTR("aaaaaaaaaa"), RULE_LOOP(p_match3), 10*4+3);
+    examine("deep-loop-11", CTSTR("aaaaaaaaaaa"), RULE_LOOP(p_match3), 11*4+3);
 
     // machine_fun +2 moves
-    examine_m("empty-machine", CTSTR("aaa"),    MACHINE_FROM_RULE((rules<>{})), 0, 0+2);
+    examine_m("empty-machine", CTSTR("aaa"),    MACHINE_FROM_RULE((rules<>{})), 0+2);
     // machine is machine_fun over rule_loop, so +2 +2 = +4 moves
-    examine_m("mismatch-machine", CTSTR("aaa"), MACHINE(p_miss5), 0, 0+4);
+    examine_m("mismatch-machine", CTSTR("aaa"), MACHINE(p_miss5), 0+4);
 
-    examine_m("match-machine-1",  CTSTR("a"), MACHINE(p_match), 0, 1+4);
-    examine_m("match-machine-3",  CTSTR("aaa"), MACHINE(p_match), 0, 3+4);
-    examine_m("match-machine-9",  CTSTR("aaaaaaaaa"), MACHINE(p_match), 0, 9+4);
-    examine_m("match-machine-10", CTSTR("aaaaaaaaaa"), MACHINE(p_match), 0, 10+5);
-    examine_m("match-machine-11", CTSTR("aaaaaaaaaaa"), MACHINE(p_match), 0, 11+5);
+    examine_m("match-machine-1",  CTSTR("a"), MACHINE(p_match), 1+4);
+    examine_m("match-machine-3",  CTSTR("aaa"), MACHINE(p_match), 3+4);
+    examine_m("match-machine-9",  CTSTR("aaaaaaaaa"), MACHINE(p_match), 9+4);
+    examine_m("match-machine-10", CTSTR("aaaaaaaaaa"), MACHINE(p_match), 10+5);
+    examine_m("match-machine-11", CTSTR("aaaaaaaaaaa"), MACHINE(p_match), 11+5);
 }
 
 /// inplace

@@ -19,12 +19,6 @@ template<Rule auto p> struct hidden_rule {
             return out.rebind(rebind_text(FWD(nmy).value, out.value));
         }
     }
-    constexpr RuleOutput auto operator()(RuleInput auto&& t) const {
-        RuleOutput auto out = p(extract_text(t));
-        // combine old augmentation with new text,
-        // then combine new kind of tristate result with new augmented
-        return out.rebind(rebind_text(FWD(t), out.value));
-    }
     constexpr auto operator()(RuleFixedInput auto& t) const {
         return p(inplace_extract_text(t));
     }
