@@ -121,7 +121,7 @@ enum rule_kind { rule_kind::regular, rule_kind::final };
 template<Str auto search, Str auto replace, rule_kind kind> struct rule {
     constexpr
     /*RuleOutput*/ decltype(auto)
-    operator()(RuleNotMatchedYetInputRef auto&& text) const
+    operator()(RuleNotMatchedYetInput auto&& text) const
     { ..... }
 };
 ```
@@ -152,7 +152,7 @@ template<Str auto search, Str auto replace, rule_kind kind> struct rule {
 Из тех же соображений, типы аргумента и результата содержат полиморфные строки, а сама функция - это шаблон структуры
 ```cpp
 template<Rule auto program> struct rule_loop {
-    constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& src) const {.....}
+    constexpr decltype(auto) operator()(RuleNotMatchedYetInput auto&& src) const {.....}
 };
 ```
 

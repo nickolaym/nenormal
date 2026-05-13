@@ -10,10 +10,8 @@
 
 namespace nn {
 
-// naming conventions
-// SomeConceptName corresponds to a value type
-// SomeConceptNameRef is an universal reference,
-// for arg-matching like foo(SomeConceptNameRef auto&& arg)
+// Note that these concepts do not distinguish value type itself and a reference to it.
+// So, if using S = str<1>, these expressions are true: Str<S>, Str<const S>, Str<S&>.
 
 // input
 // - bare CtStr
@@ -21,14 +19,10 @@ namespace nn {
 
 template<class T> concept RuleInput = CtStr<T> || Augmented<T>;
 CONCEPT_TYPECHECKER(RuleInput)
-// concept of universal reference: f(RuleInputRef auto&& a)
-template<class R> concept RuleInputRef = RuleInput<std::remove_cvref_t<R>>;
 
 // Tristate input is a subclass of Tristate of RuleInput, namely NotMatchedYet
 
 template<class T> concept RuleNotMatchedYetInput = NotMatchedYetOfTraits<T, is_RuleInput>;
-// concept of universal reference: f(RuleNotMatchedYetInputRef auto&& a)
-template<class R> concept RuleNotMatchedYetInputRef = RuleNotMatchedYetInput<std::remove_cvref_t<R>>;
 
 // output
 

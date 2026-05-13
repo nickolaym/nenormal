@@ -13,10 +13,10 @@ namespace nn {
 template<Rule auto p> struct rule_loop_body {
     REPRESENTS(Rule)
 
-    constexpr decltype(auto) operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
+    constexpr decltype(auto) operator()(RuleNotMatchedYetInput auto&& nmy) const {
         return p(FWD(nmy)).commit_loop();
     }
-    constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
+    constexpr RuleOutput auto operator()(RuleInput auto&& t) const {
         return p(FWD(t)).commit_loop();
     }
     constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
@@ -33,7 +33,7 @@ template<Rule auto p> struct rule_loop_body {
 template<Rule auto p> struct rule_loop {
     REPRESENTS(Rule)
 
-    constexpr auto operator()(RuleNotMatchedYetInputRef auto&& nmy) const {
+    constexpr auto operator()(RuleNotMatchedYetInput auto&& nmy) const {
         constexpr auto body = rule_loop_body<p>{};
         return (FWD(nmy)
             // unwrap the loop 10 times
@@ -42,7 +42,7 @@ template<Rule auto p> struct rule_loop {
             >> rule_loop{}
         ).commit_alts();
     }
-    constexpr RuleOutput auto operator()(RuleInputRef auto&& t) const {
+    constexpr RuleOutput auto operator()(RuleInput auto&& t) const {
         constexpr auto body = rule_loop_body<p>{};
         return not_matched_yet{FWD(t)}
             // unwrap the loop 10 times

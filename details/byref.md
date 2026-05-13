@@ -22,7 +22,7 @@
 то каждое проверенное, но не сработавшее правило будет перекладывать данные в новый экземпляр монады.
 
 ```cpp
-auto do_nothing(RuleInputRef auto&& t) {
+auto do_nothing(RuleInput auto&& t) {
     return not_matched_yet{ std::move(t); }
 }
 
@@ -42,10 +42,10 @@ not_matched_yet<T>::operator >> (auto&& f) && {
 - если выполнено - то новое значение нового типа (перемещая туда данные - текст и-или аугментацию).
 
 ```cpp
-decltype(auto) do_nothing(RuleNotMatchedYetInputRef auto&& t) {
+decltype(auto) do_nothing(RuleNotMatchedYetInput auto&& t) {
     return std::move(t); // not_matched_yet<T>&&
 }
-auto do_something(RuleNotMatchedYetInputRef auto&& t) {
+auto do_something(RuleNotMatchedYetInput auto&& t) {
     return matched_regular{ std::move(t); } // by value
 }
 
