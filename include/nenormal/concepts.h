@@ -10,11 +10,14 @@ namespace nn {
 
 template<class T> concept ValueType = !::std::is_const_v<T> && !::std::is_reference_v<T>;
 
+template<class T, class P>
+concept HasRepresentsConcept = requires { std::remove_cvref_t<T>::represents_concept(P{}); };
+
 template<class T, class U>
-concept HasTypeOfType = std::same_as<typename T::type, U>;
+concept HasTypeOfType = std::same_as<typename std::remove_cvref_t<T>::type, U>;
 
 template<class T, template<class>class C>
-concept HasTypeOfTraits = C<typename T::type>::value;
+concept HasTypeOfTraits = C<typename std::remove_cvref_t<T>::type>::value;
 
 } // namespace nn
 
@@ -47,8 +50,7 @@ concept HasTypeOfTraits = C<typename T::type>::value;
     struct CONCEPT_PROBE_NAME(Name) {}; \
     template<class T> \
     concept Name = \
-        /* (::nn::ValueType<T>) && */ \
-        requires { T::represents_concept(CONCEPT_PROBE_NAME(Name){}); }; \
+        ::nn::HasRepresentsConcept<T, CONCEPT_PROBE_NAME(Name)>; \
     CONCEPT_TYPECHECKER(Name)
 
 #define CONCEPT_WITH_TYPE(Name) \

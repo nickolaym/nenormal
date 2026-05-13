@@ -165,7 +165,7 @@ struct foo {
 Эту технику использовали ещё в C++98, кстати сказать.
 
 ```cpp
-template<class T> concept Foo = decltype(foo::represents_concept(Foo_probe_t{}))::value;
+template<class T> concept Foo = decltype(T::represents_concept(Foo_probe_t{}))::value;
 
 struct foo {
     static constexpr auto represents_concept(Foo_probe_t) -> std::true_type;
@@ -239,6 +239,32 @@ void g() {
 template <class T> concept SomeRef = SomeValue<std::remove_cvref_t<T>>;
 
 void f(SomeRef auto&& x); // принимает SomeValue во всех видах ссылок
+```
+
+С другой стороны, концепт - это не синоним типа, а ограничение.
+Ссылочность определяется аранжировкой слова auto
+```cpp
+template<Some auto /* тут только по значению */ V> struct foo;
+template<Some T> // тут явно можно подсунуть что угодно
+struct bar {
+    T value; // но если будет CTAD-вывод, то по значению
+    T& ref; // или если было так, то CTAD снова посчитает T значением
+};
+void f(Some auto&); // auto=T&, где T - значение, Some<T>
+void f(Some auto&&); // auto=T, где T - что угодно, Some<T>
+```
+
+Поэтому обычно достаточно не устрожать сами концепты до "только-значений".
+
+А в тех местах, где это критично, - можно дописывать
+```cpp
+template<Some T> requires !std::is_reference_v<T>
+struct foo;
+
+// или, если это массовое явление
+template<class T> concept SomeValue = Some<T> && !std::is_reference_v<T>;
+
+template<SomeValue T> struct foo;
 ```
 
 ## Концепты и параметризованные типы

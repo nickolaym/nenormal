@@ -90,3 +90,28 @@ static_assert(XyzOfTraits<the_xyz, is_Tuv>);
 void xxx(XyzOfTraits<is_Tuv> auto&& x) {}
 
 static_assert(requires { xxx(the_xyz{}); });
+
+//////////////////////////////////////////
+// Universal references match to a concept
+
+static_assert(Tuv<the_tuv>);
+static_assert(Tuv<the_tuv&>);
+static_assert(Tuv<the_tuv&&>);
+static_assert(Tuv<const the_tuv>);
+static_assert(Tuv<const the_tuv&>);
+static_assert(Tuv<const the_tuv&&>);
+
+void f_byval(Tuv auto);
+void f_byref(Tuv auto&);
+void f_mixed(Tuv auto&&);
+
+static_assert(requires (the_tuv& x) { f_byval(x); });
+static_assert(requires (the_tuv& x) { f_byref(x); });
+static_assert(requires (the_tuv& x) { f_mixed(x); });
+
+static_assert(requires (the_tuv const& x) { f_byval(x); });
+static_assert(requires (the_tuv const& x) { f_byref(x); });
+static_assert(requires (the_tuv const& x) { f_mixed(x); });
+
+static_assert(requires { f_byval(the_tuv{}); });
+static_assert(requires { f_mixed(the_tuv{}); });
