@@ -83,16 +83,19 @@ add_custom_target(collatz_decimal_all
         test_collatz_decimal_inplace
 )
 
+add_custom_target(collatz_all
+    DEPENDS
+        test_collatz_mini
+        test_collatz
+        collatz_decimal_all
+)
+
 add_custom_target(examples
     DEPENDS
         test_hello_world
         test_correct_bracket_sequence
-        test_arithmetics
-        test_arithmetics_runtime
-        test_arithmetics_inplace
-        test_collatz
-        test_collatz_decimal
-        test_collatz_decimal_inplace
+        arithmetics_all
+        collatz_all
 )
 
 # experiments
