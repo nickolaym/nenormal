@@ -16,9 +16,6 @@ template<Rule auto p> struct rule_loop_body {
     constexpr RuleOutput decltype(auto) operator()(RuleNotMatchedYetInput auto&& nmy) const {
         return p(FWD(nmy)).commit_loop();
     }
-    constexpr RuleOutput auto operator()(RuleInput auto&& t) const {
-        return p(FWD(t)).commit_loop();
-    }
     constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
         inplace_argument<decltype(t)> a{t}; // reference to input
         a.updated_by(p);
@@ -41,14 +38,6 @@ template<Rule auto p> struct rule_loop {
             >> body >> body >> body >> body >> body
             >> rule_loop{}
         ).commit_alts();
-    }
-    constexpr RuleOutput auto operator()(RuleInput auto&& t) const {
-        constexpr auto body = rule_loop_body<p>{};
-        return not_matched_yet{FWD(t)}
-            // unwrap the loop 10 times
-            >> body >> body >> body >> body >> body
-            >> body >> body >> body >> body >> body
-            >> rule_loop{};
     }
     constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
         constexpr auto body = rule_loop_body<p>{};

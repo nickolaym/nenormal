@@ -11,14 +11,18 @@ template<class T> concept RuleRequires =
     std::is_copy_constructible_v<T> &&
     requires (T p) {
         // obsolete form
-        { p(CTSTR("")) } -> RuleOutput;
-        { p(augmented_text{CTSTR(""),empty{}}) } -> RuleOutput;
+        // { p(CTSTR("")) } -> RuleOutput;
+        // { p(augmented_text{CTSTR(""),empty{}}) } -> RuleOutput;
         // modern form
         { p(not_matched_yet{CTSTR("")}) } -> RuleOutput;
         { p(not_matched_yet{augmented_text{CTSTR(""),empty{}}}) } -> RuleOutput;
         // inplace
         { p(std::string{}) } -> std::same_as<tristate_kind>;
         { p(inplace_augmented_text{std::string{}, inplace_empty{}}) } -> std::same_as<tristate_kind>;
+    } && !requires(T p) {
+        { p(CTSTR("")) } -> RuleOutput;
+    } && !requires(T p) {
+        { p(augmented_text{CTSTR(""),empty{}}) } -> RuleOutput;
     };
 
 // particular rule concepts (for user-defined augmentation)

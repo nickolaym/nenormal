@@ -58,20 +58,6 @@ template<Str auto s, Str auto r, rule_kind k> struct rule {
             }
         }
     }
-    constexpr RuleOutput auto operator()(RuleInput auto&& t) const {
-        MaybeCtStr auto mb = try_substitute(ct_search, ct_replace, extract_text(t));
-        if constexpr (!mb) {
-            // failed
-            return not_matched_yet{FWD(t)};
-        } else {
-            if constexpr (k == rule_kind::regular) {
-                return matched_regular{update_text(t, rule{}, mb.value)};
-            } else {
-                return matched_final{update_text(t, rule{}, mb.value)};
-            }
-        }
-    }
-
     constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
         if (!try_substitute_inplace(ct_search, ct_replace, inplace_extract_text(t))) {
             return tristate_kind::not_matched_yet;
