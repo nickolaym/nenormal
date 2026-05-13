@@ -17,7 +17,9 @@ TEST(collatz, case_2) {
 }
 
 TEST(collatz, case_3) {
-    constexpr auto step = [](::nn::CtStr auto s) { return program(s).value; };
+    constexpr auto step = [](::nn::CtStr auto s) {
+        return program(::nn::not_matched_yet{s}).value;
+    };
 
     // 3 -> 3x+1 = 10
     constexpr auto t0 = CTSTR("<111>");
