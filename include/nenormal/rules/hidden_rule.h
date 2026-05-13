@@ -11,7 +11,7 @@ namespace nn {
 template<Rule auto p> struct hidden_rule {
     REPRESENTS(Rule)
 
-    constexpr decltype(auto) operator()(RuleNotMatchedYetInput auto&& nmy) const {
+    constexpr RuleOutput decltype(auto) operator()(RuleNotMatchedYetInput auto&& nmy) const {
         RuleOutput auto out = not_matched_yet{extract_text(nmy.value)} >> p;
         if constexpr (!out.is_matched) {
             return FWD(nmy);

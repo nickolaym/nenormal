@@ -115,3 +115,14 @@ static_assert(requires (the_tuv const& x) { f_mixed(x); });
 
 static_assert(requires { f_byval(the_tuv{}); });
 static_assert(requires { f_mixed(the_tuv{}); });
+
+//////////////////////////
+// concepts of return type
+
+Tuv auto           pass_byval(Tuv auto& x) { return x; }
+Tuv decltype(auto) pass_byref(Tuv auto& x) { return x; }
+Tuv decltype(auto) pass_move(Tuv auto& x) { return std::move(x); }
+
+static_assert(requires(the_tuv x) { {pass_byval(x)} -> std::same_as<the_tuv>; } );
+static_assert(requires(the_tuv x) { {pass_byref(x)} -> std::same_as<the_tuv&>; } );
+static_assert(requires(the_tuv x) { {pass_move(x)} -> std::same_as<the_tuv&&>; } );

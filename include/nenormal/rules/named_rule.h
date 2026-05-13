@@ -9,9 +9,11 @@
 #define NAMED_RULE_TYPE(name, p) \
 struct name { \
     REPRESENTS(::nn::Rule) \
-    static constexpr auto impl = (p); \
-    constexpr decltype(auto) operator()(::nn::RuleNotMatchedYetInput auto&& nmy) const { return impl(FWD(nmy)); } \
-    constexpr ::nn::RuleOutput auto operator()(::nn::RuleInput auto&& t) const { return impl(FWD(t)); } \
+    static constexpr ::nn::Rule auto impl = (p); \
+    constexpr ::nn::RuleOutput decltype(auto) \
+        operator()(::nn::RuleNotMatchedYetInput auto&& nmy) const { return impl(FWD(nmy)); } \
+    constexpr ::nn::RuleOutput auto \
+        operator()(::nn::RuleInput auto&& t) const { return impl(FWD(t)); } \
     constexpr auto operator()(::nn::RuleFixedInput auto& t) const { return impl(t); } \
 }
 

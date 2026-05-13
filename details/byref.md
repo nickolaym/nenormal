@@ -42,10 +42,10 @@ not_matched_yet<T>::operator >> (auto&& f) && {
 - если выполнено - то новое значение нового типа (перемещая туда данные - текст и-или аугментацию).
 
 ```cpp
-decltype(auto) do_nothing(RuleNotMatchedYetInput auto&& t) {
+RuleOutput decltype(auto) do_nothing(RuleNotMatchedYetInput auto&& t) {
     return std::move(t); // not_matched_yet<T>&&
 }
-auto do_something(RuleNotMatchedYetInput auto&& t) {
+RuleOutput auto do_something(RuleNotMatchedYetInput auto&& t) {
     return matched_regular{ std::move(t); } // by value
 }
 
@@ -71,7 +71,7 @@ not_matched_yet<T>::operator >> (auto&& f) && {
 
 Таким образом, нужно конвертировать ссылку в значение.
 ```cpp
-decltype(auto) run_rules(auto&& arg) {
+RuleOutput decltype(auto) run_rules(auto&& arg) {
     return (std::move(arg) >> p1 >> p2 >> .... >> pn).commit_alts();
 }
 ```

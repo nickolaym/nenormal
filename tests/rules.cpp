@@ -48,7 +48,7 @@ TEST(rule_concepts, acceptance) {
 
     RULE("a","b")(nmy_str_fun());
 }
-#if 0
+
 TEST(single_rule, fails) {
     static_assert(RULE("a", "b")(CTSTR("")) == NOT_MATCHED(""));
     static_assert(RULE("a", "b")(CTSTR("b")) == NOT_MATCHED("b"));
@@ -681,5 +681,5 @@ TEST(inplace, facade_rule) {
     EXPECT_EQ(result.text, "bed");
     EXPECT_EQ(result.aux.a, 2);
 }
-#endif
+
 } // namespace nn

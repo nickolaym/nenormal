@@ -29,6 +29,7 @@ template<class T> concept RuleNotMatchedYetInput = NotMatchedYetOfTraits<T, is_R
 template<class T> concept RuleOutput        = TristateOfTraits<T, is_RuleInput>;
 template<class T> concept RuleMatchedOutput = MatchedOfTraits<T, is_RuleInput>;
 template<class T> concept RuleFailedOutput  = NotMatchedYetOfTraits<T, is_RuleInput>;
+template<class T> concept RuleFinalOutput   = MatchedFinalOfTraits<T, is_RuleInput>;
 // Note that RuleNotMatchedYetInput == RuleFailedOutput
 
 // inplace in-out arg

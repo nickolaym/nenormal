@@ -13,7 +13,7 @@ namespace nn {
 template<Rule auto p> struct rule_loop_body {
     REPRESENTS(Rule)
 
-    constexpr decltype(auto) operator()(RuleNotMatchedYetInput auto&& nmy) const {
+    constexpr RuleOutput decltype(auto) operator()(RuleNotMatchedYetInput auto&& nmy) const {
         return p(FWD(nmy)).commit_loop();
     }
     constexpr RuleOutput auto operator()(RuleInput auto&& t) const {
