@@ -19,13 +19,55 @@
 
 Кажется, что `matched_regular` - тупиковый объект, но нет, это внутренний объект цикла.
 
-Если мы введём ещё морфизм(ы) "перезапуск цикла", который определяет, что делать по итогам одной итерации:
+Если мы введём ещё морфизм(ы) "перезапуск цикла" (`commit_loop`), который определяет, что делать по итогам одной итерации:
 - `not_matched_yet` - в `matched_final_halted` (чтобы машина не зависла в бездействии)
 - `matched_regular` - в `not_matched_yet` (уходим на следующую итерацию)
 - `matched_final` - в `matched_final` (достигли финального состояния)
 - `matched_final_halted` - в `matched_final_halted` для полноты и единообразия
 
 В принципе, необязательно различать обычный финал и аварийный останов. Но для отладки полезно.
+
+## Схема переходов
+```mermaid
+graph TD
+
+START((start))
+START ~~~ LOOP_BODY
+subgraph LOOP_BODY[тело цикла]
+    subgraph INPUT[исходные данные]
+        NMY([not_matched_yet])
+    end
+    subgraph RULES[правила]
+        MISMATCHED_RULE[правило не подошло]
+        RULE[RULE]
+        FINAL_RULE[FINAL_RULE]
+    end
+    subgraph RESULTS[результаты итерации]
+        MR([matched_regular])
+        MF([matched_final])
+        MFH([matched_final_halted])
+    end
+end
+LOOP_BODY ~~~ END
+END((end))
+
+%%%%%%%%
+
+START --> NMY
+
+NMY ==> RULES
+
+MISMATCHED_RULE --> NMY
+RULE ----> MR
+FINAL_RULE ----> MF
+
+
+MR --|commit_loop|--> START
+NMY --|commit_loop|--> MFH
+
+MF --> END
+MFH --> END
+```
 
 ## Как это всё работает
 
