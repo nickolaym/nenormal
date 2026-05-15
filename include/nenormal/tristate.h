@@ -1,7 +1,6 @@
 #pragma once
 
 #include "concepts.h"
-#include "compose.h"
 #include <ostream>
 
 namespace nn {

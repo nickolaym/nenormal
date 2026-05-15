@@ -1,6 +1,6 @@
 #pragma once
 
-#include "concepts.h"
+#include "nenormal/concepts.h"
 #include <iostream>
 
 namespace nn {
