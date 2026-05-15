@@ -27,8 +27,9 @@ template<class T> concept RuleInput = NotMatchedYetOfTraits<T, is_MachineData>;
 // output
 
 template<class T> concept RuleOutput        = TristateOfTraits<T, is_MachineData>;
-template<class T> concept RuleMatchedOutput = MatchedOfTraits<T, is_MachineData>;
+// refinements of outputs
 template<class T> concept RuleFailedOutput  = NotMatchedYetOfTraits<T, is_MachineData>;
+template<class T> concept RuleMatchedOutput = MatchedOfTraits<T, is_MachineData>;
 template<class T> concept RuleFinalOutput   = MatchedFinalOfTraits<T, is_MachineData>;
 // Note that RuleInput == RuleFailedOutput
 

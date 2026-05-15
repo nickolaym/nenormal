@@ -30,7 +30,7 @@ template<Rule auto p> struct rule_loop_body {
 template<Rule auto p> struct rule_loop {
     REPRESENTS(Rule)
 
-    constexpr auto operator()(RuleInput auto&& nmy) const {
+    constexpr RuleFinalOutput auto operator()(RuleInput auto&& nmy) const {
         constexpr auto body = rule_loop_body<p>{};
         return (FWD(nmy)
             // unwrap the loop 10 times
