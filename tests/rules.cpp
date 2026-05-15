@@ -18,11 +18,11 @@ TEST(rule_concepts, acceptance) {
     constexpr auto nmy_str_fun = [&]{ return nmy_str; };
     constexpr auto nmy_augmented_fun = [&]{ return nmy_augmented; };
 
-    auto take_rule_nmy_byval = [](RuleNotMatchedYetInput auto) {};
+    auto take_rule_nmy_byval = [](RuleInput auto) {};
     static_assert(requires { take_rule_nmy_byval(nmy_str); });
     static_assert(requires { take_rule_nmy_byval(nmy_augmented); });
 
-    auto take_rule_nmy_bycref = [](RuleNotMatchedYetInput auto const&) {};
+    auto take_rule_nmy_bycref = [](RuleInput auto const&) {};
     static_assert(requires { take_rule_nmy_bycref(nmy_str); });
     static_assert(requires { take_rule_nmy_bycref(nmy_augmented); });
 
@@ -32,11 +32,11 @@ TEST(rule_concepts, acceptance) {
     >);
 
     using ttt = std::remove_cvref_t<decltype(nmy_str)>;
-    static_assert(RuleNotMatchedYetInput<ttt>);
-    static_assert(RuleNotMatchedYetInput<ttt const&>);
-    static_assert(RuleNotMatchedYetInput<ttt &&>);
+    static_assert(RuleInput<ttt>);
+    static_assert(RuleInput<ttt const&>);
+    static_assert(RuleInput<ttt &&>);
 
-    auto take_rule_nmy_byxref = [](RuleNotMatchedYetInput auto &&) {};
+    auto take_rule_nmy_byxref = [](RuleInput auto &&) {};
     static_assert(requires { take_rule_nmy_byxref(nmy_str); });
     static_assert(requires { take_rule_nmy_byxref(nmy_augmented); });
     static_assert(requires { take_rule_nmy_byxref(nmy_str_fun()); });

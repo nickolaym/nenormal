@@ -17,7 +17,7 @@ template<Rule auto... ps> struct rules {
     constexpr rules() = default;
     constexpr rules(Rule auto...) {}
 
-    constexpr RuleOutput decltype(auto) operator()(RuleNotMatchedYetInput auto&& nmy) const {
+    constexpr RuleOutput decltype(auto) operator()(RuleInput auto&& nmy) const {
         return (FWD(nmy) >> ... >> ps).commit_alts();
     }
     constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
@@ -33,7 +33,7 @@ template<Rule auto... ps> constexpr rules<ps...> rules_v{};
 
 template<> struct rules<> {
     REPRESENTS(Rule)
-    constexpr RuleOutput decltype(auto) operator()(RuleNotMatchedYetInput auto&& nmy) const {
+    constexpr RuleOutput decltype(auto) operator()(RuleInput auto&& nmy) const {
         return FWD(nmy);
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {

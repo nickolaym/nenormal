@@ -109,7 +109,7 @@ enum rule_kind { rule_kind::regular, rule_kind::final };
 
 Возвращаемый результат `RuleOutput` - это обёртка над `MachineData`, - одна из структур, образующих семейство. Подробнее см. [Tristate](details/tristate.md)
 
-Аргументом является не непосредственно MachineData, а частный случай RuleOutput - `RuleNotMatchedYetInput` - то есть, `not_matched_yet<T>`, где T - MachineData.
+Аргументом является не непосредственно MachineData, а частный случай RuleOutput - `RuleInput` - то есть, `not_matched_yet<T>`, где T - MachineData.
 
 Подробнее, зачем сделано именно так, - см. [передача аргументов](/details/byref.md)
 
@@ -121,7 +121,7 @@ enum rule_kind { rule_kind::regular, rule_kind::final };
 template<Str auto search, Str auto replace, rule_kind kind> struct rule {
     constexpr
     RuleOutput decltype(auto)
-    operator()(RuleNotMatchedYetInput auto&& text) const
+    operator()(RuleInput auto&& text) const
     { ..... }
 };
 ```
@@ -154,7 +154,7 @@ template<Str auto search, Str auto replace, rule_kind kind> struct rule {
 template<Rule auto program> struct rule_loop {
     constexpr
     RuleFinalOutput decltype(auto)
-    operator()(RuleNotMatchedYetInput auto&& src) const {.....}
+    operator()(RuleInput auto&& src) const {.....}
 };
 ```
 

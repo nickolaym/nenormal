@@ -22,7 +22,7 @@ CONCEPT_TYPECHECKER(MachineData)
 
 // Tristate input is a subclass of Tristate of MachineData, namely NotMatchedYet
 
-template<class T> concept RuleNotMatchedYetInput = NotMatchedYetOfTraits<T, is_MachineData>;
+template<class T> concept RuleInput = NotMatchedYetOfTraits<T, is_MachineData>;
 
 // output
 
@@ -30,7 +30,7 @@ template<class T> concept RuleOutput        = TristateOfTraits<T, is_MachineData
 template<class T> concept RuleMatchedOutput = MatchedOfTraits<T, is_MachineData>;
 template<class T> concept RuleFailedOutput  = NotMatchedYetOfTraits<T, is_MachineData>;
 template<class T> concept RuleFinalOutput   = MatchedFinalOfTraits<T, is_MachineData>;
-// Note that RuleNotMatchedYetInput == RuleFailedOutput
+// Note that RuleInput == RuleFailedOutput
 
 // inplace in-out arg
 
