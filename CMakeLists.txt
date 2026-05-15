@@ -34,11 +34,9 @@ endfunction()
 add_test_executable(test_concepts tests/concepts.cpp)
 add_test_executable(test_str tests/str.cpp)
 add_test_executable(test_augmented tests/augmented.cpp)
-add_test_executable(test_compose tests/compose.cpp)
 add_test_executable(test_rules tests/rules.cpp)
 add_test_executable(test_maybe tests/maybe.cpp)
 add_test_executable(test_substitute tests/substitute.cpp)
-add_test_executable(test_either tests/either.cpp)
 add_test_executable(test_tristate tests/tristate.cpp)
 
 add_custom_target(unittests
@@ -46,11 +44,9 @@ add_custom_target(unittests
         test_concepts
         test_str
         test_augmented
-        test_compose
         test_rules
         test_maybe
         test_substitute
-        test_either
         test_tristate
 )
 
@@ -99,4 +95,13 @@ add_custom_target(examples
 )
 
 # experiments
+add_test_executable(test_compose experimental/compose.cpp)
 add_test_executable(test_monadic experimental/monadic.cpp)
+add_test_executable(test_either experimental/either.cpp)
+
+add_custom_target(experimental
+    DEPENDS
+    test_compose
+        test_either
+        test_monadic
+)

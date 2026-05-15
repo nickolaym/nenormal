@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "nenormal/compose.h"
+#include "./compose.h"
 #include "nenormal/ct.h"
 
 namespace nn {

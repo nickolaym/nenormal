@@ -1,4 +1,4 @@
-#include "nenormal/either.h"
+#include "./either.h"
 #include <gtest/gtest.h>
 
 namespace nn {
