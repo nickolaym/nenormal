@@ -103,13 +103,13 @@ enum rule_kind { rule_kind::regular, rule_kind::final };
 Поскольку тип результата (выбор между строкой и неудачей, а также длина строки) зависит от входного значения,
 то аргументом является не Str, а CtStr.
 
-В коде, чтобы отличать эти строки, введён концепт `RuleInput`, - либо `CtStr`, либо аугментированная строка (см. [Аугментация](details/augmentation.md)).
+В коде, чтобы отличать эти строки, введён концепт `MachineData`, - либо `CtStr`, либо аугментированная строка (см. [Аугментация](details/augmentation.md)).
 
 Для однородности, возвращаемая строка тоже `CtStr`. На самом деле, можно было бы возвращать `constexpr Str auto` - но мы немедленно переводили бы её в `CtStr` для передачи в другие правила.
 
-Возвращаемый результат `RuleOutput` - это обёртка над `RuleInput`, - одна из структур, образующих семейство. Подробнее см. [Tristate](details/tristate.md)
+Возвращаемый результат `RuleOutput` - это обёртка над `MachineData`, - одна из структур, образующих семейство. Подробнее см. [Tristate](details/tristate.md)
 
-Аргументом является не непосредственно RuleInput, а частный случай RuleOutput - `RuleNotMatchedYetInput` - то есть, `not_matched_yet<T>`, где T - RuleInput.
+Аргументом является не непосредственно MachineData, а частный случай RuleOutput - `RuleNotMatchedYetInput` - то есть, `not_matched_yet<T>`, где T - MachineData.
 
 Подробнее, зачем сделано именно так, - см. [передача аргументов](/details/byref.md)
 
@@ -147,7 +147,7 @@ template<Str auto search, Str auto replace, rule_kind kind> struct rule {
 
 ### Цикл исполнения
 
-Цикл является функцией `rule_loop`, принимающей на вход `RuleInput` и возвращающей `RuleOutput`.
+Цикл является функцией `rule_loop`, принимающей на вход `MachineData` и возвращающей `RuleOutput`.
 
 Из тех же соображений, типы аргумента и результата содержат полиморфные строки, а сама функция - это шаблон структуры
 ```cpp

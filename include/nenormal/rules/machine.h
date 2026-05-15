@@ -12,7 +12,7 @@ namespace nn {
 
 template<Rule auto p> struct machine_fun {
     // rvalue-ref input to optimize a bit
-    constexpr RuleInput auto operator()(RuleInput auto&& t) const {
+    constexpr MachineData auto operator()(MachineData auto&& t) const {
         return (not_matched_yet{FWD(t)} >> p).value;
     }
     // rvalue input because inside it works as a variable

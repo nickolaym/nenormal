@@ -91,7 +91,7 @@ stopper = finalRule "" ""
 
 program ruleset src = (inject src >>= ruleset >>= stopper) $ extract
     where
-        inject :: Domain -> Either ProgramOutput RuleInput
+        inject :: Domain -> Either ProgramOutput MachineData
         inject src = Right src
             -- для запуска альтернатив нам нужно правое значение
 
