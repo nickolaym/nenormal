@@ -1,17 +1,22 @@
 # Вычисления в циклах и композиция функций
 
-**DISCLAIMER**
-
 Этот текст был написан, когда я ещё прорабатывал дизайн программы.
 
 Создал библиотеку выражений, работающую на принципах монады Either.
 
-В дальнейшем понял, что нужна специальная монада Tristate, которая применяется не только
-внутри одного выражения (своего рода expression template),
+В дальнейшем понял, что нужна специальная монада [Tristate](./tristate.md),
+которая применяется не только внутри одного выражения (своего рода expression template),
 но и является контейнером данных.
 
 Тем не менее, сам подход представляет ценность.
 Собственно, он и был применён для Tristate.
+
+Главная мотивация - научиться эффективно склеивать множество функций
+над полиморфными типами во время компиляции.
+
+## Пример кода
+
+[compose.h](/experimental/compose.h) и [юниттест](/experimental/compose.cpp)
 
 ## Циклы
 
@@ -21,25 +26,25 @@
 ```cpp
 // псевдокод
 template<Rule auto r1, Rule auto r2, ....., Rule auto rn> struct rules {
-    auto operator()(CtStr auto text) const {
+    auto operator()(auto input) const {
         for (auto r : {r1, r2, ..., rn}) {
-            auto tr = r(t);
-            if constexpr (!failed(tr)) return tr;
+            auto output = r(t);
+            if constexpr (successful(output)) return output;
         }
-        return failed{};
+        return input; // вернули нетронутым - это признак отказа
     }
 };
-
+```
 Цикл - единственным правилом (подпрограммой верхнего уровня)
 ```cpp
 // псевдокод
 template<Rule auto r> struct rule_loop {
-    auto operator()(CtStr auto text) const {
-        auto tr = r(t);
+    auto operator()(auto input) const {
+        auto output = r(input);
         while (true) {
-            if constexpr (failed(tr)) return r; // предыдущий результат
-            if constexpr (finished(tr)) return tr; // последний успешный результат
-            r = (*this)(tr);
+            if constexpr (failed(output)) return input; // предыдущий результат
+            if constexpr (finished(output)) return input; // последний успешный результат
+            input = output;
         }
     }
 }
@@ -53,10 +58,12 @@ template<Rule auto r> struct rule_loop {
 Классический способ for-цикла - это рекурсия. Например, вот такая:
 ```cpp
 template<Rule auto r1, Rule auto ... rs>
-auto for_loop(auto t) {
-    auto tr = r1(t);
-    if constexpr(!failed(tr)) return tr;
-    else return for_loop<rs...>(t);
+auto for_loop(auto input) {
+    auto output = r1(input);
+    if constexpr(successful(output))
+        return output;
+    else
+        return for_loop<rs...>(input);
 }
 ```
 
@@ -78,9 +85,8 @@ auto left_fold(auto arg, auto ... fs) {
 }
 ```
 Чтобы оно сработало, необходимы следующие условия
-- типы аргументов и результатов должны быть однородными, Arg | Stop
-- операции `(>>f)` также должны быть однородными, Arg -> Arg | Stop
-  (из более узкой категории в более широкую)
+- типы аргументов и результатов должны быть однородными
+- операции `(>>f)` также должны быть однородными
 - преждевременный выход из цикла - это когда промежуточный результат попадает в Stop.
 
 Для удобства мы максимально упростим вид оператора `>>`.
@@ -96,21 +102,44 @@ auto left_fold(auto arg, auto ... fs) {
 
 А ещё - мы не задумываемся о содержании объектов arg и stop.
 
+# Техника программирования
+
+Допустим, у нас правила - `Data -> Maybe (Data,Flag)`.
+(успешно сделали замену и уточнили - финальное-обычное / не смогли).
+
+Назовём это концептом `LightRule` - какие-то не адаптированные и неоднородные функции.
+
+(Изначально в проекте так и было сделано, пока не выяснилось, что это можно улучшить).
+
+Покажем, что даже их легко адаптировать.
+
 ## Как сделать подпрограмму на свёртке?
 
-В нашей задаче уже известно, что правила - `CtStr -> success{CtStr,kind} | fail`.
-
-Фактически, это монада `Maybe`.
-
-Нам нужно преобразовать maybe-функцию в either-функцию.
-
-- `make_arg(s) = arg{s}` - действительно, аргументы у нас всегда - строки (пока что тривиально)
-- `take_res(arg{_}) = fail{}` - если мы пробежали всю цепочку, но так и не получили результат, это провал
-- `take_res{stop{r}} = r` - если остановились, то - вот он, результат!
-- `make_fun(rule)` - распаковывает строку из аргумента (arg{s}), находит `r=rule(s)`, и если это fail, то возвращает `arg{s}`, а если другая строка - то `stop{r}`
+Нам нужно преобразовать maybe-функцию в either-функцию - и обратно!
 
 ```cpp
-template<Rule auto ...rs> struct rules {
+// аргумент у нас всегда делается прямо из данных
+auto make_arg(Data auto s) { return arg{s}; }
+
+// функцию нужно адаптировать
+auto make_fun(LightRule auto f) {
+    return [f](Arg auto a) {
+        auto s = a.value; // arg S --> S
+        auto mbr = f(s);
+        if constexpr (failed(mbr))
+            return a; // nothing --> arg S
+        else
+            return stop{mbr.value}; // just R --> stop R
+    }
+}
+
+// результат нужно привести из ArgStop в Maybe
+// - если это (всё ещё) Arg - значит, успеха не было
+auto take_res(Arg auto a) { return nothing{}; } // arg S --> nothing
+auto take_res(Stop auto a) { return just{a.value}; } // stop R --> just R
+
+// теперь всё готово для запуска
+template<LightRule auto ...rs> struct rules {
     auto operator()(auto s) const { return take_res(make_arg(s) >> ... >> make_rule(rs)); }
 };
 ```
@@ -120,10 +149,14 @@ template<Rule auto ...rs> struct rules {
 Ну уж казалось бы, цикл - это неизбежная рекурсия.
 
 ```cpp
-auto while_loop(auto a, auto f) {
-    auto r = f(a);
-    if constexpr(failed(r)) return a;
-    else return while_loop(r, f);
+auto while_loop(Data auto s, LightRule auto f) {
+    auto mbr = f(s);
+    if constexpr(failed(r)) return s;
+    else {
+        auto r = mbr.value;
+        if constexpr (r.flag == final) return r;
+        else return while_loop(r, f);
+    }
 }
 ```
 
@@ -160,19 +193,35 @@ arg >> fun >> fun >> while_loop
 
 Более того, можно придумать такую схему, при которой каждый следующий цикл увеличивает N.
 
-## Как сделать цикл для правил?
+(см. ниже.)
 
-Мы помним, что rule живёт в монаде SuccessFail (модифицированная Maybe).
+## Как сделать цикл для LightRule?
 
-- `make_arg(s) = arg{s}` - тут ничего необычного
-- `make_fun(rule)` - пусть `res = rule(s)`
-  - `success{r, rule_kind::regular}` превращает в `arg{r}` - продолжаем цикл
-  - `success{r, rule_kind::final}` превращает в `stop{res}` = `stop{success{r, rule_kind::final}}`
-  - `fail{}` - превращает в `stop{success{s, rule_kind::regular}}`
-- `take_res(stop{res}) = res` - заметим, что у бесконечного цикла не может быть `arg` на выходе.
+Почти так же, но у нас изменилось правило прерывания цепочки.
+```cpp
+// вход засовываем в arg, как обычно
+auto make_arg(Data auto s) { return arg{s}; }
+
+// адаптируем функцию
+auto make_fun(LightRule auto f) {
+    return [f](Arg auto a) {
+        Data auto s = a.value;
+        auto mbr = f(s);
+        if constexpr (failed(mbr))
+            return stop{s}; // возвращаем предыдущий результат
+        else {
+            auto [r,flag] = mbr.value; // just (Data,Flag)
+            if constexpr (flag == final)
+                return stop{r}; // достигнуто финальное состояние
+            else
+                return arg{r}; // перезапускаем цикл
+        }
+    };
+}
+```
 
 На самом деле, мы можем немного упростить себе жизнь, если подсунем в цикл программу,
-которая никогда не возвращает fail.
+которая никогда не возвращает "нет подстановок".
 
 Это всего лишь `rules<p, FINAL_RULE("","")>`.
 
@@ -191,22 +240,19 @@ arg >> fun >> fun >> while_loop
 
 Потому что я решаю практическую задачу: как уменьшить объём рекурсии, для чего мне нужны fold-expressions.
 
-## Аугментация
+## А может быть, применить монадные трансформеры?
 
-Более подробно - [augmentation](./augmentation.md)
+Ведь у нас тут смотрите, сколько разных монад, одна в другую вложена:
 
-Можно ли переписать с помощью монадного трансформера?
+- Maybe (успех-неуспех подстановки)
+- Either (регулярное-финальное правило)
+- Continuation над Either (fold-expression)
+- Writer (аугментация)
 
-Исходные правила - это `Str -> Maybe (Either Str Str)` (неудача / success обычный и success финальный).
-
-Мы умеем превращать их в `Str -> Either (Either Str Str) Str` (сопоставили / продолжаем сопоставлять).
-
-А теперь хотим пропихнуть туда кортеж `(Str, Aux)` = `Writer Aux Str`
-
-Просто заменили Str на (Str, Aux).
-
-Просто заменили функцию rule на "распаковать - при удаче переписать состояние и запаковать"
+И можно было бы их единообразно соединить. Грубо говоря, чтобы у нас был код,
+в котором вместо четырёх разных монад были просто Monad Monad Monad Monad,
+и неважно, они там Id или List, например...
 
 Нужно ли делать по-хаскельному? Скорее нет, чем да, потому что в хаскелле монадные трансформеры
 являются универсальным синтаксическим сахаром, тогда как в C++ это в двух местах легко расписать вручную.
-А нагрузка на компилятор немного уменьшится.
+А нагрузка на компилятор НАМНОГО уменьшится.
