@@ -46,7 +46,7 @@ template<Str auto s, Str auto r, rule_kind k> struct rule {
         return os;
     }
 
-    constexpr RuleOutput decltype(auto) operator()(RuleNotMatchedYetInput auto&& nmy) const {
+    constexpr RuleOutput decltype(auto) operator()(RuleInput auto&& nmy) const {
         MaybeCtStr auto mb = try_substitute(ct_search, ct_replace, extract_text(nmy.value));
         if constexpr (!mb) {
             return FWD(nmy);

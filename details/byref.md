@@ -17,12 +17,12 @@
 
 ## Гетерогенные функции - лифт в монаду
 
-Если правила - это тотальные функции `RuleInput -> Tristate RuleInput`
-(где `RuleInput = CtStr | Augmented CtStr`),
+Если правила - это тотальные функции `MachineData -> Tristate MachineData`
+(где `MachineData = CtStr | Augmented CtStr`),
 то каждое проверенное, но не сработавшее правило будет перекладывать данные в новый экземпляр монады.
 
 ```cpp
-auto do_nothing(RuleInput auto&& t) {
+auto do_nothing(MachineData auto&& t) {
     return not_matched_yet{ std::move(t); }
 }
 
@@ -35,17 +35,17 @@ not_matched_yet<T>::operator >> (auto&& f) && {
 
 ## Гомогенные функции в монаде
 
-Если правила - частичные функции `Tristate RuleInput -> Tristate RuleInput`,
+Если правила - частичные функции `Tristate MachineData -> Tristate MachineData`,
 то мы принимаем rvalue-reference и возвращаем...
 
 - если правило не выполнено - то rvalue-reference аргумента
 - если выполнено - то новое значение нового типа (перемещая туда данные - текст и-или аугментацию).
 
 ```cpp
-RuleOutput decltype(auto) do_nothing(RuleNotMatchedYetInput auto&& t) {
+RuleOutput decltype(auto) do_nothing(RuleInput auto&& t) {
     return std::move(t); // not_matched_yet<T>&&
 }
-RuleOutput auto do_something(RuleNotMatchedYetInput auto&& t) {
+RuleOutput auto do_something(RuleInput auto&& t) {
     return matched_regular{ std::move(t); } // by value
 }
 

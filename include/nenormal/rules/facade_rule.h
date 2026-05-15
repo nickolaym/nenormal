@@ -16,9 +16,9 @@ template<Str auto name, Rule auto p> struct facade_rule {
 
     friend std::ostream& operator << (std::ostream& os, facade_rule const& v) { return os << name.view(); }
 
-    constexpr RuleOutput decltype(auto) operator()(RuleNotMatchedYetInput auto&& nmy) const {
+    constexpr RuleOutput decltype(auto) operator()(RuleInput auto&& nmy) const {
         // host rebound arg in a scope-persistent storage
-        RuleFailedOutput auto bare_nmy = not_matched_yet{extract_text(nmy.value)};
+        RuleInput auto bare_nmy = not_matched_yet{extract_text(nmy.value)};
         RuleOutput auto const& out = p(bare_nmy);
         // combine old augmentation with new text,
         // then combine new kind of tristate result with new augmented

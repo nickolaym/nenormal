@@ -16,37 +16,37 @@
 
 Доменом (предметной областью) является либо просто строка `CtStr`, либо аугментированная строка.
 
-Когда мы ниже дойдём до аугментации, раскроем эту тему, а пока будем говорить об абстрактном домене `Domain`.
+Когда мы ниже дойдём до аугментации, раскроем эту тему, а пока будем говорить об абстрактном домене `MachineData`.
 
 Теоретически, можем говорить про то, что у нас есть два домена - исходных значений и финальных.
 То есть, обычные и финальные правила НАМ-машины могут давать "чуть-чуть разные строки" (или разную аугментацию).
 
-Поэтому, чтобы не склеивать их раньше времени, введём ещё и `FinalDomain`.
+Поэтому, чтобы не склеивать их раньше времени, введём ещё и `FinalMachineData`.
 
 ### Первый подход к снаряду: Maybe или Either?
 
-Правило подстановки принимает на вход значение Domain и возвращает неуспех / успех (Domain с признаком остановки/продолжения)
+Правило подстановки принимает на вход значение `MachineData` и возвращает неуспех / успех (`MachineData` с признаком остановки/продолжения)
 
 Кажется, это ложится на монаду Maybe, но на самом деле - на монаду Either. И вот каким образом.
 
 Помимо одиночного правила, у нас есть последовательность альтернатив и цикл программы.
 
-Тело цикла принимает на вход текущее состояние, пропускает его через программу (содержащую альтернативы) и получает Domain с признаком остановки/продолжения.
+Тело цикла принимает на вход текущее состояние, пропускает его через программу (содержащую альтернативы) и получает `MachineData` с признаком остановки/продолжения.
 
 Правило принимает стартовое значение и отдаёт... разберёмся, что именно
 ```haskell
-type Rule = Domain -> RuleOutput
+type Rule = MachineData -> RuleOutput
 ```
 Программа принимает стартовое значение и отдаёт... разберёмся, что именно
 ```haskell
-type Program = Domain -> ProgramOutput
+type Program = MachineData -> ProgramOutput
 ```
 
 ### Цикл
 
 Цикл принимает стартовое значение и отдаёт финальное значение (явный или неявный останов)
 ```haskell
-type MachineLoop = Program -> Domain -> FinalDomain
+type MachineLoop = Program -> MachineData -> FinalMachineData
 
 machineLoop prg src = (inject src >>= loopedPrg) $ extract
     where
@@ -59,17 +59,17 @@ machineLoop prg src = (inject src >>= loopedPrg) $ extract
             -- мы уверены, что если цикл остановился,
             -- то там не может быть Right tmp, а только Left dst
         -- откуда понятно, что
-        loopedPrg :: Domain -> Either FinalDomain Domain
+        loopedPrg :: MachineData -> Either FinalMachineData MachineData
         -- и, конечно,
-        prg :: Domain -> Either FinalDomain Domain
+        prg :: MachineData -> Either FinalMachineData MachineData
 ```
 
 ### Программа
 
 Логично, что
 ```haskell
-type ProgramOutput = Either FinalDomain Domain
-type Program = Domain -> Either FinalDomain Domain
+type ProgramOutput = Either FinalMachineData MachineData
+type Program = MachineData -> Either FinalMachineData MachineData
 ```
 И мы тоже можем её завернуть в монаду Either.
 
@@ -91,7 +91,7 @@ stopper = finalRule "" ""
 
 program ruleset src = (inject src >>= ruleset >>= stopper) $ extract
     where
-        inject :: Domain -> Either ProgramOutput RuleInput
+        inject :: MachineData -> Either ProgramOutput MachineData
         inject src = Right src
             -- для запуска альтернатив нам нужно правое значение
 
@@ -100,10 +100,10 @@ program ruleset src = (inject src >>= ruleset >>= stopper) $ extract
 ```
 Таким образом, `RuleOutput`
 - это либо `Left ProgramOutput` в случае успешной подстановки,
-- либо `Right Domain` в случае неуспешной!
+- либо `Right MachineData` в случае неуспешной!
 
 ```haskell
-type RuleOutput = Either ProgramOutput Domain
+type RuleOutput = Either ProgramOutput MachineData
 ```
 
 ### Цепочка альтернатив
@@ -122,12 +122,12 @@ rules []     src = Right src
 trySubstitute :: Str -> Str -> Str -> Maybe Str
 
 -- и распаковка-упаковка строки в домен
-fromDomain :: Domain -> Str
-toNewDomain :: Domain -> Str -> Domain
+fromDomain :: MachineData -> Str
+toNewDomain :: MachineData -> Str -> MachineData
 
 singleRule search replace willFinishOrContinue = fun
     where
-        fun :: Domain -> RuleOutput
+        fun :: MachineData -> RuleOutput
         fun src = case (trySubstitute search replace (fromDomain src)) of
             Just t -> Left (willFinishOrContinue (toNewDomain src t)
             Nothing  -> Right src

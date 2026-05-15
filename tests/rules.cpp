@@ -18,11 +18,11 @@ TEST(rule_concepts, acceptance) {
     constexpr auto nmy_str_fun = [&]{ return nmy_str; };
     constexpr auto nmy_augmented_fun = [&]{ return nmy_augmented; };
 
-    auto take_rule_nmy_byval = [](RuleNotMatchedYetInput auto) {};
+    auto take_rule_nmy_byval = [](RuleInput auto) {};
     static_assert(requires { take_rule_nmy_byval(nmy_str); });
     static_assert(requires { take_rule_nmy_byval(nmy_augmented); });
 
-    auto take_rule_nmy_bycref = [](RuleNotMatchedYetInput auto const&) {};
+    auto take_rule_nmy_bycref = [](RuleInput auto const&) {};
     static_assert(requires { take_rule_nmy_bycref(nmy_str); });
     static_assert(requires { take_rule_nmy_bycref(nmy_augmented); });
 
@@ -32,11 +32,11 @@ TEST(rule_concepts, acceptance) {
     >);
 
     using ttt = std::remove_cvref_t<decltype(nmy_str)>;
-    static_assert(RuleNotMatchedYetInput<ttt>);
-    static_assert(RuleNotMatchedYetInput<ttt const&>);
-    static_assert(RuleNotMatchedYetInput<ttt &&>);
+    static_assert(RuleInput<ttt>);
+    static_assert(RuleInput<ttt const&>);
+    static_assert(RuleInput<ttt &&>);
 
-    auto take_rule_nmy_byxref = [](RuleNotMatchedYetInput auto &&) {};
+    auto take_rule_nmy_byxref = [](RuleInput auto &&) {};
     static_assert(requires { take_rule_nmy_byxref(nmy_str); });
     static_assert(requires { take_rule_nmy_byxref(nmy_augmented); });
     static_assert(requires { take_rule_nmy_byxref(nmy_str_fun()); });
@@ -180,10 +180,10 @@ TEST(rule_loop, step_by_step) {
 }
 
 TEST(augmented, single_rule) {
-    constexpr RuleInput auto input = augmented_text{CTSTR("aaa"), empty{}};
+    constexpr MachineData auto input = augmented_text{CTSTR("aaa"), empty{}};
     using input_type = std::remove_const_t<decltype(input)>;
     static_assert(Augmented<input_type>);
-    static_assert(RuleInput<input_type>);
+    static_assert(MachineData<input_type>);
     constexpr Rule auto p = RULE("a", "b");
     constexpr RuleMatchedOutput auto output = p(not_matched_yet{input}); // matched_regular{augmented_test{...}}
     using output_type = std::remove_const_t<decltype(output)>;
@@ -195,10 +195,10 @@ TEST(augmented, single_rule) {
 }
 
 TEST(single_rule, augmented_fail) {
-    constexpr RuleInput auto input = augmented_text{CTSTR("aaa"), empty{}};
+    constexpr MachineData auto input = augmented_text{CTSTR("aaa"), empty{}};
     constexpr Rule auto p = RULE("c", "d");
     constexpr RuleFailedOutput auto output = p(not_matched_yet{input});
-    constexpr RuleInput auto output_data = output.value;
+    constexpr MachineData auto output_data = output.value;
     static_assert(input == output_data);
 }
 
@@ -286,11 +286,11 @@ TEST(hidden, text) {
 TEST(hidden, empty_augmentation) {
     constexpr auto p = HIDDEN_RULE(RULE("a", "b"));
 
-    constexpr RuleInput auto bad_input = augmented_text{CTSTR(""), empty{}};
+    constexpr MachineData auto bad_input = augmented_text{CTSTR(""), empty{}};
     constexpr RuleFailedOutput auto bad_output = p(not_matched_yet{bad_input});
     static_assert(bad_output.value == bad_input);
 
-    constexpr RuleInput auto good_input = augmented_text{CTSTR("aaa"), empty{}};
+    constexpr MachineData auto good_input = augmented_text{CTSTR("aaa"), empty{}};
     constexpr RuleMatchedOutput auto good_output = p(not_matched_yet{good_input});
     static_assert(good_output.value == augmented_text{CTSTR("baa"), empty{}});
 }
@@ -301,11 +301,11 @@ TEST(hidden, cumulative_augmentation) {
 
     constexpr auto inc = [](int n, auto...) { return n + 1; };
 
-    constexpr RuleInput auto bad_input = augmented_text{CTSTR(""), cumulative_effect{inc, 0}};
+    constexpr MachineData auto bad_input = augmented_text{CTSTR(""), cumulative_effect{inc, 0}};
     constexpr RuleFailedOutput auto bad_output = h(not_matched_yet{bad_input});
     static_assert(bad_output.value == bad_input);
 
-    constexpr RuleInput auto good_input = augmented_text{CTSTR("aaa"), cumulative_effect{inc, 0}};
+    constexpr MachineData auto good_input = augmented_text{CTSTR("aaa"), cumulative_effect{inc, 0}};
     constexpr RuleMatchedOutput auto good_output = h(not_matched_yet{good_input});
     static_assert(good_output.value.text == CTSTR("baa"));
     static_assert(good_output.value.aux == cumulative_effect{inc, 0});
@@ -383,7 +383,7 @@ TEST(facade, facade_rule_invokes_callback_with_facade_type) {
             "Callback must receive FacadeRule, not bare rule");
         return acc + 1;
     };
-    constexpr RuleInput auto input = augmented_text{
+    constexpr MachineData auto input = augmented_text{
         CTSTR("aaa"),
         cumulative_effect{inc, 0}
     };

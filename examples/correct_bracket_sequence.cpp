@@ -34,7 +34,7 @@ constexpr auto program = NAMED_RULE(program, RULES(
     RULES()
 ));
 
-constexpr ::nn::RuleOutput auto runprogram(::nn::RuleInput auto&& a) {
+constexpr ::nn::RuleOutput auto runprogram(::nn::MachineData auto&& a) {
     return program(::nn::not_matched_yet{a});
 }
 

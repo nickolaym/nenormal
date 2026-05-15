@@ -17,20 +17,21 @@ namespace nn {
 // - bare CtStr
 // - augmented string
 
-template<class T> concept RuleInput = CtStr<T> || Augmented<T>;
-CONCEPT_TYPECHECKER(RuleInput)
+template<class T> concept MachineData = CtStr<T> || Augmented<T>;
+CONCEPT_TYPECHECKER(MachineData)
 
-// Tristate input is a subclass of Tristate of RuleInput, namely NotMatchedYet
+// Tristate input is a subclass of Tristate of MachineData, namely NotMatchedYet
 
-template<class T> concept RuleNotMatchedYetInput = NotMatchedYetOfTraits<T, is_RuleInput>;
+template<class T> concept RuleInput = NotMatchedYetOfTraits<T, is_MachineData>;
 
 // output
 
-template<class T> concept RuleOutput        = TristateOfTraits<T, is_RuleInput>;
-template<class T> concept RuleMatchedOutput = MatchedOfTraits<T, is_RuleInput>;
-template<class T> concept RuleFailedOutput  = NotMatchedYetOfTraits<T, is_RuleInput>;
-template<class T> concept RuleFinalOutput   = MatchedFinalOfTraits<T, is_RuleInput>;
-// Note that RuleNotMatchedYetInput == RuleFailedOutput
+template<class T> concept RuleOutput        = TristateOfTraits<T, is_MachineData>;
+// refinements of outputs
+template<class T> concept RuleFailedOutput  = NotMatchedYetOfTraits<T, is_MachineData>;
+template<class T> concept RuleMatchedOutput = MatchedOfTraits<T, is_MachineData>;
+template<class T> concept RuleFinalOutput   = MatchedFinalOfTraits<T, is_MachineData>;
+// Note that RuleInput == RuleFailedOutput
 
 // inplace in-out arg
 
