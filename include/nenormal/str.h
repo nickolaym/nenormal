@@ -14,13 +14,19 @@ CONCEPT(Str)
 template<class T> concept CtStr = CtOfTraits<T, is_Str>;
 CONCEPT_TYPECHECKER(CtStr)
 
+// note that N here includes the nul-terminator
 template<size_t N> using charbuf = char[N];
 
+// note that N here excludes the nul-terminator.
+// so it's impossible to deduce N from the constructor implicitly,
+// and it requires explicit CTAD
 template<size_t N> struct str {
-    static_assert(N > 0); // nul-terminated string
-    charbuf<N> value = {};
+    charbuf<N + 1> value = {};
     constexpr str() = default;
-    constexpr str(const charbuf<N>& v) { std::copy(std::begin(v), std::end(v), std::begin(value)); }
+    constexpr str(const charbuf<N + 1>& v) {
+        std::copy(std::begin(v), std::end(v) - 1, std::begin(value));
+        value[N] = 0;
+    }
 
     REPRESENTS(Str)
     friend std::ostream& operator << (std::ostream& os, str const& v) {
@@ -33,7 +39,7 @@ template<size_t N> struct str {
     constexpr auto end() { return std::begin(value) + size(); }
     constexpr auto end() const { return std::begin(value) + size(); }
 
-    constexpr static size_t size() { return N-1; }
+    constexpr static size_t size() { return N; }
     constexpr static bool empty() { return size() == 0; }
 
     constexpr operator std::string_view() const { return view(); }
@@ -45,7 +51,7 @@ template<size_t N> struct str {
     template<size_t M> constexpr bool operator == (const str<M>& rhs) const { return false; }
 };
 // CTAD
-template<size_t N> str(const charbuf<N>&) -> str<N>;
+template<size_t N> str(const charbuf<N>&) -> str<N - 1>;
 
 namespace literals {
 

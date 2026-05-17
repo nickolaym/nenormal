@@ -12,7 +12,7 @@ template<char c> constexpr auto ct_char_v = ct_char<c>{};
 
 constexpr Str auto chars(CtOfType<size_t> auto n, char c) {
     constexpr size_t size = n.value;
-    str<size + 1> res;
+    str<size> res;
     auto it = res.begin();
     it = std::fill_n(it, size, c);
     *it = 0;
@@ -30,7 +30,7 @@ constexpr Str auto concat_str(Str auto const&... ss) {
         return (ss , ...); // pack of single item unrolls to that item
     } else {
         constexpr size_t total_size = (ss.size() + ... + 0);
-        str<total_size + 1> res;
+        str<total_size> res;
         auto it = res.begin();
         ((it = std::copy(ss.begin(), ss.end(), it)) , ...);
         *it = 0;

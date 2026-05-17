@@ -8,7 +8,7 @@ TEST(str, compile_time_properties) {
     constexpr Str auto s = str{"abc"};
     Str auto const& ref = s;
     using s_type = std::remove_const_t<decltype(s)>;
-    static_assert(std::same_as<s_type, str<4>>);
+    static_assert(std::same_as<s_type, str<3>>);
     static_assert(Str<s_type>);
     static_assert(s.size() == 3);
     static_assert(s == str{"abc"});

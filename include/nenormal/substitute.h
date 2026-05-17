@@ -32,7 +32,7 @@ constexpr MaybeCtStr auto try_substitute(CtStr auto cts, CtStr auto ctr, CtStr a
                 [&]{
                     auto fend = fbegin + s.size();
                     constexpr auto len = src.size() - s.size() + r.size();
-                    str<len + 1> dst; // not constant yet in this block
+                    str<len> dst; // not constant yet in this block
                     auto it = dst.begin();
                     it = std::copy(src.begin(), fbegin, it);
                     it = std::copy(r.begin(), r.end(), it);
