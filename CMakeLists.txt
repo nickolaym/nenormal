@@ -33,6 +33,7 @@ endfunction()
 # test elements
 add_test_executable(test_concepts tests/concepts.cpp)
 add_test_executable(test_str tests/str.cpp)
+add_test_executable(test_str_algo tests/str_algo.cpp)
 add_test_executable(test_augmented tests/augmented.cpp)
 add_test_executable(test_rules tests/rules.cpp)
 add_test_executable(test_maybe tests/maybe.cpp)
@@ -43,6 +44,7 @@ add_custom_target(unittests
     DEPENDS
         test_concepts
         test_str
+        test_str_algo
         test_augmented
         test_rules
         test_maybe

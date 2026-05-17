@@ -33,8 +33,8 @@ template<size_t N> struct str {
     constexpr auto end() { return std::begin(value) + size(); }
     constexpr auto end() const { return std::begin(value) + size(); }
 
-    constexpr size_t size() const { return N-1; }
-    constexpr bool empty() const { return size() == 0; }
+    constexpr static size_t size() { return N-1; }
+    constexpr static bool empty() { return size() == 0; }
 
     constexpr operator std::string_view() const { return view(); }
     constexpr std::string_view view() const { return {begin(), end()}; }
