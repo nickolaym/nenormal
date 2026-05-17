@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "./program.h"
+#include <format>
 
 namespace examples::arithmetics {
 
@@ -9,14 +10,12 @@ TEST(arithmetics, runtime) {
         size_t step = 0;
         auto trace = [&](::nn::CtStr auto src, ::nn::Rule auto p, ::nn::CtStr auto dst) {
             step++;
-            std::cout
-                << std::setw(3) << step << " : "
-                << std::setw(20) << std::left << q(src)
-                << "  >>  "
-                << p
-                << "  ==  "
-                << q(dst)
-                << std::endl;
+            std::cout << std::format("{:3} : {:<20} >> {:<30} == {}",
+                step,
+                src.value.view(),
+                p.name.view(),
+                dst.value.view()
+            ) << std::endl;
         };
 
         constexpr auto count = [](int n, auto...) { return n+1; };

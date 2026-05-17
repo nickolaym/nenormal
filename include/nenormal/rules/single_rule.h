@@ -36,14 +36,26 @@ template<Str auto s, Str auto r, rule_kind k> struct rule {
     static constexpr auto ct_replace = ct<r>{};
     static constexpr auto ct_kind = ct<k>{};
 
+    static constexpr auto arrow = []{
+        if constexpr (k == rule_kind::regular)
+            return STR(" -> ");
+        else
+            return STR(" ->. ");
+    }();
+    static constexpr auto name = concat_str(
+        STR("("),
+        STR("\""),
+        s,
+        STR("\""),
+        arrow,
+        STR("\""),
+        r,
+        STR("\""),
+        STR(")")
+    );
+
     friend std::ostream& operator << (std::ostream& os, rule const& v) {
-        os
-            << "("
-            << std::quoted(s.view())
-            << (k == rule_kind::regular ? " -> " : " ->. ")
-            << std::quoted(r.view())
-            << ")";
-        return os;
+        return os << name.view();
     }
 
     constexpr RuleOutput decltype(auto) operator()(RuleInput auto&& nmy) const {

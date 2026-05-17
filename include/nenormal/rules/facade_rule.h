@@ -10,10 +10,11 @@ namespace nn {
 // but in case of success, facade rule triggers augmentation with itself.
 // this allows give common name for a group of rules.
 
-template<Str auto name, Rule auto p> struct facade_rule {
+template<Str auto n, Rule auto p> struct facade_rule {
     REPRESENTS(Rule)
     REPRESENTS(FacadeRule)
 
+    static constexpr Str auto name = n;
     friend std::ostream& operator << (std::ostream& os, facade_rule const& v) { return os << name.view(); }
 
     constexpr RuleOutput decltype(auto) operator()(RuleInput auto&& nmy) const {
