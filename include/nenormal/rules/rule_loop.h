@@ -27,24 +27,62 @@ template<Rule auto p> struct rule_loop_body {
 // rule_loop unrolls the loop over recursion, to reduce its depth.
 // in case of homogenous in-out type unrolling is not required.
 
-template<Rule auto p> struct rule_loop {
+template<Rule auto p, size_t Limit = 5000> struct rule_loop {
     REPRESENTS(Rule)
 
-    constexpr RuleFinalOutput auto operator()(RuleInput auto&& nmy) const {
+    constexpr RuleOutput auto operator()(RuleInput auto&& nmy) const {
         constexpr auto body = rule_loop_body<p>{};
-        return (FWD(nmy)
-            // unwrap the loop 10 times
-            >> body >> body >> body >> body >> body
-            >> body >> body >> body >> body >> body
-            >> rule_loop{}
-        ).commit_alts();
+
+        if constexpr (Limit == 0)
+            return FWD(nmy); // by value
+        else if constexpr (Limit == 1)
+            return FWD(nmy)
+                >> body;
+        else if constexpr (Limit == 2)
+            return FWD(nmy)
+                >> body >> body;
+        else if constexpr (Limit == 3)
+            return FWD(nmy)
+                >> body >> body >> body;
+        else if constexpr (Limit == 4)
+            return FWD(nmy)
+                >> body >> body >> body >> body;
+        else if constexpr (Limit == 5)
+            return FWD(nmy)
+                >> body >> body >> body >> body >> body;
+        else if constexpr (Limit == 6)
+            return FWD(nmy)
+                >> body >> body >> body >> body >> body
+                >> body;
+        else if constexpr (Limit == 7)
+            return FWD(nmy)
+                >> body >> body >> body >> body >> body
+                >> body >> body;
+        else if constexpr (Limit == 8)
+            return FWD(nmy)
+                >> body >> body >> body >> body >> body
+                >> body >> body >> body;
+        else if constexpr (Limit == 9)
+            return FWD(nmy)
+                >> body >> body >> body >> body >> body
+                >> body >> body >> body >> body;
+        else if constexpr (Limit == 10)
+            return FWD(nmy)
+                >> body >> body >> body >> body >> body
+                >> body >> body >> body >> body >> body;
+        else
+            return FWD(nmy)
+                >> body >> body >> body >> body >> body
+                >> body >> body >> body >> body >> body
+                >> rule_loop<p, Limit - 10>{};
     }
     constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
         constexpr auto body = rule_loop_body<p>{};
         inplace_argument<decltype(t)> a{t};
-        size_t limit = 10000;
+        size_t limit = Limit;
         while (!a) {
-            if (--limit == 0) throw std::runtime_error("the loop runs too long");
+            if (limit == 0) break;
+            --limit;
             a.updated_by(body);
         }
         return a.kind;

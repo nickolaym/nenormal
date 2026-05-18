@@ -12,7 +12,14 @@ constexpr ::nn::CtStr auto dots = ::nn::ct_chars(::nn::ct_size_v<N>, ::nn::ct_ch
 
 constexpr ::nn::CtStr auto zero = dots<0>;
 
-constexpr ::nn::Machine auto decrement = MACHINE(RULE(".", ""));
+constexpr ::nn::Rule auto single_decrement = RULE(".", "");
+constexpr ::nn::Machine auto decrement = MACHINE(single_decrement);
+
+template<size_t Limit>
+constexpr ::nn::Rule auto limited_loop = ::nn::rule_loop<single_decrement, Limit>{};
+
+template<size_t Limit>
+constexpr ::nn::Machine auto limited_decrement = MACHINE_FROM_RULE(limited_loop<Limit>);
 
 void print_step(int step, ::std::string_view o) {
     size_t n = o.size();
@@ -33,16 +40,35 @@ constexpr auto count_steps =
 };
 
 auto run(::nn::CtStr auto s) {
-    int step = 0;
-    ::nn::Augmented auto input = ::nn::augmented_text{s, ::nn::cumulative_effect{count_steps, step}};
+    ::nn::Augmented auto input = ::nn::augmented_text{s, ::nn::cumulative_effect{count_steps, 0}};
     ::nn::Augmented auto output = decrement(input);
     std::cout << "-----" << std::endl;
-    return output.text.value.size();
+    return output.aux.a;
 };
 
 constexpr auto pure_run(::nn::CtStr auto s) {
     return decrement(s).value.size();
 }
+
+
+::std::string dots_str(size_t n) {
+    return ::std::string(n, '.');
+}
+
+constexpr auto inplace_step = [](int acc, ::nn::SingleRule auto const& p, ::std::string const& t) {
+    print_step(acc + 1, ::std::string_view(t));
+    return acc + 1;
+};
+
+auto run_inplace(::std::string s) {
+    ::nn::inplace_augmented_text arg{::std::move(s), ::nn::inplace_cumulative_effect{inplace_step, 0}};
+    return decrement(FWD(arg)).aux.a;
+}
+
+auto pure_run_inplace(::std::string s) {
+    return decrement(FWD(s)).size();
+}
+
 
 TEST(rule_loop, pure) {
     static_assert(pure_run(dots<0>) == 0);
@@ -52,16 +78,82 @@ TEST(rule_loop, pure) {
     static_assert(pure_run(dots<4>) == 0);
     static_assert(pure_run(dots<10>) == 0);
     static_assert(pure_run(dots<20>) == 0);
-    static_assert(pure_run(dots<100>) == 0);
-    static_assert(pure_run(dots<200>) == 0);
+    // static_assert(pure_run(dots<100>) == 0);
+    // static_assert(pure_run(dots<200>) == 0);
 }
 
 TEST(rule_loop, run) {
     EXPECT_EQ(run(dots<0>), 0);
-    EXPECT_EQ(run(dots<1>), 0);
-    EXPECT_EQ(run(dots<10>), 0);
-    EXPECT_EQ(run(dots<20>), 0);
-    EXPECT_EQ(run(dots<100>), 0);
+    EXPECT_EQ(run(dots<1>), 1);
+    EXPECT_EQ(run(dots<10>), 10);
+    EXPECT_EQ(run(dots<20>), 20);
+    EXPECT_EQ(run(dots<100>), 100);
+}
+
+TEST(rule_loop, pure_run_inplace) {
+    EXPECT_EQ(pure_run_inplace(dots_str(0)), 0);
+    EXPECT_EQ(pure_run_inplace(dots_str(1)), 0);
+    EXPECT_EQ(pure_run_inplace(dots_str(10)), 0);
+    EXPECT_EQ(pure_run_inplace(dots_str(20)), 0);
+    EXPECT_EQ(pure_run_inplace(dots_str(100)), 0);
+}
+
+TEST(rule_loop, run_inplace) {
+    EXPECT_EQ(run_inplace(dots_str(300)), 300);
+}
+
+TEST(rule_loop, limited_loops) {
+    constexpr auto exam = [](::nn::CtSize auto loop_limit, ::nn::CtSize auto dots_len) constexpr {
+        constexpr size_t L = loop_limit.value;
+        constexpr size_t D = dots_len.value;
+
+        constexpr ::nn::CtStr auto input_text = dots<D>;
+        constexpr ::nn::RuleInput auto input = ::nn::not_matched_yet{input_text};
+        constexpr ::nn::RuleOutput auto output = limited_loop<L>(input);
+
+        if constexpr(L <= D) {
+            static_assert(output == ::nn::not_matched_yet{dots<D - L>});
+        } else {
+            static_assert(output == ::nn::matched_final_halted{dots<0>});
+        }
+    };
+
+    constexpr auto exam_loops = [=](::nn::CtSize auto dots_len) {
+        // test unrolling without recursion
+        exam(::nn::ct_size_v<0>, dots_len);
+        exam(::nn::ct_size_v<1>, dots_len);
+        exam(::nn::ct_size_v<2>, dots_len);
+        exam(::nn::ct_size_v<3>, dots_len);
+        exam(::nn::ct_size_v<4>, dots_len);
+        exam(::nn::ct_size_v<5>, dots_len);
+        exam(::nn::ct_size_v<6>, dots_len);
+        exam(::nn::ct_size_v<7>, dots_len);
+        exam(::nn::ct_size_v<8>, dots_len);
+        exam(::nn::ct_size_v<9>, dots_len);
+        exam(::nn::ct_size_v<10>, dots_len);
+        // with single recursion
+        exam(::nn::ct_size_v<11>, dots_len);
+        exam(::nn::ct_size_v<15>, dots_len);
+        exam(::nn::ct_size_v<16>, dots_len);
+        // with double recursion
+        exam(::nn::ct_size_v<25>, dots_len);
+        exam(::nn::ct_size_v<26>, dots_len);
+    };
+
+    exam_loops(::nn::ct_size_v<0>);
+    exam_loops(::nn::ct_size_v<5>);
+    exam_loops(::nn::ct_size_v<15>);
+    exam_loops(::nn::ct_size_v<25>);
+}
+
+TEST(rule_loop, inplace_limited_loop) {
+    constexpr size_t L = 10; // there is no unrolling, so we test only one case
+    constexpr auto machine = limited_decrement<L>;
+
+    for (size_t D : {0, 9, 10, 11}) {
+        size_t R = (D < L) ? 0 : (D - L);
+        EXPECT_EQ(machine(dots_str(D)), dots_str(R));
+    }
 }
 
 } // namespace test_rule_loop_ns

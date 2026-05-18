@@ -6,11 +6,13 @@ namespace nn {
 
 template<size_t n> using ct_size = ct<n>;
 template<size_t n> constexpr auto ct_size_v = ct_size<n>{};
+template<class T> concept CtSize = CtOfType<T, size_t>;
 
 template<char c> using ct_char = ct<c>;
 template<char c> constexpr auto ct_char_v = ct_char<c>{};
+template<class T> concept CtChar = CtOfType<T, char>;
 
-constexpr Str auto chars(CtOfType<size_t> auto n, char c) {
+constexpr Str auto chars(CtSize auto n, char c) {
     constexpr size_t size = n.value;
     str<size> res;
     auto it = res.begin();
@@ -19,7 +21,7 @@ constexpr Str auto chars(CtOfType<size_t> auto n, char c) {
     return res;
 }
 
-constexpr CtStr auto ct_chars(CtOfType<size_t> auto n, CtOfType<char> auto c) {
+constexpr CtStr auto ct_chars(CtSize auto n, CtChar auto c) {
     return ct<chars(n, c.value)>{};
 }
 
