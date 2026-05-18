@@ -491,68 +491,77 @@ TEST(augmented, no_extra_ctors) {
         std::cout << std::endl;
     };
 
-    auto s3 = CTSTR("aaa");
+    // input strings: "aaaaa" (n times a)
+    constexpr auto aaa = [](CtSize auto n) { return ct_chars(n, ct_char_v<'a'>); };
+    // "aaaaa." (n times a)
+    constexpr auto aaadot = [aaa](CtSize auto n) { return concat_ctstr(aaa(n), CTSTR(".")); };
 
-    examine("simple-miss", s3, RULES(RULES(RULES(p_miss))), 0);
+    auto s3 = aaa(ct_size_v<3>);
+
+    // mismatch does not make moves
+    examine("simple-miss",       s3, RULES(RULES(RULES(p_miss))), 0);
+    examine("many-misses",       s3, prog_mismatch, 0);
 
     // +1 move per each level of depth from matched rule (return by value)
-    examine("simple-match", s3, RULES(RULES(RULES(p_match))), 3);
-    examine("match,etc...", s3, RULES(p_match, p_miss, p_miss, p_miss, p_miss), 1);
-    examine("many-misses", s3, prog_mismatch, 0);
+    examine("simple-match",      s3, p_match, 0);
+    examine("nested-match",      s3, RULES(RULES(RULES(p_match))), 3);
+    examine("match,etc...",      s3, RULES(p_match, p_miss, p_miss, p_miss, p_miss), 1);
     examine("miss,match,etc...", s3, RULES(p_miss, p_match, p_miss, p_miss, p_miss), 1);
 
-    // parts of loop
+    // +1 move from rule_loop_body (commit_loop() - return by value)
     examine("loop-body-0", s3, rule_loop_body<p_miss>{}, 1);
+    examine("loop-body-1", s3, rule_loop_body<p_match>{}, 1);
 
-    // each iteration takes +2 move (rule_loop_body and rule_loop)
-    // +1 per each level of nesting (10 iterations or less) - return by value
+    // each iteration takes +1 move (matched rule)
+    // +2 - rule_loop
     examine("mismatch-loop", s3, RULE_LOOP(p_miss5), 2);
-    // loop does +1 move per iteration
-    examine("match-loop-1",  CTSTR("a"), RULE_LOOP(p_match), 1+2);
-    examine("match-loop-3",  CTSTR("aaa"), RULE_LOOP(p_match), 3+2);
-    examine("match-loop-9",  CTSTR("aaaaaaaaa"), RULE_LOOP(p_match), 9+2);
-    examine("match-loop-10", CTSTR("aaaaaaaaaa"), RULE_LOOP(p_match), 10+3);
-    examine("match-loop-11", CTSTR("aaaaaaaaaaa"), RULE_LOOP(p_match), 11+3);
-    examine("match-loop-13", CTSTR("aaaaaaaaaaaaa"), RULE_LOOP(p_match), 13+3);
-    examine("match-loop-19", CTSTR("aaaaaaaaaaaaaaaaaaa"), RULE_LOOP(p_match), 19+3);
-    examine("match-loop-20", CTSTR("aaaaaaaaaaaaaaaaaaaa"), RULE_LOOP(p_match), 20+4);
-    examine("match-loop-23", CTSTR("aaaaaaaaaaaaaaaaaaaaaaa"), RULE_LOOP(p_match), 23+4);
+    examine("match-loop-1",  aaa(ct_size_v< 1>), RULE_LOOP(p_match),  1+2);
+    examine("match-loop-1",  aaa(ct_size_v< 2>), RULE_LOOP(p_match),  2+2);
+    examine("match-loop-3",  aaa(ct_size_v< 3>), RULE_LOOP(p_match),  3+2);
+    examine("match-loop-9",  aaa(ct_size_v< 9>), RULE_LOOP(p_match),  9+2);
+    examine("match-loop-10", aaa(ct_size_v<10>), RULE_LOOP(p_match), 10+2);
+    examine("match-loop-11", aaa(ct_size_v<11>), RULE_LOOP(p_match), 11+2);
+    examine("match-loop-19", aaa(ct_size_v<19>), RULE_LOOP(p_match), 19+2);
+    examine("match-loop-20", aaa(ct_size_v<20>), RULE_LOOP(p_match), 20+2);
+    examine("match-loop-21", aaa(ct_size_v<21>), RULE_LOOP(p_match), 21+2);
 
-    examine("final-loop-!", CTSTR("."), RULE_LOOP(p_final), 1+2);
-    // each iteration here takes +2 move (rules, rule_loop_body)
-    // each nesting still takes +1 move
-    // +1 overall
-    examine("final-loop-1",  CTSTR("."), RULE_LOOP(p_mf), 1*2+2);
-    examine("final-loop-2",  CTSTR("a."), RULE_LOOP(p_mf), 2*2+2);
-    examine("final-loop-3",  CTSTR("aa."), RULE_LOOP(p_mf), 3*2+2);
-    examine("final-loop-5",  CTSTR("aaaa."), RULE_LOOP(p_mf), 5*2+2);
-    examine("final-loop-9",  CTSTR("aaaaaaaa."), RULE_LOOP(p_mf), 9*2+2);
-    examine("final-loop-10", CTSTR("aaaaaaaaa."), RULE_LOOP(p_mf), 10*2+3);
-    examine("final-loop-11", CTSTR("aaaaaaaaaa."), RULE_LOOP(p_mf), 11*2+3);
-    examine("final-loop-19", CTSTR("aaaaaaaaaaaaaaaaaa."), RULE_LOOP(p_mf), 19*2+3);
-    examine("final-loop-20", CTSTR("aaaaaaaaaaaaaaaaaaa."), RULE_LOOP(p_mf), 20*2+4);
-    examine("final-loop-23", CTSTR("aaaaaaaaaaaaaaaaaaaaaa."), RULE_LOOP(p_mf), 23*2+4);
+    // +1 iteration (final rule)
+    // +2 rule_loop
+    examine("final-loop-!",  aaadot(ct_size_v< 0>), RULE_LOOP(p_final), ( 0+1)+2);
+
+    // each iteration here takes +2 move (rules + rule_loop_body)
+    // n times a + 1 times dot = (n+1) iterations
+    // +2 - rule_loop
+    examine("final-loop-0",  aaadot(ct_size_v< 0>), RULE_LOOP(p_mf), ( 0+1)*2+2);
+    examine("final-loop-1",  aaadot(ct_size_v< 1>), RULE_LOOP(p_mf), ( 1+1)*2+2);
+    examine("final-loop-2",  aaadot(ct_size_v< 2>), RULE_LOOP(p_mf), ( 2+1)*2+2);
+    examine("final-loop-3",  aaadot(ct_size_v< 3>), RULE_LOOP(p_mf), ( 3+1)*2+2);
+    examine("final-loop-9",  aaadot(ct_size_v< 9>), RULE_LOOP(p_mf), ( 9+1)*2+2);
+    examine("final-loop-10", aaadot(ct_size_v<10>), RULE_LOOP(p_mf), (10+1)*2+2);
+    examine("final-loop-11", aaadot(ct_size_v<11>), RULE_LOOP(p_mf), (11+1)*2+2);
+    examine("final-loop-19", aaadot(ct_size_v<19>), RULE_LOOP(p_mf), (19+1)*2+2);
+    examine("final-loop-20", aaadot(ct_size_v<20>), RULE_LOOP(p_mf), (20+1)*2+2);
+    examine("final-loop-21", aaadot(ct_size_v<21>), RULE_LOOP(p_mf), (21+1)*2+2);
 
     // each iteration here takes +4 move (3 rules and rule_loop_body)
-    // each nesting still takes +1 move
-    // +1 overall
-    examine("deep-loop-1",  CTSTR("a"), RULE_LOOP(p_match3), 1*4+2);
-    examine("deep-loop-3",  CTSTR("aaa"), RULE_LOOP(p_match3), 3*4+2);
-    examine("deep-loop-5",  CTSTR("aaaaa"), RULE_LOOP(p_match3), 5*4+2);
-    examine("deep-loop-9",  CTSTR("aaaaaaaaa"), RULE_LOOP(p_match3), 9*4+2);
-    examine("deep-loop-10", CTSTR("aaaaaaaaaa"), RULE_LOOP(p_match3), 10*4+3);
-    examine("deep-loop-11", CTSTR("aaaaaaaaaaa"), RULE_LOOP(p_match3), 11*4+3);
+    examine("deep-loop-1",  aaa(ct_size_v< 1>), RULE_LOOP(p_match3),  1*4+2);
+    examine("deep-loop-2",  aaa(ct_size_v< 2>), RULE_LOOP(p_match3),  2*4+2);
+    examine("deep-loop-3",  aaa(ct_size_v< 3>), RULE_LOOP(p_match3),  3*4+2);
+    examine("deep-loop-9",  aaa(ct_size_v< 9>), RULE_LOOP(p_match3),  9*4+2);
+    examine("deep-loop-10", aaa(ct_size_v<10>), RULE_LOOP(p_match3), 10*4+2);
+    examine("deep-loop-11", aaa(ct_size_v<11>), RULE_LOOP(p_match3), 11*4+2);
 
     // machine_fun +2 moves
-    examine_m("empty-machine", CTSTR("aaa"),    MACHINE_FROM_RULE((rules<>{})), 0+2);
+    examine_m("empty-machine", aaa(ct_size_v<2>), MACHINE_FROM_RULE((rules<>{})), 0+2);
     // machine is machine_fun over rule_loop, so +2 +2 = +4 moves
-    examine_m("mismatch-machine", CTSTR("aaa"), MACHINE(p_miss5), 0+4);
+    examine_m("mismatch-machine", aaa(ct_size_v<2>), MACHINE(p_miss5), 0+4);
 
-    examine_m("match-machine-1",  CTSTR("a"), MACHINE(p_match), 1+4);
-    examine_m("match-machine-3",  CTSTR("aaa"), MACHINE(p_match), 3+4);
-    examine_m("match-machine-9",  CTSTR("aaaaaaaaa"), MACHINE(p_match), 9+4);
-    examine_m("match-machine-10", CTSTR("aaaaaaaaaa"), MACHINE(p_match), 10+5);
-    examine_m("match-machine-11", CTSTR("aaaaaaaaaaa"), MACHINE(p_match), 11+5);
+    examine_m("match-machine-1",  aaa(ct_size_v<1>),  MACHINE(p_match),  1+4);
+    examine_m("match-machine-3",  aaa(ct_size_v<2>),  MACHINE(p_match),  2+4);
+    examine_m("match-machine-3",  aaa(ct_size_v<3>),  MACHINE(p_match),  3+4);
+    examine_m("match-machine-9",  aaa(ct_size_v<9>),  MACHINE(p_match),  9+4);
+    examine_m("match-machine-10", aaa(ct_size_v<10>), MACHINE(p_match), 10+4);
+    examine_m("match-machine-11", aaa(ct_size_v<11>), MACHINE(p_match), 11+4);
 }
 
 /// inplace

@@ -5,6 +5,7 @@
 #include "concepts.h"
 #include "ct.h"
 #include "str.h"
+#include "str_algo.h"
 #include "maybe.h"
 #include "substitute.h"
 #include "rules.h"

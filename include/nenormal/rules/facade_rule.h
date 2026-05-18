@@ -10,22 +10,22 @@ namespace nn {
 // but in case of success, facade rule triggers augmentation with itself.
 // this allows give common name for a group of rules.
 
-template<Str auto name, Rule auto p> struct facade_rule {
+template<Str auto n, Rule auto p> struct facade_rule {
     REPRESENTS(Rule)
     REPRESENTS(FacadeRule)
 
+    static constexpr Str auto name = n;
     friend std::ostream& operator << (std::ostream& os, facade_rule const& v) { return os << name.view(); }
 
     constexpr RuleOutput decltype(auto) operator()(RuleInput auto&& nmy) const {
-        // host rebound arg in a scope-persistent storage
         RuleInput auto bare_nmy = not_matched_yet{extract_text(nmy.value)};
-        RuleOutput auto const& out = p(bare_nmy);
+        RuleOutput auto bare_out = p(bare_nmy);
         // combine old augmentation with new text,
         // then combine new kind of tristate result with new augmented
-        if constexpr (!out.is_matched) {
+        if constexpr (!bare_out.is_matched) {
             return FWD(nmy);
         } else {
-            return out.rebind(update_text(FWD(nmy).value, *this, out.value));
+            return bare_out.rebind(update_text(FWD(nmy).value, *this, bare_out.value));
         }
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {

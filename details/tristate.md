@@ -28,6 +28,9 @@
 В принципе, необязательно различать обычный финал и аварийный останов. Но для отладки полезно.
 
 ## Схема переходов
+
+### В одной итерации
+
 ```mermaid
 graph TD
 
@@ -67,6 +70,48 @@ NMY --|commit_loop|--> MFH
 
 MF --> END
 MFH --> END
+```
+
+### Запуск (с прерыванием по длительности)
+
+```mermaid
+graph TD
+
+START((start))
+
+subgraph RUN[запуск]
+    NMY([not_matched_yet])
+
+    ITERATION[итерация]
+
+    subgraph IT[результаты итерации]
+        IT_NMY([новое not_matched_yet])
+        IT_MF([matched_final])
+        IT_MFH([matched_final_halted])
+    end
+end
+
+subgraph RESULTS[результаты запуска]
+    RES_NMY([not_matched_yet])
+    RES_MF([matched_final])
+    RES_MFH([matched_final_halted])
+end
+
+END((end))
+
+START --> NMY
+NMY --> ITERATION
+
+ITERATION -->|matched_regular| IT_NMY
+ITERATION --> IT_MF
+ITERATION --> IT_MFH
+
+IT_NMY -->|на следующую итерацию| NMY
+IT_NMY -->|предел по количеству| RES_NMY
+IT_MF --> RES_MF
+IT_MFH --> RES_MFH
+
+RESULTS --> END
 ```
 
 ## Как это всё работает

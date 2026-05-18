@@ -30,4 +30,16 @@ template<class T> concept RuleRequires =
 CONCEPT(SingleRule)
 CONCEPT(FacadeRule)
 
+CONCEPT(Machine)
+
+template<class T> concept MachineRequires =
+    std::is_default_constructible_v<T> &&
+    std::is_copy_constructible_v<T> &&
+    requires (T m) {
+        { m(CTSTR("")) } -> CtStr;
+        { m(augmented_text{CTSTR(""), empty{}}) } -> Augmented;
+        { m(std::string{}) } -> std::same_as<std::string>;
+        { m(inplace_augmented_text{std::string{}, inplace_empty{}}) } -> InplaceAugmented;
+    };
+
 } // namespace nn

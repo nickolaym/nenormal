@@ -11,6 +11,7 @@ namespace nn {
 // typical use is a wrapping rules with rule_loop and machine_fun.
 
 template<Rule auto p> struct machine_fun {
+    REPRESENTS(Machine)
     // rvalue-ref input to optimize a bit
     constexpr MachineData auto operator()(MachineData auto&& t) const {
         return (not_matched_yet{FWD(t)} >> p).value;

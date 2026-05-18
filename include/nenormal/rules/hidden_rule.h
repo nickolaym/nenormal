@@ -12,11 +12,12 @@ template<Rule auto p> struct hidden_rule {
     REPRESENTS(Rule)
 
     constexpr RuleOutput decltype(auto) operator()(RuleInput auto&& nmy) const {
-        RuleOutput auto out = not_matched_yet{extract_text(nmy.value)} >> p;
-        if constexpr (!out.is_matched) {
+        RuleInput auto bare_nmy = not_matched_yet{extract_text(nmy.value)};
+        RuleOutput auto bare_out = p(bare_nmy);
+        if constexpr (!bare_out.is_matched) {
             return FWD(nmy);
         } else {
-            return out.rebind(rebind_text(FWD(nmy).value, out.value));
+            return bare_out.rebind(rebind_text(FWD(nmy).value, bare_out.value));
         }
     }
     constexpr auto operator()(RuleFixedInput auto& t) const {
