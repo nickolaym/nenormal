@@ -157,3 +157,93 @@ TEST(rule_loop, inplace_limited_loop) {
 }
 
 } // namespace test_rule_loop_ns
+
+
+namespace test_extremal_loop_ns {
+
+// decimal decrement of "<nnn>"
+
+// start with "<nnn-->"" where nnn > 0
+constexpr ::nn::Rule auto single_decrement = NAMED_RULE(single_decrement, RULES(
+    RULE("<0", "<"), // cut leading zeros
+    RULE("0--", "--9"), // subtract with borrow
+    RULE("1--", "0"),
+    RULE("2--", "1"),
+    RULE("3--", "2"),
+    RULE("4--", "3"),
+    RULE("5--", "4"),
+    RULE("6--", "5"),
+    RULE("7--", "6"),
+    RULE("8--", "7"),
+    RULE("9--", "8")
+));
+
+// "<nnn>" -> "<nnn-->" --> "<mmm>" where mmm = nnn-1 --> etc until "<>" --> ""
+constexpr ::nn::Rule auto repeated_decrement = RULES(
+    RULE("<>", ""), // collapse implicit zero (and stop on empty string)
+    single_decrement,
+    RULE(">", "-->") // start decrement
+);
+
+TEST(decimal, single_step) {
+    constexpr auto m = MACHINE(single_decrement);
+    static_assert(m(CTSTR("<1-->")) == CTSTR("<>"));
+    static_assert(m(CTSTR("<2-->")) == CTSTR("<1>"));
+    static_assert(m(CTSTR("<3-->")) == CTSTR("<2>"));
+    static_assert(m(CTSTR("<4-->")) == CTSTR("<3>"));
+    static_assert(m(CTSTR("<5-->")) == CTSTR("<4>"));
+    static_assert(m(CTSTR("<6-->")) == CTSTR("<5>"));
+    static_assert(m(CTSTR("<7-->")) == CTSTR("<6>"));
+    static_assert(m(CTSTR("<8-->")) == CTSTR("<7>"));
+    static_assert(m(CTSTR("<9-->")) == CTSTR("<8>"));
+    static_assert(m(CTSTR("<10-->")) == CTSTR("<9>"));
+    static_assert(m(CTSTR("<20-->")) == CTSTR("<19>"));
+    static_assert(m(CTSTR("<1000-->")) == CTSTR("<999>"));
+}
+
+TEST(decimal, repeated) {
+    constexpr auto m = MACHINE(repeated_decrement);
+    static_assert(m(CTSTR("<>")) == CTSTR(""));
+    static_assert(m(CTSTR("<1>")) == CTSTR(""));
+    static_assert(m(CTSTR("<9>")) == CTSTR(""));
+    static_assert(m(CTSTR("<100>")) == CTSTR(""));
+    static_assert(m(CTSTR("<300>")) == CTSTR(""));
+}
+
+TEST(decimal, count_iterations) {
+    constexpr auto m = MACHINE(repeated_decrement);
+    constexpr auto m500 = MACHINE_FROM_RULE((::nn::rule_loop<repeated_decrement, 500>{}));
+
+    constexpr auto count = [=](auto machine, ::nn::CtStr auto s) {
+        constexpr auto counter = [](int i, auto&&...) { return i+1; };
+        constexpr auto input = ::nn::augmented_text{s, ::nn::cumulative_effect{counter, 0}};
+        constexpr auto output = machine(input);
+        return std::pair{output.text, output.aux.a};
+    };
+
+    auto show_count = [=](auto machine, ::nn::CtStr auto s) {
+        auto [t,c] = count(machine, s);
+        std::cout
+            << std::format("input {} runs {} steps stops {}",
+                s.value.view(), c, t.value.view())
+            << std::endl;
+        return t.value.view().empty();
+    };
+    EXPECT_TRUE(show_count(m, CTSTR("<>")));
+    EXPECT_TRUE(show_count(m, CTSTR("<1>")));
+    EXPECT_TRUE(show_count(m, CTSTR("<10>")));
+    EXPECT_TRUE(show_count(m, CTSTR("<100>")));
+    EXPECT_TRUE(show_count(m, CTSTR("<300>")));
+    EXPECT_TRUE(show_count(m, CTSTR("<100><100><100>")));
+    // EXPECT_TRUE(show_count(m, CTSTR("<1000>"))); // it works, but compiles 2+ minutes
+    // EXPECT_FALSE(show_count(m, CTSTR("<2500>"))); // it works, but compiles 3+ minutes
+
+    EXPECT_TRUE(show_count(m500, CTSTR("<>")));
+    EXPECT_TRUE(show_count(m500, CTSTR("<1>")));
+    EXPECT_TRUE(show_count(m500, CTSTR("<10>")));
+    EXPECT_TRUE(show_count(m500, CTSTR("<100>")));
+    EXPECT_FALSE(show_count(m500, CTSTR("<300>")));
+    EXPECT_FALSE(show_count(m500, CTSTR("<100><100><100><100><100>")));
+}
+
+} // namespace test_extremal_loop_ns
