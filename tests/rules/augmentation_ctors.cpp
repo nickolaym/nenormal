@@ -146,75 +146,69 @@ TEST(ctors, loop_body) {
     EXAMINE_RULE(CTSTR("."), LOOP_BODY(RULES(RULES(RULES(p_final)))), 3 + 1);
 }
 
-#define REPEAT_LOOP_BODY(p, n) (::nn::rule_loop_helpers_ns::repeat_body<LOOP_BODY(p), (n)>{})
+#define MULTIPLY_BODY(p, n) (::nn::rule_loop_helpers_ns::multiply_body<LOOP_BODY(p), (n)>{})
 
-TEST(ctors, repeat_body_0) {
-    // repeat ultimatively returns rvalue, so +1 itself
-    // repeat 0 = no body
-    EXAMINE_RULE(CTSTR("a"), REPEAT_LOOP_BODY(p_miss, 0), 1);
-    EXAMINE_RULE(CTSTR("a"), REPEAT_LOOP_BODY(p_match, 0), 1);
+TEST(ctors, multiply_body_1) {
+    // multiply 1 - copy elision from rule_loop_body, so +1 from it
+    EXAMINE_RULE(CTSTR("a"), MULTIPLY_BODY(p_miss, 1), 1);
+    EXAMINE_RULE(CTSTR("a"), MULTIPLY_BODY(p_match, 1), 1);
+    EXAMINE_RULE(CTSTR("."), MULTIPLY_BODY(p_final, 1), 1);
 }
-TEST(ctors, repeat_body_1) {
-    // repeat 1 - copy elision from rule_loop_body, so +1 from it
-    EXAMINE_RULE(CTSTR("a"), REPEAT_LOOP_BODY(p_miss, 1), 1);
-    EXAMINE_RULE(CTSTR("a"), REPEAT_LOOP_BODY(p_match, 1), 1);
-    EXAMINE_RULE(CTSTR("."), REPEAT_LOOP_BODY(p_final, 1), 1);
-}
-TEST(ctors, repeat_body_2) {
-    // repeat 2
+TEST(ctors, multiply_body_2) {
+    // multiply 2
 
     // body #1 return halted, +1
     // body #2 skipped (rvalue reference)
-    // repeat forwards to rvalue, +1
-    EXAMINE_RULE(CTSTR("a"), REPEAT_LOOP_BODY(p_miss, 2), 2);
+    // multiply forwards to rvalue, +1
+    EXAMINE_RULE(CTSTR("a"), MULTIPLY_BODY(p_miss, 2), 2);
 
     // body #1 return not_matched_yet (from regular), +1
     // body #2 return halted, +1
-    // repeat does copy elision
-    EXAMINE_RULE(CTSTR("a"), REPEAT_LOOP_BODY(p_match, 2), 2);
+    // multiply does copy elision
+    EXAMINE_RULE(CTSTR("a"), MULTIPLY_BODY(p_match, 2), 2);
 
     // body #1 return final, +1
     // body #2 skipped
-    // repeat forwards to rvalue, +1
-    EXAMINE_RULE(CTSTR("."), REPEAT_LOOP_BODY(p_final, 2), 2);
+    // multiply forwards to rvalue, +1
+    EXAMINE_RULE(CTSTR("."), MULTIPLY_BODY(p_final, 2), 2);
 }
-TEST(ctors, repeat_body_3) {
-    // repeat 3
+TEST(ctors, multiply_body_3) {
+    // multiply 3
 
     // body #1 return halted, +1
     // body #2 and #3 skipped
-    // repeat forwards to value, +1
-    EXAMINE_RULE(CTSTR("a"), REPEAT_LOOP_BODY(p_miss, 3), 2);
+    // multiply forwards to value, +1
+    EXAMINE_RULE(CTSTR("a"), MULTIPLY_BODY(p_miss, 3), 2);
 
     // body #1 return not_matched_yet (from regular), +1
     // body #2 return halted, +1
     // body #3 skipped
-    // repeat forwards to value, +1
-    EXAMINE_RULE(CTSTR("a"), REPEAT_LOOP_BODY(p_match, 3), 3);
+    // multiply forwards to value, +1
+    EXAMINE_RULE(CTSTR("a"), MULTIPLY_BODY(p_match, 3), 3);
 
     // body #1 return final, +1
     // body #2 and #3 skipped
-    // repeat forwards to value, +1
-    EXAMINE_RULE(CTSTR("."), REPEAT_LOOP_BODY(p_final, 3), 2);
+    // multiply forwards to value, +1
+    EXAMINE_RULE(CTSTR("."), MULTIPLY_BODY(p_final, 3), 2);
 }
-TEST(ctors, repeat_body_10) {
-    // repeat 10
+TEST(ctors, multiply_body_10) {
+    // multiply 10
 
     // body #1 return halted, +1
     // rest bodies skipped
-    // repeat forwards to value, +1
-    EXAMINE_RULE(CTSTR("a"), REPEAT_LOOP_BODY(p_miss, 10), 2);
+    // multiply forwards to value, +1
+    EXAMINE_RULE(CTSTR("a"), MULTIPLY_BODY(p_miss, 10), 2);
 
     // body #1 return not_matched_yet (from regular), +1
     // body #2 return halted, +1
     // rest bodies skipped
-    // repeat forwards to value, +1
-    EXAMINE_RULE(CTSTR("a"), REPEAT_LOOP_BODY(p_match, 10), 3);
+    // multiply forwards to value, +1
+    EXAMINE_RULE(CTSTR("a"), MULTIPLY_BODY(p_match, 10), 3);
 
     // body #1 return final, +1
     // rest bodies skipped
-    // repeat forwards to value, +1
-    EXAMINE_RULE(CTSTR("."), REPEAT_LOOP_BODY(p_final, 10), 2);
+    // multiply forwards to value, +1
+    EXAMINE_RULE(CTSTR("."), MULTIPLY_BODY(p_final, 10), 2);
 }
 
 } // namespace
