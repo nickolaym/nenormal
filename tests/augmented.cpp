@@ -128,7 +128,6 @@ TEST(augmented_move, side_effect) {
     static_assert(c.text == "c"_cts);
 }
 
-
 TEST(augmented_move, cumulative_effect) {
     struct moveable {
         bool valid = false;
@@ -151,6 +150,36 @@ TEST(augmented_move, cumulative_effect) {
     static_assert(c.text == "c"_cts);
     EXPECT_FALSE(b.aux.a.valid);
     EXPECT_TRUE(c.aux.a.valid);
+}
+
+TEST(augmented_debug, ctstr) {
+    constexpr auto a = CTSTR("a");
+    debug_call(a, "hello");
+}
+
+TEST(augmented_debug, simply_augmented) {
+    constexpr auto a = augmented_text{CTSTR("a"), empty{}};
+    debug_call(a, "hello");
+}
+
+TEST(augmented_debug, debug_augmentation_appropriate) {
+    std::string passed;
+    const auto d = [&](std::string_view v) {
+        passed = v;
+    };
+    const auto a = augmented_text{CTSTR("a"), debug_augmentation{empty{}, d}};
+    debug_call(a, "hello");
+    EXPECT_EQ(passed, "hello");
+}
+
+TEST(augmented_debug, debug_augmentation_inappropriate) {
+    std::string passed;
+    const auto d = [&](std::string_view v) {
+        passed = v;
+    };
+    const auto a = augmented_text{CTSTR("a"), debug_augmentation{empty{}, d}};
+    debug_call(a, 1, 2, 3);
+    EXPECT_EQ(passed, "");
 }
 
 /// inplace

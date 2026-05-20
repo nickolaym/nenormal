@@ -2,6 +2,7 @@
 
 #include "concepts.h"
 #include "str.h"
+#include "utility.h"
 
 namespace nn {
 
@@ -61,6 +62,34 @@ struct cumulative_effect {
     constexpr bool operator == (cumulative_effect<F,A1> const& v) const
         requires std::equality_comparable_with<A, A1>
     { return a == v.a; }
+};
+
+////////////////////////////////////////
+// debug purposes: technical side effect
+
+CONCEPT(DebugAugmentation)
+
+template<Augmentation A, class D>
+struct debug_augmentation {
+    REPRESENTS(Augmentation)
+    REPRESENTS(DebugAugmentation)
+    A basic_aux;
+    D debug_callback; // void(std::string_view)
+
+    constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) && {
+        using new_aux_type = decltype(::std::move(basic_aux)(i, p, o));
+        return debug_augmentation<new_aux_type, D>{
+            ::std::move(basic_aux)(i, p, o),
+            ::std::move(debug_callback)
+        };
+    }
+    constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) const& {
+        using new_aux_type = decltype(basic_aux(i, p, o));
+        return debug_augmentation<new_aux_type, D>{
+            basic_aux(i, p, o),
+            debug_callback
+        };
+    }
 };
 
 /////////////////////////////////////
@@ -134,6 +163,18 @@ constexpr CtStr auto rebind_text(CtStr auto i, CtStr auto o) {
 }
 constexpr Augmented auto rebind_text(Augmented auto&& i, CtStr auto o) {
     return i.rebind(o);
+}
+
+// debug
+
+constexpr void debug_call(CtStr auto i, auto&&... args) {}
+constexpr void debug_call(Augmented auto&& i, auto&&... args) {
+    if constexpr(
+        DebugAugmentation<decltype(i.aux)> &&
+        requires { i.aux.debug_callback(FWD(args)...); }
+    ) {
+        i.aux.debug_callback(FWD(args)...);
+    }
 }
 
 } // namespace nn
