@@ -2,6 +2,7 @@
 
 #include "rule_concepts.h"
 #include "../utility.h"
+#include "../scope_exit.h"
 
 namespace nn {
 
@@ -10,12 +11,19 @@ namespace nn {
 // - not_matched_yet - to matched_final_halted (to prevent endless loop)
 // - matched_regular - to not_matched_yet (to retry with new text)
 
+#define DEBUG_CALL_PAIR(name_cts) \
+    debug_call(nmy.value, concat_ctstr(CTSTR("<"), name_cts, CTSTR(">")).value.view()); \
+    SCOPE_EXIT() { \
+    debug_call(nmy.value, concat_ctstr(CTSTR("<"), name_cts, CTSTR(">")).value.view()); \
+    };
+
 namespace rule_loop_helpers_ns {
 
 template<Rule auto p> struct rule_loop_body {
     REPRESENTS(Rule)
 
     constexpr RuleOutput decltype(auto) operator()(RuleInput auto&& nmy) const {
+        DEBUG_CALL_PAIR(CTSTR("body"));
         return p(FWD(nmy)).commit_loop();
     }
     constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
@@ -34,6 +42,7 @@ requires (N > 0) && (N <= 10)
 struct multiply_body {
     REPRESENTS(Rule)
     constexpr RuleOutput auto operator()(RuleInput auto&& nmy) const {
+        DEBUG_CALL_PAIR(concat_ctstr(CTSTR("mult:"), size_to_ctstr(ct_size_v<N>)));
         if constexpr (N == 1)
             return FWD(nmy)
                 >> body;
@@ -78,6 +87,7 @@ template<Rule auto body, size_t L>
 struct repeat_body {
     REPRESENTS(Rule)
     constexpr RuleOutput auto operator()(RuleInput auto&& nmy) const {
+        DEBUG_CALL_PAIR(concat_ctstr(CTSTR("repeat:"), size_to_ctstr(ct_size_v<L>)));
         if constexpr (L == 0)
             return FWD(nmy);
         else if constexpr (L <= 10)
@@ -102,6 +112,7 @@ template<Rule auto p, size_t Limit = rule_loop_limit_v> struct rule_loop {
     REPRESENTS(Rule)
 
     constexpr RuleOutput auto operator()(RuleInput auto&& nmy) const {
+        DEBUG_CALL_PAIR(concat_ctstr(CTSTR("loop:"), size_to_ctstr(ct_size_v<Limit>)));
         constexpr auto body = rule_loop_helpers_ns::rule_loop_body<p>{};
         return FWD(nmy) >> rule_loop_helpers_ns::repeat_body<body, Limit>{};
     }

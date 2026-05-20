@@ -58,9 +58,19 @@ auto make_input(ctor_tracker* tracker, CtStr auto s) {
     return not_matched_yet{
         augmented_text{
             s,
-            cumulative_effect{
-                inc_tracker,
-                ctor_tracker_arg{tracker}
+            debug_augmentation{
+                cumulative_effect{
+                    inc_tracker,
+                    ctor_tracker_arg{tracker}
+                },
+                [](::std::string_view msg) {
+                    if (msg.starts_with("</"))
+                        ::std::cout << "" << msg << " ";
+                    else if (msg.starts_with("<"))
+                        ::std::cout << " " << msg << "";
+                    else
+                        ::std::cout << msg;
+                }
             }
         }
     };
@@ -69,7 +79,7 @@ auto make_input(ctor_tracker* tracker, CtStr auto s) {
 auto examine_rule_impl(const char* title, CtStr auto s, Rule auto p, int expected_moves) {
     auto tracker = ctor_tracker{};
     std::cout << std::endl << title << std::endl;
-    auto steps = p(make_input(&tracker, s)).value.aux.a.s;
+    auto steps = p(make_input(&tracker, s)).value.aux.basic_aux.a.s;
     std::cout << std::endl << "    " << tracker << std::endl;
     EXPECT_EQ(tracker.copies, 0);
     EXPECT_EQ(tracker.moves, expected_moves);
@@ -99,7 +109,7 @@ auto examine_machine_impl(const char* title, CtStr auto s, Machine auto m, int e
 // catalogue of rules
 constexpr Rule auto p_miss  = RULE("x", "");
 constexpr Rule auto p_match = RULE("a", "");
-constexpr Rule auto p_final = RULE(".", "");
+constexpr Rule auto p_final = FINAL_RULE(".", "");
 
 TEST(ctors, mismatch_rules) {
     // if there were no matched rules, no move ctors
@@ -185,8 +195,7 @@ TEST(ctors, repeat_body_3) {
     // body #1 return final, +1
     // body #2 and #3 skipped
     // repeat forwards to value, +1
-    // ???
-    EXAMINE_RULE(CTSTR("."), REPEAT_LOOP_BODY(p_final, 3), 3);
+    EXAMINE_RULE(CTSTR("."), REPEAT_LOOP_BODY(p_final, 3), 2);
 }
 TEST(ctors, repeat_body_10) {
     // repeat 10
@@ -205,8 +214,7 @@ TEST(ctors, repeat_body_10) {
     // body #1 return final, +1
     // rest bodies skipped
     // repeat forwards to value, +1
-    // ???
-    EXAMINE_RULE(CTSTR("."), REPEAT_LOOP_BODY(p_final, 10), 3);
+    EXAMINE_RULE(CTSTR("."), REPEAT_LOOP_BODY(p_final, 10), 2);
 }
 
 } // namespace
