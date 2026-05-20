@@ -14,7 +14,7 @@ namespace nn {
 #define DEBUG_CALL_PAIR(name_cts) \
     debug_call(nmy.value, concat_ctstr(CTSTR("<"), name_cts, CTSTR(">")).value.view()); \
     SCOPE_EXIT() { \
-    debug_call(nmy.value, concat_ctstr(CTSTR("<"), name_cts, CTSTR(">")).value.view()); \
+    debug_call(nmy.value, concat_ctstr(CTSTR("</"), name_cts, CTSTR(">")).value.view()); \
     };
 
 namespace rule_loop_helpers_ns {
