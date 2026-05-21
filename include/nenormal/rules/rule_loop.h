@@ -38,12 +38,13 @@ template<Rule auto p> struct rule_loop_body {
 // in case of homogenous in-out type unrolling is not required.
 
 template<Rule auto body, size_t N>
-requires (N > 0) && (N <= 10)
 struct multiply_body {
     REPRESENTS(Rule)
     constexpr RuleOutput auto operator()(RuleInput auto&& nmy) const {
         DEBUG_CALL_PAIR(concat_ctstr(CTSTR("mult:"), size_to_ctstr(ct_size_v<N>)));
-        if constexpr (N == 1)
+        if constexpr (N == 0)
+            return FWD(nmy);
+        else if constexpr (N == 1)
             return FWD(nmy)
                 >> body;
         else if constexpr (N == 2)
@@ -79,28 +80,35 @@ struct multiply_body {
                 >> body >> body >> body >> body >> body
                 >> body >> body >> body >> body >> body;
         else
-            static_assert(false, "not supported arbitrary N");
+            return FWD(nmy)
+                >> body >> body >> body >> body >> body
+                >> body >> body >> body >> body >> body
+                >> multiply_body<body, N - 10>{};
     }
 };
 
-template<Rule auto body, size_t L>
+// L - limit
+// D - delta (first linear part)
+// M - multiplier (second recursive part)
+template<Rule auto body, size_t Limit, size_t Unroll, size_t Multiply>
 struct repeat_body {
     REPRESENTS(Rule)
     constexpr RuleOutput auto operator()(RuleInput auto&& nmy) const {
-        DEBUG_CALL_PAIR(concat_ctstr(CTSTR("repeat:"), size_to_ctstr(ct_size_v<L>)));
-        if constexpr (L == 0)
+        DEBUG_CALL_PAIR(concat_ctstr(CTSTR("repeat:"), size_to_ctstr(ct_size_v<Limit>)));
+        if constexpr (Limit == 0)
             return FWD(nmy);
-        else if constexpr (L <= 10)
+        else if constexpr (Limit <= Unroll)
             return FWD(nmy)
-                >> multiply_body<body, L>{};
-        else if constexpr (L % 2 == 0)
+                >> multiply_body<body, Limit>{};
+        else {
+            constexpr auto R = (Limit - Unroll) % Multiply;
+            constexpr auto UnrollRound = Unroll + R;
+            constexpr auto LimitRest = Limit - UnrollRound; // Lrest % Multiply == 0
+            constexpr auto LimitRestM = LimitRest / Multiply;
             return FWD(nmy)
-                >> multiply_body<body, 10>{}
-                >> repeat_body< multiply_body<body, 2>{}, (L - 10) / 2>{};
-        else
-            return FWD(nmy)
-                >> multiply_body<body, 9>{}
-                >> repeat_body< multiply_body<body, 2>{}, (L - 9) / 2>{}; 
+                >> multiply_body<body, UnrollRound>{}
+                >> repeat_body< multiply_body<body, Multiply>{}, LimitRestM, Unroll, Multiply>{};
+        }
     }
 };
 
@@ -111,10 +119,13 @@ constexpr size_t rule_loop_limit_v = 5000;
 template<Rule auto p, size_t Limit = rule_loop_limit_v> struct rule_loop {
     REPRESENTS(Rule)
 
+    static constexpr size_t Unroll = 50;
+    static constexpr size_t Multiply = 1;
+
     constexpr RuleOutput auto operator()(RuleInput auto&& nmy) const {
         DEBUG_CALL_PAIR(concat_ctstr(CTSTR("loop:"), size_to_ctstr(ct_size_v<Limit>)));
         constexpr auto body = rule_loop_helpers_ns::rule_loop_body<p>{};
-        return FWD(nmy) >> rule_loop_helpers_ns::repeat_body<body, Limit>{};
+        return FWD(nmy) >> rule_loop_helpers_ns::repeat_body<body, Limit, Unroll, Multiply>{};
     }
     constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
         constexpr auto body = rule_loop_helpers_ns::rule_loop_body<p>{};

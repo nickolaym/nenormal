@@ -1,5 +1,7 @@
 #include "nenormal/nenormal.h"
 #include <gtest/gtest.h>
+#include <format>
+#include <array>
 
 // Augmentation should call as few copy/move constructors as possible.
 // If the input is rvalue, only moves are expected.
@@ -229,7 +231,7 @@ TEST(ctors, multiply_body_10) {
     EXAMINE_RULE(ct_dot, MULTIPLY_BODY(p_final, 10), 2);
 }
 
-#define REPEAT_BODY(p, n) (::nn::rule_loop_helpers_ns::repeat_body<LOOP_BODY(p), (n)>{})
+#define REPEAT_BODY(p, n) (::nn::rule_loop_helpers_ns::repeat_body<LOOP_BODY(p), (n), 10, 2>{})
 
 TEST(ctors, repeat_body_0) {
     // repeat 0 - does nothing, return by value, +1
@@ -340,21 +342,51 @@ TEST(ctors, repeat_50_third_part) {
     EXAMINE_RULE(ct_repa<50>, rep50, 50); // 10 + 2*10 + mul4{+4}*4 + mul4{+4}
 }
 
-// rule loop runs repeat<5000> and does copy elision
-// so it behaves as above, mentioning extra skip-and-ret for deeper recursion
+// rule loop runs repeat<5000, 50, 1> and does copy elision
 
 constexpr auto loop = RULE_LOOP(p_match);
 
 TEST(ctors, loop) {
     EXAMINE_RULE(ct_repa<0>, loop, 3);
-    EXAMINE_RULE(ct_repa<9>, loop, 11);
+    EXAMINE_RULE(ct_repa<9>, loop, 12);
 
-    EXAMINE_RULE(ct_repa<10>, loop, 14);
-    EXAMINE_RULE(ct_repa<29>, loop, 33);
+    EXAMINE_RULE(ct_repa<10>, loop, 13);
+    EXAMINE_RULE(ct_repa<29>, loop, 32);
 
-    EXAMINE_RULE(ct_repa<30>, loop, 34);
-    EXAMINE_RULE(ct_repa<49>, loop, 53);
+    EXAMINE_RULE(ct_repa<30>, loop, 33);
+    EXAMINE_RULE(ct_repa<49>, loop, 51);
 }
+
+////////
+
+struct move_counter {
+    int moves = 0;
+    constexpr move_counter(int m) : moves(m) {}
+    constexpr move_counter(move_counter&& src) : moves(src.moves + 1) {}
+};
+
+constexpr auto count_rule(CtStr auto s, Rule auto p) {
+    return p(not_matched_yet{augmented_text{s, cumulative_effect{
+        [](move_counter const& mc, auto...) { return move_counter(mc.moves); },
+        move_counter{0}
+    }}}).value.aux.a.moves;
+}
+
+static_assert(count_rule(ct_a, p_miss) == 0);
+
+template<size_t... ns>
+constexpr auto count_moves =
+    std::array<std::pair<size_t, int>, (sizeof...(ns))>{
+        std::pair{ns, count_rule(ct_repa<ns>, loop)} ...
+    };
+
+TEST(moves, count) {
+    auto table = count_moves<0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500>;
+    for (auto [n,m] : table) {
+        std::cout << std::format("{:4} : {:4}", n, m) << std::endl;
+    }
+}
+
 
 } // namespace
 } // namespace nn
