@@ -196,6 +196,48 @@ TEST(augmented, single_rule) {
     static_assert(std::same_as<decltype(output_data.aux), empty>);
 }
 
+TEST(augmented, moveable_function) {
+    // rules should handle fully moveable augmented text,
+    // with moveable functions too
+    // (lambdas with moveable bound variables, function-like classes, etc.)
+
+    struct moveable {
+        moveable() = default;
+        moveable(moveable&&) = default;
+    };
+
+    auto with_side_effect = [](CtStr auto s) {
+        return not_matched_yet{augmented_text{s, side_effect{
+            [m = moveable{}](auto...) {}
+        }}};
+    };
+    auto with_cumulative_effect = [](CtStr auto s) {
+        return not_matched_yet{augmented_text{s, cumulative_effect{
+            [m = moveable()](auto a, auto...) { return std::move(a); },
+            moveable{}
+        }}};
+    };
+
+    auto run_with_effects = [&](Rule auto p, CtStr auto s) {
+        p(with_side_effect(s));
+        p(with_cumulative_effect(s));
+    };
+    auto run = [&](Rule auto p) {
+        run_with_effects(p, CTSTR("a"));
+        run_with_effects(p, CTSTR(""));
+    };
+
+    constexpr Rule auto rr = RULE("a", "b");
+    constexpr Rule auto fr = FINAL_RULE("a", "b");
+    constexpr Rule auto h = HIDDEN_RULE(rr);
+    constexpr Rule auto f = FACADE_RULE("facade", rr);
+
+    run(rr);
+    run(fr);
+    run(h);
+    run(f);
+}
+
 TEST(single_rule, augmented_fail) {
     constexpr MachineData auto input = augmented_text{CTSTR("aaa"), empty{}};
     constexpr Rule auto p = RULE("c", "d");

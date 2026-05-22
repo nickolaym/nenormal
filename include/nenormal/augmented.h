@@ -119,7 +119,9 @@ struct augmented_text {
         return text == v.text && aux == v.aux;
     }
 
-    constexpr auto update(auto&& p, CtStr auto new_text) && {
+    constexpr auto update(auto&& p, CtStr auto new_text) &&
+    requires std::move_constructible<A>
+    {
         using new_text_type = decltype(new_text);
         using new_aux_type = decltype(std::move(aux)(text, p, new_text));
         // CTAD does not work here because augmented_text{} corresponds to current
@@ -128,7 +130,9 @@ struct augmented_text {
             std::move(aux)(text, p, new_text),
         };
     }
-    constexpr auto update(auto p, CtStr auto new_text) const& {
+    constexpr auto update(auto p, CtStr auto new_text) const&
+    requires std::copy_constructible<A>
+    {
         using new_text_type = decltype(new_text);
         using new_aux_type = decltype(aux(text, p, new_text));
         // CTAD does not work here because augmented_text{} corresponds to current
@@ -138,10 +142,14 @@ struct augmented_text {
         };
     }
 
-    constexpr auto rebind(CtStr auto new_text) && {
+    constexpr auto rebind(CtStr auto new_text) &&
+    requires std::move_constructible<A>
+    {
         return augmented_text<decltype(new_text), A>{new_text, std::move(aux)};
     }
-    constexpr auto rebind(CtStr auto new_text) const& {
+    constexpr auto rebind(CtStr auto new_text) const&
+    requires std::copy_constructible<A>
+    {
         return augmented_text<decltype(new_text), A>{new_text, aux};
     }
 };
@@ -155,14 +163,14 @@ constexpr CtStr auto update_text(CtStr auto i, auto p, CtStr auto o) {
     return o;
 }
 constexpr Augmented auto update_text(Augmented auto&& i, auto p, CtStr auto o) {
-    return i.update(p, o);
+    return FWD(i).update(p, o);
 }
 
 constexpr CtStr auto rebind_text(CtStr auto i, CtStr auto o) {
     return o;
 }
 constexpr Augmented auto rebind_text(Augmented auto&& i, CtStr auto o) {
-    return i.rebind(o);
+    return FWD(i).rebind(o);
 }
 
 // debug

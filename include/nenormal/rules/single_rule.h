@@ -64,9 +64,9 @@ template<Str auto s, Str auto r, rule_kind k> struct rule {
             return FWD(nmy);
         } else {
             if constexpr (k == rule_kind::regular) {
-                return matched_regular{update_text(nmy.value, rule{}, mb.value)};
+                return matched_regular{update_text(FWD(nmy).value, rule{}, mb.value)};
             } else {
-                return matched_final{update_text(nmy.value, rule{}, mb.value)};
+                return matched_final{update_text(FWD(nmy).value, rule{}, mb.value)};
             }
         }
     }

@@ -126,6 +126,10 @@ TEST(augmented_move, side_effect) {
 
     auto c = std::move(b).rebind("c"_cts);
     static_assert(c.text == "c"_cts);
+
+    auto d = update_text(std::move(c), "rule goes here", "d"_cts);
+    auto e = rebind_text(std::move(d), "e"_cts);
+    static_assert(e.text == "e"_cts);
 }
 
 TEST(augmented_move, cumulative_effect) {
@@ -150,6 +154,13 @@ TEST(augmented_move, cumulative_effect) {
     static_assert(c.text == "c"_cts);
     EXPECT_FALSE(b.aux.a.valid);
     EXPECT_TRUE(c.aux.a.valid);
+
+    auto d = update_text(std::move(c), "rule goes here", "d"_cts);
+    auto e = rebind_text(std::move(d), "e"_cts);
+    static_assert(e.text == "e"_cts);
+    EXPECT_FALSE(c.aux.a.valid);
+    EXPECT_FALSE(d.aux.a.valid);
+    EXPECT_TRUE(e.aux.a.valid);
 }
 
 TEST(augmented_debug, ctstr) {
