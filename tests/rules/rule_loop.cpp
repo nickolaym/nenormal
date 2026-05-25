@@ -40,7 +40,7 @@ constexpr auto count_steps =
 };
 
 auto run(::nn::CtStr auto s) {
-    ::nn::Augmented auto input = ::nn::augmented_text{s, ::nn::cumulative_effect{count_steps, 0}};
+    ::nn::Augmented auto input = ::nn::augmented_text{s, ::nn::cumulative_effect{0, count_steps}};
     ::nn::Augmented auto output = decrement(input);
     std::cout << "-----" << std::endl;
     return output.aux.a;
@@ -61,7 +61,7 @@ constexpr auto inplace_step = [](int acc, ::nn::SingleRule auto const& p, ::std:
 };
 
 auto run_inplace(::std::string s) {
-    ::nn::inplace_augmented_text arg{::std::move(s), ::nn::inplace_cumulative_effect{inplace_step, 0}};
+    ::nn::inplace_augmented_text arg{::std::move(s), ::nn::inplace_cumulative_effect{0, inplace_step}};
     return decrement(FWD(arg)).aux.a;
 }
 
@@ -216,7 +216,7 @@ TEST(decimal, count_iterations) {
 
     constexpr auto count = [=](auto machine, ::nn::CtStr auto s) {
         constexpr auto counter = [](int i, auto&&...) { return i+1; };
-        constexpr auto input = ::nn::augmented_text{s, ::nn::cumulative_effect{counter, 0}};
+        constexpr auto input = ::nn::augmented_text{s, ::nn::cumulative_effect{0, counter}};
         constexpr auto output = machine(input);
         return std::pair{output.text, output.aux.a};
     };

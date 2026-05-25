@@ -213,8 +213,8 @@ TEST(augmented, moveable_function) {
     };
     auto with_cumulative_effect = [](CtStr auto s) {
         return not_matched_yet{augmented_text{s, cumulative_effect{
+            moveable{},
             [m = moveable()](auto a, auto...) { return std::move(a); },
-            moveable{}
         }}};
     };
 
@@ -345,19 +345,19 @@ TEST(hidden, cumulative_augmentation) {
 
     constexpr auto inc = [](int n, auto...) { return n + 1; };
 
-    constexpr MachineData auto bad_input = augmented_text{CTSTR(""), cumulative_effect{inc, 0}};
+    constexpr MachineData auto bad_input = augmented_text{CTSTR(""), cumulative_effect{0, inc}};
     constexpr RuleFailedOutput auto bad_output = h(not_matched_yet{bad_input});
     static_assert(bad_output.value == bad_input);
 
-    constexpr MachineData auto good_input = augmented_text{CTSTR("aaa"), cumulative_effect{inc, 0}};
+    constexpr MachineData auto good_input = augmented_text{CTSTR("aaa"), cumulative_effect{0, inc}};
     constexpr RuleMatchedOutput auto good_output = h(not_matched_yet{good_input});
     static_assert(good_output.value.text == CTSTR("baa"));
-    static_assert(good_output.value.aux == cumulative_effect{inc, 0});
+    static_assert(good_output.value.aux == cumulative_effect{0, inc});
 
     // in contrast, non-hidden rule updates the accumulator
     constexpr RuleMatchedOutput auto good_updated_output = p(not_matched_yet{good_input});
     static_assert(good_updated_output.value.text == CTSTR("baa"));
-    static_assert(good_updated_output.value.aux == cumulative_effect{inc, 1});
+    static_assert(good_updated_output.value.aux == cumulative_effect{1, inc});
 }
 
 /// facade_rule tests
@@ -429,7 +429,7 @@ TEST(facade, facade_rule_invokes_callback_with_facade_type) {
     };
     constexpr MachineData auto input = augmented_text{
         CTSTR("aaa"),
-        cumulative_effect{inc, 0}
+        cumulative_effect{0, inc}
     };
     constexpr auto output = f(not_matched_yet{input});
     static_assert(output.value.aux.a == 1); // callback was invoked, accumulator incremented
@@ -533,7 +533,7 @@ TEST(inplace, cumulative_effect) {
     constexpr auto m = MACHINE(RULES(RULE("a","b"), FINAL_RULE("c","d"), RULE("e","f")));
     auto result = m(inplace_augmented_text{
         "aec",
-        inplace_cumulative_effect{[](int c, auto, std::string const&) { return c + 1; }, 0}
+        inplace_cumulative_effect{0, [](int c, auto, std::string const&) { return c + 1; }}
     });
     EXPECT_EQ(result.text, "bed");
     EXPECT_EQ(result.aux.a, 2);

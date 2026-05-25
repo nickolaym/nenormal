@@ -225,7 +225,7 @@ TEST(monadic, program) {
 
 TEST(monadic, augmented) {
     constexpr auto augmented = [](CtStr auto src) {
-        return stateful{src, cumulative_effect{ [](int n, auto...) { return n+1; }, 0 }};
+        return stateful{src, cumulative_effect{0, [](int n, auto...) { return n+1; }}};
     };
 
     constexpr auto rl = monadic_rule_loop<program>{};
@@ -242,7 +242,7 @@ TEST(monadic, with_hidden) {
     static_assert(rl_public.simple(""_cts) == ""_cts);
 
     constexpr auto augmented = [](CtStr auto src) {
-        return stateful{src, cumulative_effect{ [](int n, auto...) { return n+1; }, 0 }};
+        return stateful{src, cumulative_effect{0, [](int n, auto...) { return n+1; }}};
     };
 
     constexpr auto res_hidden = rl_hidden(augmented(""_cts));

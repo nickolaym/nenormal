@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include <format>
 #include <array>
+#include <memory>
 
 // Augmentation should call as few copy/move constructors as possible.
 // If the input is rvalue, only moves are expected.
@@ -61,14 +62,35 @@ auto make_input(ctor_tracker* tracker, CtStr auto s) {
             s,
             debug_augmentation{
                 cumulative_effect{
+                    ctor_tracker_arg{tracker},
                     inc_tracker,
-                    ctor_tracker_arg{tracker}
                 },
-                [](::std::string_view msg) {
-                    if (msg.starts_with("</"))
-                        ::std::cout << "" << msg << " ";
-                    else if (msg.starts_with("<"))
-                        ::std::cout << " " << msg << "";
+                // note that the debug callback is copy-constructible
+                // because we call it twice, - second time after the source is moved
+                [tabptr = std::make_shared<int>(0)](::std::string_view msg) {
+                    if (!tabptr) throw std::runtime_error("wtf");
+                    int& tab = *tabptr;
+                    if (msg.contains("body")) {
+                        ::std::cout << msg;
+                    }
+                    else if (msg.starts_with("</")) {
+                        --tab;
+                        ::std::cout
+                            << ::std::endl
+                            << ::std::string(tab, ' ')
+                            << msg
+                            << ::std::endl
+                            << ::std::string(tab, ' ');
+                    }
+                    else if (msg.starts_with("<")) {
+                        ::std::cout
+                            << ::std::endl
+                            << ::std::string(tab, ' ')
+                            << msg
+                            << ::std::endl
+                            << ::std::string(tab+1, ' ');
+                        ++tab;
+                    }
                     else
                         ::std::cout << msg;
                 }
@@ -231,46 +253,50 @@ TEST(ctors, multiply_body_10) {
     EXAMINE_RULE(ct_dot, MULTIPLY_BODY(p_final, 10), 2);
 }
 
-#define REPEAT_BODY(p, n) (::nn::rule_loop_helpers_ns::repeat_body<LOOP_BODY(p), (n), 10, 2>{})
+// test body with logarithmic depth
+// - unroll 10
+// - multiplication 2
+#define REPEAT_BODY_10_2(p, limit) \
+    (::nn::rule_loop_helpers_ns::repeat_body<LOOP_BODY(p), (limit), 10, 2>{})
 
-TEST(ctors, repeat_body_0) {
+TEST(ctors, repeat_body_10_2_limit_0) {
     // repeat 0 - does nothing, return by value, +1
-    EXAMINE_RULE(ct_aaa, REPEAT_BODY(p_miss, 0), 1);
-    EXAMINE_RULE(ct_aaa, REPEAT_BODY(p_match, 0), 1);
-    EXAMINE_RULE(ct_dot, REPEAT_BODY(p_final, 0), 1);
+    EXAMINE_RULE(ct_aaa, REPEAT_BODY_10_2(p_miss, 0), 1);
+    EXAMINE_RULE(ct_aaa, REPEAT_BODY_10_2(p_match, 0), 1);
+    EXAMINE_RULE(ct_dot, REPEAT_BODY_10_2(p_final, 0), 1);
 }
 
-TEST(ctors, repeat_body_1_10) {
+TEST(ctors, repeat_body_10_2_limit_1_to_10) {
     // repeat 1..10 calls multiply and does copy elision
 
     // 1:
-    EXAMINE_RULE(ct_a, REPEAT_BODY(p_miss, 1), 1);
-    EXAMINE_RULE(ct_a, REPEAT_BODY(p_match, 1), 1);
-    EXAMINE_RULE(ct_dot, REPEAT_BODY(p_final, 1), 1);
+    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_miss, 1), 1);
+    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_match, 1), 1);
+    EXAMINE_RULE(ct_dot, REPEAT_BODY_10_2(p_final, 1), 1);
 
     // 2:
-    EXAMINE_RULE(ct_a, REPEAT_BODY(p_miss, 2), 2);
-    EXAMINE_RULE(ct_a, REPEAT_BODY(p_match, 2), 2);
-    EXAMINE_RULE(ct_aaa, REPEAT_BODY(p_match, 2), 2);
-    EXAMINE_RULE(ct_dot, REPEAT_BODY(p_final, 2), 2);
+    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_miss, 2), 2);
+    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_match, 2), 2);
+    EXAMINE_RULE(ct_aaa, REPEAT_BODY_10_2(p_match, 2), 2);
+    EXAMINE_RULE(ct_dot, REPEAT_BODY_10_2(p_final, 2), 2);
 
     // 3:
-    EXAMINE_RULE(ct_a, REPEAT_BODY(p_miss, 3), 2);
-    EXAMINE_RULE(ct_a, REPEAT_BODY(p_match, 3), 3);
-    EXAMINE_RULE(ct_aaa, REPEAT_BODY(p_match, 3), 3);
-    EXAMINE_RULE(ct_dot, REPEAT_BODY(p_final, 3), 2);
+    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_miss, 3), 2);
+    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_match, 3), 3);
+    EXAMINE_RULE(ct_aaa, REPEAT_BODY_10_2(p_match, 3), 3);
+    EXAMINE_RULE(ct_dot, REPEAT_BODY_10_2(p_final, 3), 2);
     // 10:
-    EXAMINE_RULE(ct_a, REPEAT_BODY(p_miss, 10), 2);
-    EXAMINE_RULE(ct_a, REPEAT_BODY(p_match, 10), 3);
-    EXAMINE_RULE(ct_aaa, REPEAT_BODY(p_match, 10), 5);
-    EXAMINE_RULE(ct_a10, REPEAT_BODY(p_match, 10), 10);
-    EXAMINE_RULE(ct_dot, REPEAT_BODY(p_final, 10), 2);
+    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_miss, 10), 2);
+    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_match, 10), 3);
+    EXAMINE_RULE(ct_aaa, REPEAT_BODY_10_2(p_match, 10), 5);
+    EXAMINE_RULE(ct_a10, REPEAT_BODY_10_2(p_match, 10), 10);
+    EXAMINE_RULE(ct_dot, REPEAT_BODY_10_2(p_final, 10), 2);
 }
 
 // repeat<body,10> = (multiply<body,10>) + repeat<multiply<body,2>,5>
-constexpr auto rep20 = REPEAT_BODY(p_match, 20);
+constexpr auto rep20 = REPEAT_BODY_10_2(p_match, 20);
 
-TEST(ctors, repeat_20_first_part) {
+TEST(ctors, repeat_body_10_2_limit_20_first_part) {
     // halted inside first multiply<body,10>...
     EXAMINE_RULE(ct_repa<0>, rep20, 3); // mult10(halted +1, skip, return +1), skip, return +1
     EXAMINE_RULE(ct_repa<1>, rep20, 4); // mult10(nmy +1, halted +1, skip, return +1), skip, return +1
@@ -280,7 +306,7 @@ TEST(ctors, repeat_20_first_part) {
     // 9
     EXAMINE_RULE(ct_repa<9>, rep20, 11); // mult10(nmy*9 = +9, halted +1, copy elision), skip, return +1
 }
-TEST(ctors, repeat_20_second_part) {
+TEST(ctors, repeat_body_10_2_limit_20_second_part) {
     // halted inside second repeat<multiply<body,2>>...
     EXAMINE_RULE(ct_repa<10>, rep20, 13); // mult10(nmy*10 = +10), rep5(mult2(halted +1, ret +1), ret +1)
     EXAMINE_RULE(ct_repa<11>, rep20, 13); // mult10(nmy*10 = +10), rep5(mult2(nmy +1, halted +1), ret +1)
@@ -305,21 +331,21 @@ TEST(ctors, repeat_20_second_part) {
 //   repeat<multiply<body,2>,20> =
 //     multiply<multiply<body,2>,10> +
 //       multiply<multiply<multiply<body,2>,2>,5>
-constexpr auto rep50 = REPEAT_BODY(p_match, 50);
+constexpr auto rep50 = REPEAT_BODY_10_2(p_match, 50);
 
-TEST(ctors, repeat_50_first_part) {
+TEST(ctors, repeat_body_10_2_limit_50_first_part) {
     // first part (0..9) behaves as above
     EXAMINE_RULE(ct_repa<0>, rep50, 3);
     EXAMINE_RULE(ct_repa<9>, rep50, 11);
 }
-TEST(ctors, repeat_50_second_part) {
+TEST(ctors, repeat_body_10_2_limit_50_second_part) {
     // second part behaves as above, +1 ret
     // 10 + (0..19)
     EXAMINE_RULE(ct_repa<10>, rep50, 14); // 10 + 2*1 + ret 1 + ret 1
     EXAMINE_RULE(ct_repa<17>, rep50, 20); // 10 + 2*4 + ret 1 + ret 1
     EXAMINE_RULE(ct_repa<29>, rep50, 31); // 10 + 2*10 + elision + ret 1
 }
-TEST(ctors, repeat_50_third_part) {
+TEST(ctors, repeat_body_10_2_limit_50_third_part) {
     // third part (30..50)
     // mul2(mul2) works as follows:
     // 1: (halt,ret),ret = 3
@@ -360,33 +386,53 @@ TEST(ctors, loop) {
 ////////
 
 struct move_counter {
-    int moves = 0;
-    constexpr move_counter(int m) : moves(m) {}
+    size_t moves = 0;
+    constexpr move_counter(size_t m) : moves(m) {}
     constexpr move_counter(move_counter&& src) : moves(src.moves + 1) {}
 };
 
-constexpr auto count_rule(CtStr auto s, Rule auto p) {
+constexpr auto run_counting_moves(CtStr auto s, Rule auto p) {
     return p(not_matched_yet{augmented_text{s, cumulative_effect{
+        move_counter{0},
         [](move_counter const& mc, auto...) { return move_counter(mc.moves); },
-        move_counter{0}
     }}}).value.aux.a.moves;
 }
 
-static_assert(count_rule(ct_a, p_miss) == 0);
+// check that run_counting_moves works
+// static_assert(run_counting_moves(ct_a, p_miss) == 0);
 
 template<size_t... ns>
-constexpr auto count_moves =
-    std::array<std::pair<size_t, int>, (sizeof...(ns))>{
-        std::pair{ns, count_rule(ct_repa<ns>, loop)} ...
+constexpr auto steps_and_moves =
+    std::array<std::pair<size_t, size_t>, (sizeof...(ns))>{
+        std::pair{ns, run_counting_moves(ct_repa<ns>, loop)} ...
     };
 
 TEST(moves, count) {
-    auto table = count_moves<0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500>;
-    for (auto [n,m] : table) {
-        std::cout << std::format("{:4} : {:4}", n, m) << std::endl;
+    // 10n iterations make
+    // - 10n moves with applying regular rule
+    // - 1 move with halting
+    // - 1 move with return by value from the middle of multiply_body
+    // - 1 move with return by value instead of recursion
+    // totally, 10n + 3
+    auto table10 = steps_and_moves<
+        0, 10, 20, 30, 40,
+        50, 60, 70, 80, 90,
+        100, 200, 300, 400, 500>;
+    for (auto [num_steps, num_move_ctors] : table10) {
+        EXPECT_EQ(num_steps + 3, num_move_ctors);
+    }
+
+    // 50n-1 iterations make
+    // - 50n-1 moves with applying regular rule
+    // - 1 move with halting
+    // copy elision from the end of multiply_body
+    // - 1 move with return by value instead of recursion
+    // totally, 50n-1 + 2
+    auto table49 = steps_and_moves<49, 99, 149, 199>;
+    for (auto [num_steps, num_move_ctors] : table49) {
+        EXPECT_EQ(num_steps + 2, num_move_ctors);
     }
 }
-
 
 } // namespace
 } // namespace nn

@@ -19,11 +19,12 @@ struct inplace_side_effect {
     void operator()(auto p, std::string const& t) const { f(p, t); }
 };
 
-template<class F, class A>
+template<class A, class F>
 struct inplace_cumulative_effect {
     REPRESENTS(InplaceAugmentation);
-    F f; // A f(A&& a, auto p, std::string const& t)
+    // order of members is unfied with cumulative_effect<A,F>
     A a;
+    F f; // A f(A&& a, auto p, std::string const& t)
     void operator()(auto p, std::string const& t) { a = f(a, p, t); }
 };
 

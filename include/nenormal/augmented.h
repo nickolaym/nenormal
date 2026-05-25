@@ -34,24 +34,30 @@ struct side_effect {
     constexpr bool operator == (side_effect const&) const { return true; }
 };
 
-template<class F, class A>
+template<class A, class F>
 struct cumulative_effect {
     REPRESENTS(Augmentation)
-    F f;
+    // this order of members is intentional.
+    // it lets eliminate extra move constructor with aggregate initialization
+    // of next value: cumulative_effect{f(move(a)), move(f)}
     A a;
+    F f;
 
     constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) && {
-        // moving both f and f(...) is a race condition.
-        // so we must evaluate the result first.
-        auto new_acc = f(std::move(a), i, p, o);
-        using new_acc_type = decltype(new_acc);
+        using new_acc_type = decltype(f(std::move(a), i, p, o));
         // CTAD does not work here because cumulative_effect{} corresponds to current
-        return cumulative_effect<F, new_acc_type>{std::move(f), std::move(new_acc)};
+        using new_effect = cumulative_effect<new_acc_type, F>;
+        // no race condition because the order of initialization is always natural
+        // (the order of declaration)
+        return new_effect{
+            .a = f(std::move(a), i, p, o),
+            .f = std::move(f)
+        };
     }
     constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) const& {
         using new_acc_type = decltype(f(a, i, p, o));
         // CTAD does not work here because cumulative_effect{} corresponds to current
-        return cumulative_effect<F, new_acc_type>{f, f(a, i, p, o)};
+        return cumulative_effect<new_acc_type, F>{f(a, i, p, o), f};
     }
 
     constexpr bool operator == (cumulative_effect const& v) const
@@ -59,7 +65,7 @@ struct cumulative_effect {
     { return a == v.a; }
 
     template<class A1>
-    constexpr bool operator == (cumulative_effect<F,A1> const& v) const
+    constexpr bool operator == (cumulative_effect<A1, F> const& v) const
         requires std::equality_comparable_with<A, A1>
     { return a == v.a; }
 };
@@ -120,7 +126,7 @@ struct augmented_text {
     }
 
     constexpr auto update(auto&& p, CtStr auto new_text) &&
-    requires std::move_constructible<A>
+    // requires std::move_constructible<A>
     {
         using new_text_type = decltype(new_text);
         using new_aux_type = decltype(std::move(aux)(text, p, new_text));
@@ -131,7 +137,7 @@ struct augmented_text {
         };
     }
     constexpr auto update(auto p, CtStr auto new_text) const&
-    requires std::copy_constructible<A>
+    // requires std::copy_constructible<A>
     {
         using new_text_type = decltype(new_text);
         using new_aux_type = decltype(aux(text, p, new_text));
@@ -182,6 +188,22 @@ constexpr void debug_call(Augmented auto&& i, auto&&... args) {
         requires { i.aux.debug_callback(FWD(args)...); }
     ) {
         i.aux.debug_callback(FWD(args)...);
+    }
+}
+
+constexpr auto dummy_debug_callback = [](auto&&...) {};
+constexpr auto get_debug_callback(const CtStr auto& i) {
+    return dummy_debug_callback;
+}
+constexpr auto get_debug_callback(const Augmented auto& i) {
+    if constexpr (DebugAugmentation<decltype(i.aux)>) {
+        return [cb = i.aux.debug_callback](auto&&... args) {
+            if constexpr (requires { cb(FWD(args)...); }) {
+                cb(FWD(args)...);
+            }
+        };
+    } else {
+        return dummy_debug_callback;
     }
 }
 

@@ -32,7 +32,9 @@ TEST(arithmetics, inplace) {
         std::cout << "----- " << step << " steps" << std::endl;
         EXPECT_EQ(dst, simple_dst);
 
-        auto counted = machine(::nn::inplace_augmented_text{src, ::nn::inplace_cumulative_effect{count, 0}}).aux.a;
+        auto counted = machine(
+            ::nn::inplace_augmented_text{src, ::nn::inplace_cumulative_effect{0, count}}
+        ).aux.a;
         EXPECT_EQ(counted, step);
     };
 
