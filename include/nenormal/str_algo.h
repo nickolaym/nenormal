@@ -1,6 +1,7 @@
 #pragma once
 
 #include "str.h"
+#include <charconv>
 
 namespace nn {
 
@@ -42,6 +43,27 @@ constexpr Str auto concat_str(Str auto const&... ss) {
 
 constexpr CtStr auto concat_ctstr(CtStr auto... ss) {
     return ct<concat_str(ss.value ...)>{};
+}
+
+constexpr size_t size_to_str_len(size_t x) {
+    size_t l = 1;
+    while (x >= 10) {
+        ++l;
+        x /= 10;
+    }
+    return l;
+}
+
+constexpr Str auto size_to_str(CtSize auto n) {
+    constexpr size_t x = n.value;
+    constexpr size_t l = size_to_str_len(x);
+    str<l> s;
+    ::std::to_chars(s.begin(), s.end(), x);
+    return s;
+}
+
+constexpr CtStr auto size_to_ctstr(CtSize auto n) {
+    return ct<size_to_str(n)>{};
 }
 
 } // namespace nn

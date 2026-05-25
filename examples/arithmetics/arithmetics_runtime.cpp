@@ -25,7 +25,9 @@ TEST(arithmetics, runtime) {
         std::cout << q(dst) << std::endl;
         std::cout << "----- " << step << " steps" << std::endl;
 
-        constexpr auto counted = machine(::nn::augmented_text{src, ::nn::cumulative_effect{count, 0}}).aux.a;
+        constexpr auto counted = machine(
+            ::nn::augmented_text{src, ::nn::cumulative_effect{0, count}}
+        ).aux.a;
         constexpr auto ct_counted = ::nn::ct<counted>{};
         EXPECT_EQ(ct_counted.value, step);
     };

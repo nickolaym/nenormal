@@ -143,7 +143,7 @@ auto trace = [](
 // Run the executor with given source; return the result string
 ::nn::CtStr auto run(::nn::CtStr auto src) {
     trace_header();
-    auto res = machine(::nn::augmented_text{src, ::nn::cumulative_effect{trace, 0}});
+    auto res = machine(::nn::augmented_text{src, ::nn::cumulative_effect{0, trace}});
     trace_footer(res.text, res.aux.a);
     return res.text;
 };

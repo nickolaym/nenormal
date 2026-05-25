@@ -65,7 +65,7 @@ TEST(augmented, cumulative_effect) {
         return acc + 1;
     };
 
-    auto a = augmented_text{"aaa"_cts, cumulative_effect{f, 0}};
+    auto a = augmented_text{"aaa"_cts, cumulative_effect{0, f}};
     EXPECT_EQ(a.aux.a, 0);
     auto b = update_text(a, "rule_goes_here", "bbb"_cts);
     static_assert(b.text == "bbb"_cts);
@@ -84,7 +84,7 @@ TEST(augmented, pure_cumulative_effect) {
         return acc + 1;
     };
 
-    constexpr auto a = augmented_text{"aaa"_cts, cumulative_effect{f, 0}};
+    constexpr auto a = augmented_text{"aaa"_cts, cumulative_effect{0, f}};
     EXPECT_EQ(a.aux.a, 0);
     constexpr auto b = update_text(a, "rule_goes_here", "bbb"_cts);
     static_assert(b.text == "bbb"_cts);
@@ -126,8 +126,11 @@ TEST(augmented_move, side_effect) {
 
     auto c = std::move(b).rebind("c"_cts);
     static_assert(c.text == "c"_cts);
-}
 
+    auto d = update_text(std::move(c), "rule goes here", "d"_cts);
+    auto e = rebind_text(std::move(d), "e"_cts);
+    static_assert(e.text == "e"_cts);
+}
 
 TEST(augmented_move, cumulative_effect) {
     struct moveable {
@@ -141,7 +144,7 @@ TEST(augmented_move, cumulative_effect) {
         return std::move(a);
     };
 
-    auto a = augmented_text{"a"_cts, cumulative_effect{std::move(f), moveable{true}}};
+    auto a = augmented_text{"a"_cts, cumulative_effect{moveable{true}, std::move(f)}};
 
     auto b = std::move(a).update("rule goes here", "b"_cts);
     static_assert(b.text == "b"_cts);
@@ -151,6 +154,50 @@ TEST(augmented_move, cumulative_effect) {
     static_assert(c.text == "c"_cts);
     EXPECT_FALSE(b.aux.a.valid);
     EXPECT_TRUE(c.aux.a.valid);
+
+    auto d = update_text(std::move(c), "rule goes here", "d"_cts);
+    auto e = rebind_text(std::move(d), "e"_cts);
+    static_assert(e.text == "e"_cts);
+    EXPECT_FALSE(c.aux.a.valid);
+    EXPECT_FALSE(d.aux.a.valid);
+    EXPECT_TRUE(e.aux.a.valid);
+}
+
+TEST(augmented_debug, ctstr) {
+    constexpr auto a = CTSTR("a");
+    debug_call(a, "hello");
+    auto cb = get_debug_callback(a);
+    cb("hello");
+}
+
+TEST(augmented_debug, simply_augmented) {
+    constexpr auto a = augmented_text{CTSTR("a"), empty{}};
+    debug_call(a, "hello");
+    auto cb = get_debug_callback(a);
+    cb("hello");
+}
+
+TEST(augmented_debug, debug_augmentation_appropriate) {
+    std::string passed;
+    const auto d = [&](std::string_view v) {
+        passed = v;
+    };
+    const auto a = augmented_text{CTSTR("a"), debug_augmentation{empty{}, d}};
+    debug_call(a, "hello");
+    EXPECT_EQ(passed, "hello");
+    auto cb = get_debug_callback(a);
+    cb("world");
+    EXPECT_EQ(passed, "world");
+}
+
+TEST(augmented_debug, debug_augmentation_inappropriate) {
+    std::string passed;
+    const auto d = [&](std::string_view v) {
+        passed = v;
+    };
+    const auto a = augmented_text{CTSTR("a"), debug_augmentation{empty{}, d}};
+    debug_call(a, 1, 2, 3);
+    EXPECT_EQ(passed, "");
 }
 
 /// inplace
@@ -181,7 +228,7 @@ TEST(inplace_augmented, cumulative_effect) {
     auto f = [](int counter, auto p, std::string const& t) {
         return counter + 1;
     };
-    inplace_augmented_text t{"foo", inplace_cumulative_effect{f, 0}};
+    inplace_augmented_text t{"foo", inplace_cumulative_effect{0, f}};
     EXPECT_EQ(&inplace_extract_text(t), &t.text);
     inplace_update_text(t, "rule goes here");
     EXPECT_EQ(t.text, "foo"); // stays unchanged

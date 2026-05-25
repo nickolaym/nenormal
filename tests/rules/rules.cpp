@@ -119,6 +119,8 @@ TEST(rules, only_earlier_acts_mixed) {
 }
 
 TEST(rule_loop, step_by_step) {
+    using rule_loop_helpers_ns::rule_loop_body;
+
     constexpr auto rs = RULES(RULE("c", "d"), RULE("a", "b"), FINAL_RULE("e", "f"));
     constexpr auto rb = rule_loop_body<rs>{};
     constexpr auto rl = RULE_LOOP(rs);
@@ -192,6 +194,48 @@ TEST(augmented, single_rule) {
     static_assert(Augmented<output_data_type>);
     static_assert(output_data.text == CTSTR("baa"));
     static_assert(std::same_as<decltype(output_data.aux), empty>);
+}
+
+TEST(augmented, moveable_function) {
+    // rules should handle fully moveable augmented text,
+    // with moveable functions too
+    // (lambdas with moveable bound variables, function-like classes, etc.)
+
+    struct moveable {
+        moveable() = default;
+        moveable(moveable&&) = default;
+    };
+
+    auto with_side_effect = [](CtStr auto s) {
+        return not_matched_yet{augmented_text{s, side_effect{
+            [m = moveable{}](auto...) {}
+        }}};
+    };
+    auto with_cumulative_effect = [](CtStr auto s) {
+        return not_matched_yet{augmented_text{s, cumulative_effect{
+            moveable{},
+            [m = moveable()](auto a, auto...) { return std::move(a); },
+        }}};
+    };
+
+    auto run_with_effects = [&](Rule auto p, CtStr auto s) {
+        p(with_side_effect(s));
+        p(with_cumulative_effect(s));
+    };
+    auto run = [&](Rule auto p) {
+        run_with_effects(p, CTSTR("a"));
+        run_with_effects(p, CTSTR(""));
+    };
+
+    constexpr Rule auto rr = RULE("a", "b");
+    constexpr Rule auto fr = FINAL_RULE("a", "b");
+    constexpr Rule auto h = HIDDEN_RULE(rr);
+    constexpr Rule auto f = FACADE_RULE("facade", rr);
+
+    run(rr);
+    run(fr);
+    run(h);
+    run(f);
 }
 
 TEST(single_rule, augmented_fail) {
@@ -301,19 +345,19 @@ TEST(hidden, cumulative_augmentation) {
 
     constexpr auto inc = [](int n, auto...) { return n + 1; };
 
-    constexpr MachineData auto bad_input = augmented_text{CTSTR(""), cumulative_effect{inc, 0}};
+    constexpr MachineData auto bad_input = augmented_text{CTSTR(""), cumulative_effect{0, inc}};
     constexpr RuleFailedOutput auto bad_output = h(not_matched_yet{bad_input});
     static_assert(bad_output.value == bad_input);
 
-    constexpr MachineData auto good_input = augmented_text{CTSTR("aaa"), cumulative_effect{inc, 0}};
+    constexpr MachineData auto good_input = augmented_text{CTSTR("aaa"), cumulative_effect{0, inc}};
     constexpr RuleMatchedOutput auto good_output = h(not_matched_yet{good_input});
     static_assert(good_output.value.text == CTSTR("baa"));
-    static_assert(good_output.value.aux == cumulative_effect{inc, 0});
+    static_assert(good_output.value.aux == cumulative_effect{0, inc});
 
     // in contrast, non-hidden rule updates the accumulator
     constexpr RuleMatchedOutput auto good_updated_output = p(not_matched_yet{good_input});
     static_assert(good_updated_output.value.text == CTSTR("baa"));
-    static_assert(good_updated_output.value.aux == cumulative_effect{inc, 1});
+    static_assert(good_updated_output.value.aux == cumulative_effect{1, inc});
 }
 
 /// facade_rule tests
@@ -385,183 +429,10 @@ TEST(facade, facade_rule_invokes_callback_with_facade_type) {
     };
     constexpr MachineData auto input = augmented_text{
         CTSTR("aaa"),
-        cumulative_effect{inc, 0}
+        cumulative_effect{0, inc}
     };
     constexpr auto output = f(not_matched_yet{input});
     static_assert(output.value.aux.a == 1); // callback was invoked, accumulator incremented
-}
-
-/// count ctors
-struct ctor_tracker {
-    int copies = 0;
-    int moves = 0;
-    int inits = 0;
-
-    void copy() { nl(); std::cout << "c"; ++copies; }
-    void move() { nl(); std::cout << "m"; ++moves; }
-    void init() { nl(); std::cout << "i"; ++inits; }
-    void nl() { if ((copies+moves+inits) % 10 == 0) std::cout << "\n    "; }
-
-    friend std::ostream& operator << (std::ostream& os, ctor_tracker const& t) {
-        return os << "tracker{c=" << t.copies << ", m=" << t.moves << ", i=" << t.inits << "}";
-    }
-};
-struct ctor_tracker_arg {
-    ctor_tracker* t;
-    int s = 0;
-    explicit ctor_tracker_arg(ctor_tracker* t) noexcept : t{t} {}
-    ctor_tracker_arg(ctor_tracker* t, int s) noexcept : t{t}, s{s} {
-        t->init();
-        show();
-    }
-    ctor_tracker_arg(const ctor_tracker_arg& o) noexcept : t{o.t}, s{o.s} {
-        t->copy();
-        show();
-    }
-    ctor_tracker_arg(ctor_tracker_arg&& o) noexcept : t{o.t}, s{o.s} {
-        t->move();
-        show();
-    }
-    void show() {
-        std::cout << "[" << s << "]";
-    }
-
-    constexpr bool operator == (const ctor_tracker_arg&) const = default;
-};
-
-
-TEST(augmented, no_extra_ctors) {
-    auto pass = [](ctor_tracker_arg const& a, auto...) {
-        return ctor_tracker_arg{a.t, a.s+1};
-    };
-
-    auto p_miss = RULE("1","");
-    auto p_match = RULE("a","");
-    auto p_final = RULE(".", "");
-    auto p_mf = RULES(p_match, p_final);
-    auto p_miss5 = RULES(p_miss, p_miss, p_miss, p_miss, p_miss);
-    auto p_match3 = RULES(RULES(RULES(p_match)));
-    auto prog_mismatch = RULES(
-        p_miss5,
-        HIDDEN_RULE(p_miss5),
-        FACADE_RULE("",p_miss5),
-        rules<>{}
-    );
-    auto prog_match = RULES(
-        p_miss5,
-        p_match,
-        p_miss5,
-        p_miss5,
-        p_miss5
-    );
-
-    ctor_tracker t = {};
-
-    const auto nmy = [&](CtStr auto s) {
-        return
-        not_matched_yet{
-            augmented_text{
-                s,
-                cumulative_effect{
-                    pass,
-                    ctor_tracker_arg{&t}
-                }
-            }
-        };
-    };
-
-    auto examine = [&](const char* title, auto s, auto p, int expected_moves) {
-        t = {};
-        std::cout << title << " ";
-        auto steps = p(nmy(s)).value.aux.a.s;
-        std::cout << "\n    " << t << std::endl;
-        EXPECT_EQ(t.copies, 0); // we shall use moves only!
-        EXPECT_EQ(t.moves, expected_moves);
-        EXPECT_EQ(t.inits, steps);
-        std::cout << std::endl;
-    };
-    auto examine_m = [&](const char* title, auto s, auto m, int expected_moves) {
-        t = {};
-        std::cout << title << " ";
-        auto steps = m(nmy(s).value).aux.a.s;
-        std::cout << "\n    " << t << std::endl;
-        EXPECT_EQ(t.copies, 0);
-        EXPECT_EQ(t.moves, expected_moves);
-        EXPECT_EQ(t.inits, steps);
-        std::cout << std::endl;
-    };
-
-    // input strings: "aaaaa" (n times a)
-    constexpr auto aaa = [](CtSize auto n) { return ct_chars(n, ct_char_v<'a'>); };
-    // "aaaaa." (n times a)
-    constexpr auto aaadot = [aaa](CtSize auto n) { return concat_ctstr(aaa(n), CTSTR(".")); };
-
-    auto s3 = aaa(ct_size_v<3>);
-
-    // mismatch does not make moves
-    examine("simple-miss",       s3, RULES(RULES(RULES(p_miss))), 0);
-    examine("many-misses",       s3, prog_mismatch, 0);
-
-    // +1 move per each level of depth from matched rule (return by value)
-    examine("simple-match",      s3, p_match, 0);
-    examine("nested-match",      s3, RULES(RULES(RULES(p_match))), 3);
-    examine("match,etc...",      s3, RULES(p_match, p_miss, p_miss, p_miss, p_miss), 1);
-    examine("miss,match,etc...", s3, RULES(p_miss, p_match, p_miss, p_miss, p_miss), 1);
-
-    // +1 move from rule_loop_body (commit_loop() - return by value)
-    examine("loop-body-0", s3, rule_loop_body<p_miss>{}, 1);
-    examine("loop-body-1", s3, rule_loop_body<p_match>{}, 1);
-
-    // each iteration takes +1 move (matched rule)
-    // +2 - rule_loop
-    examine("mismatch-loop", s3, RULE_LOOP(p_miss5), 2);
-    examine("match-loop-1",  aaa(ct_size_v< 1>), RULE_LOOP(p_match),  1+2);
-    examine("match-loop-1",  aaa(ct_size_v< 2>), RULE_LOOP(p_match),  2+2);
-    examine("match-loop-3",  aaa(ct_size_v< 3>), RULE_LOOP(p_match),  3+2);
-    examine("match-loop-9",  aaa(ct_size_v< 9>), RULE_LOOP(p_match),  9+2);
-    examine("match-loop-10", aaa(ct_size_v<10>), RULE_LOOP(p_match), 10+2);
-    examine("match-loop-11", aaa(ct_size_v<11>), RULE_LOOP(p_match), 11+2);
-    examine("match-loop-19", aaa(ct_size_v<19>), RULE_LOOP(p_match), 19+2);
-    examine("match-loop-20", aaa(ct_size_v<20>), RULE_LOOP(p_match), 20+2);
-    examine("match-loop-21", aaa(ct_size_v<21>), RULE_LOOP(p_match), 21+2);
-
-    // +1 iteration (final rule)
-    // +2 rule_loop
-    examine("final-loop-!",  aaadot(ct_size_v< 0>), RULE_LOOP(p_final), ( 0+1)+2);
-
-    // each iteration here takes +2 move (rules + rule_loop_body)
-    // n times a + 1 times dot = (n+1) iterations
-    // +2 - rule_loop
-    examine("final-loop-0",  aaadot(ct_size_v< 0>), RULE_LOOP(p_mf), ( 0+1)*2+2);
-    examine("final-loop-1",  aaadot(ct_size_v< 1>), RULE_LOOP(p_mf), ( 1+1)*2+2);
-    examine("final-loop-2",  aaadot(ct_size_v< 2>), RULE_LOOP(p_mf), ( 2+1)*2+2);
-    examine("final-loop-3",  aaadot(ct_size_v< 3>), RULE_LOOP(p_mf), ( 3+1)*2+2);
-    examine("final-loop-9",  aaadot(ct_size_v< 9>), RULE_LOOP(p_mf), ( 9+1)*2+2);
-    examine("final-loop-10", aaadot(ct_size_v<10>), RULE_LOOP(p_mf), (10+1)*2+2);
-    examine("final-loop-11", aaadot(ct_size_v<11>), RULE_LOOP(p_mf), (11+1)*2+2);
-    examine("final-loop-19", aaadot(ct_size_v<19>), RULE_LOOP(p_mf), (19+1)*2+2);
-    examine("final-loop-20", aaadot(ct_size_v<20>), RULE_LOOP(p_mf), (20+1)*2+2);
-    examine("final-loop-21", aaadot(ct_size_v<21>), RULE_LOOP(p_mf), (21+1)*2+2);
-
-    // each iteration here takes +4 move (3 rules and rule_loop_body)
-    examine("deep-loop-1",  aaa(ct_size_v< 1>), RULE_LOOP(p_match3),  1*4+2);
-    examine("deep-loop-2",  aaa(ct_size_v< 2>), RULE_LOOP(p_match3),  2*4+2);
-    examine("deep-loop-3",  aaa(ct_size_v< 3>), RULE_LOOP(p_match3),  3*4+2);
-    examine("deep-loop-9",  aaa(ct_size_v< 9>), RULE_LOOP(p_match3),  9*4+2);
-    examine("deep-loop-10", aaa(ct_size_v<10>), RULE_LOOP(p_match3), 10*4+2);
-    examine("deep-loop-11", aaa(ct_size_v<11>), RULE_LOOP(p_match3), 11*4+2);
-
-    // machine_fun +2 moves
-    examine_m("empty-machine", aaa(ct_size_v<2>), MACHINE_FROM_RULE((rules<>{})), 0+2);
-    // machine is machine_fun over rule_loop, so +2 +2 = +4 moves
-    examine_m("mismatch-machine", aaa(ct_size_v<2>), MACHINE(p_miss5), 0+4);
-
-    examine_m("match-machine-1",  aaa(ct_size_v<1>),  MACHINE(p_match),  1+4);
-    examine_m("match-machine-3",  aaa(ct_size_v<2>),  MACHINE(p_match),  2+4);
-    examine_m("match-machine-3",  aaa(ct_size_v<3>),  MACHINE(p_match),  3+4);
-    examine_m("match-machine-9",  aaa(ct_size_v<9>),  MACHINE(p_match),  9+4);
-    examine_m("match-machine-10", aaa(ct_size_v<10>), MACHINE(p_match), 10+4);
-    examine_m("match-machine-11", aaa(ct_size_v<11>), MACHINE(p_match), 11+4);
 }
 
 /// inplace
@@ -662,7 +533,7 @@ TEST(inplace, cumulative_effect) {
     constexpr auto m = MACHINE(RULES(RULE("a","b"), FINAL_RULE("c","d"), RULE("e","f")));
     auto result = m(inplace_augmented_text{
         "aec",
-        inplace_cumulative_effect{[](int c, auto, std::string const&) { return c + 1; }, 0}
+        inplace_cumulative_effect{0, [](int c, auto, std::string const&) { return c + 1; }}
     });
     EXPECT_EQ(result.text, "bed");
     EXPECT_EQ(result.aux.a, 2);

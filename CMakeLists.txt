@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add the compilation flag for concepts diagnostics depth
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts-diagnostics-depth=10")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconstexpr-depth=500") # default=512..900
 
 
 enable_testing()
@@ -35,11 +36,21 @@ add_test_executable(test_concepts tests/concepts.cpp)
 add_test_executable(test_str tests/str.cpp)
 add_test_executable(test_str_algo tests/str_algo.cpp)
 add_test_executable(test_augmented tests/augmented.cpp)
-add_test_executable(test_rules tests/rules.cpp)
-add_test_executable(test_rule_loop tests/rule_loop.cpp)
 add_test_executable(test_maybe tests/maybe.cpp)
 add_test_executable(test_substitute tests/substitute.cpp)
 add_test_executable(test_tristate tests/tristate.cpp)
+
+# test rules
+add_test_executable(test_rules tests/rules/rules.cpp)
+add_test_executable(test_rule_loop tests/rules/rule_loop.cpp)
+add_test_executable(test_augmentation_ctors tests/rules/augmentation_ctors.cpp)
+
+add_custom_target(unittests_rules
+    DEPENDS
+        test_rules
+        test_rule_loop
+        test_augmentation_ctors
+)
 
 add_custom_target(unittests
     DEPENDS
@@ -47,11 +58,11 @@ add_custom_target(unittests
         test_str
         test_str_algo
         test_augmented
-        test_rules
-        test_rule_loop
         test_maybe
         test_substitute
         test_tristate
+
+        unittests_rules
 )
 
 # test examples

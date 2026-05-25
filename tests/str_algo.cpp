@@ -45,4 +45,36 @@ TEST(concat, ctstr) {
     static_assert(concat_ctstr("abc"_cts, "de"_cts, "fghijk"_cts) == "abcdefghijk"_cts);
 }
 
+TEST(size_to_str, len) {
+    static_assert(size_to_str_len(0) == 1);
+    static_assert(size_to_str_len(9) == 1);
+    static_assert(size_to_str_len(10) == 2);
+    static_assert(size_to_str_len(99) == 2);
+    static_assert(size_to_str_len(100) == 3);
+    static_assert(size_to_str_len(999) == 3);
+    static_assert(size_to_str_len(1000) == 4);
+    static_assert(size_to_str_len(9999) == 4);
+    static_assert(size_to_str_len(10000) == 5);
+}
+
+TEST(size_to_str, str) {
+    static_assert(size_to_str(ct_size_v<0>) == "0"_ss);
+    static_assert(size_to_str(ct_size_v<9>) == "9"_ss);
+    static_assert(size_to_str(ct_size_v<10>) == "10"_ss);
+    static_assert(size_to_str(ct_size_v<99>) == "99"_ss);
+    static_assert(size_to_str(ct_size_v<100>) == "100"_ss);
+    static_assert(size_to_str(ct_size_v<1000>) == "1000"_ss);
+    static_assert(size_to_str(ct_size_v<12345>) == "12345"_ss);
+}
+
+TEST(size_to_str, ctstr) {
+    static_assert(size_to_ctstr(ct_size_v<0>) == "0"_cts);
+    static_assert(size_to_ctstr(ct_size_v<9>) == "9"_cts);
+    static_assert(size_to_ctstr(ct_size_v<10>) == "10"_cts);
+    static_assert(size_to_ctstr(ct_size_v<99>) == "99"_cts);
+    static_assert(size_to_ctstr(ct_size_v<100>) == "100"_cts);
+    static_assert(size_to_ctstr(ct_size_v<1000>) == "1000"_cts);
+    static_assert(size_to_ctstr(ct_size_v<12345>) == "12345"_cts);
+}
+
 } // namespace nn

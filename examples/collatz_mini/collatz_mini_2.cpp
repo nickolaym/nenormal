@@ -24,7 +24,7 @@ auto trace = [](int step, ::nn::CtStr auto src, ::nn::Rule auto p, ::nn::CtStr a
 };
 
 auto run = [](::nn::CtStr auto src) {
-    auto res = machine(::nn::augmented_text{src, ::nn::cumulative_effect{trace, 0}});
+    auto res = machine(::nn::augmented_text{src, ::nn::cumulative_effect{0, trace}});
     std::cout << std::format("{:3} : {}", res.aux.a, res.text.value.view()) << std::endl;
     return res.text;
 };
