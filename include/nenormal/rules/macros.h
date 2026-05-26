@@ -1,5 +1,8 @@
 #pragma once
 
+// empty rule
+#define EMPTY() (::nn::empty_rule{})
+
 // single rule
 #define RULE(s, r) (::nn::rule_v<STR(s), STR(r), ::nn::rule_kind::regular>)
 #define FINAL_RULE(s, r) (::nn::rule_v<STR(s), STR(r), ::nn::rule_kind::final>)

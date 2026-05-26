@@ -153,14 +153,14 @@ TEST(ctors, mismatch_rules) {
 TEST(ctors, single_match) {
     // 1 match - 1 init ctor, 0 moves directly from the rule
     EXAMINE_RULE(ct_a, p_match, 0);
-    // +n levels of depth - +n moves
-    EXAMINE_RULE(ct_a, RULES(p_match), 1);
-    EXAMINE_RULE(ct_a, RULES(RULES(p_match)), 2);
-    EXAMINE_RULE(ct_a, RULES(RULES(RULES(p_match))), 3);
-    // mismatches before/after do not affect, only the level
-    EXAMINE_RULE(ct_a, RULES(p_miss, p_match), 1);
-    EXAMINE_RULE(ct_a, RULES(p_match, p_miss), 1);
-    EXAMINE_RULE(ct_a, RULES(p_miss, p_match, p_miss), 1);
+    // +n levels of depth - no moves (copy elision)
+    EXAMINE_RULE(ct_a, RULES(p_match), 0);
+    EXAMINE_RULE(ct_a, RULES(RULES(p_match)), 0);
+    EXAMINE_RULE(ct_a, RULES(RULES(RULES(p_match))), 0);
+    // mismatches before/after do not affect
+    EXAMINE_RULE(ct_a, RULES(p_miss, p_match), 0);
+    EXAMINE_RULE(ct_a, RULES(p_match, p_miss), 0);
+    EXAMINE_RULE(ct_a, RULES(p_miss, p_match, p_miss), 0);
 }
 
 #define LOOP_BODY(p) (::nn::rule_loop_helpers_ns::rule_loop_body<(p)>{})
@@ -172,10 +172,10 @@ TEST(ctors, loop_body) {
     EXAMINE_RULE(ct_a, LOOP_BODY(p_miss), 1);
     EXAMINE_RULE(ct_a, LOOP_BODY(p_match), 1);
     EXAMINE_RULE(ct_dot, LOOP_BODY(p_final), 1);
-    // +n levels, as well
-    EXAMINE_RULE(ct_a, LOOP_BODY(RULES(RULES(RULES(p_miss)))), 0 + 1);
-    EXAMINE_RULE(ct_a, LOOP_BODY(RULES(RULES(RULES(p_match)))), 3 + 1);
-    EXAMINE_RULE(ct_dot, LOOP_BODY(RULES(RULES(RULES(p_final)))), 3 + 1);
+    // +n levels - +0 moves (copy elision)
+    EXAMINE_RULE(ct_a, LOOP_BODY(RULES(RULES(RULES(p_miss)))), 1);
+    EXAMINE_RULE(ct_a, LOOP_BODY(RULES(RULES(RULES(p_match)))), 1);
+    EXAMINE_RULE(ct_dot, LOOP_BODY(RULES(RULES(RULES(p_final)))), 1);
 }
 
 #define MULTIPLY_BODY(p, n) (::nn::rule_loop_helpers_ns::multiply_body<LOOP_BODY(p), (n)>{})

@@ -111,6 +111,8 @@ struct augmented_text {
     T text;
     A aux;
 
+    static constexpr CtStr auto the_text = T{};
+
     // cannot easily guarantee safety of references
     // so require that A is a value type
     static_assert(!std::is_reference_v<A>);
@@ -163,13 +165,13 @@ struct augmented_text {
 // extract and restore text from an augmented type
 
 constexpr CtStr auto extract_text(CtStr auto i) { return i; }
-constexpr CtStr auto extract_text(Augmented auto&& i) { return i.text; }
+constexpr CtStr auto extract_text(Augmented auto const& i) { return i.the_text; }
 
 constexpr CtStr auto update_text(CtStr auto i, auto p, CtStr auto o) {
     return o;
 }
 constexpr Augmented auto update_text(Augmented auto&& i, auto p, CtStr auto o) {
-    return FWD(i).update(p, o);
+    return std::move(i).update(p, o);
 }
 
 constexpr CtStr auto rebind_text(CtStr auto i, CtStr auto o) {
