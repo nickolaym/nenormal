@@ -1,0 +1,4 @@
+add_test_executable(example_collatz_mini collatz_mini.cpp)
+add_test_executable(example_collatz_mini_2 collatz_mini_2.cpp)
+
+add_all_above(examples_collatz_mini)
