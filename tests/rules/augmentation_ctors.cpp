@@ -104,9 +104,9 @@ auto examine_rule_impl(const char* title, CtStr auto s, Rule auto p, int expecte
     std::cout << std::endl << title << std::endl;
     auto steps = p(make_input(&tracker, s)).value.aux.basic_aux.a.s;
     std::cout << std::endl << "    " << tracker << std::endl;
-    EXPECT_EQ(tracker.copies, 0);
-    EXPECT_EQ(tracker.moves, expected_moves);
-    EXPECT_EQ(tracker.inits, steps);
+    EXPECT_EQ(tracker.copies, 0) << title;
+    EXPECT_EQ(tracker.moves, expected_moves) << title;
+    EXPECT_EQ(tracker.inits, steps) << title;
 }
 
 auto examine_machine_impl(const char* title, CtStr auto s, Machine auto m, int expected_moves) {
@@ -114,9 +114,9 @@ auto examine_machine_impl(const char* title, CtStr auto s, Machine auto m, int e
     std::cout << std::endl << title << std::endl;
     auto steps = m(make_input(&tracker, s).value).aux.a.s;
     std::cout << std::endl << "    " << tracker << std::endl;
-    EXPECT_EQ(tracker.copies, 0);
-    EXPECT_EQ(tracker.moves, expected_moves);
-    EXPECT_EQ(tracker.inits, steps);
+    EXPECT_EQ(tracker.copies, 0) << title;
+    EXPECT_EQ(tracker.moves, expected_moves) << title;
+    EXPECT_EQ(tracker.inits, steps) << title;
 }
 
 #define EXAMINE_RULE(s, p, em) ([]{ \
@@ -190,67 +190,49 @@ TEST(ctors, multiply_body_2) {
     // multiply 2
 
     // body #1 return halted, +1
-    // body #2 skipped (rvalue reference)
-    // multiply forwards to rvalue, +1
-    EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_miss, 2), 2);
+    EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_miss, 2), 1);
 
     // body #1 return not_matched_yet (from regular), +1
     // body #2 return halted, +1
-    // multiply does copy elision
     EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_match, 2), 2);
     // #1 return not_matched_yet, +1
     // #2 return not_matched_yet, +1
-    // copy elision
     EXAMINE_RULE(ct_aaa, MULTIPLY_BODY(p_match, 2), 2);
 
     // body #1 return final, +1
-    // body #2 skipped
-    // multiply forwards to rvalue, +1
-    EXAMINE_RULE(ct_dot, MULTIPLY_BODY(p_final, 2), 2);
+    EXAMINE_RULE(ct_dot, MULTIPLY_BODY(p_final, 2), 1);
 }
 TEST(ctors, multiply_body_3) {
     // multiply 3
 
     // body #1 return halted, +1
-    // body #2 and #3 skipped
-    // multiply forwards to value, +1
-    EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_miss, 3), 2);
+    EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_miss, 3), 1);
 
     // body #1 return not_matched_yet (from regular), +1
     // body #2 return halted, +1
-    // body #3 skipped
-    // multiply forwards to value, +1
-    EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_match, 3), 3);
+    EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_match, 3), 2);
     // #1 nmy +1; #2 nmy +1; #3 nmy +1; copy elision
     EXAMINE_RULE(ct_aaa, MULTIPLY_BODY(p_match, 3), 3);
 
     // body #1 return final, +1
-    // body #2 and #3 skipped
-    // multiply forwards to value, +1
-    EXAMINE_RULE(ct_dot, MULTIPLY_BODY(p_final, 3), 2);
+    EXAMINE_RULE(ct_dot, MULTIPLY_BODY(p_final, 3), 1);
 }
 TEST(ctors, multiply_body_10) {
     // multiply 10
 
     // body #1 return halted, +1
-    // rest bodies skipped
-    // multiply forwards to value, +1
-    EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_miss, 10), 2);
+    EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_miss, 10), 1);
 
     // body #1 return not_matched_yet (from regular), +1
     // body #2 return halted, +1
-    // rest bodies skipped
-    // multiply forwards to value, +1
-    EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_match, 10), 3);
-    // #1..#3 nmy, +3; #4 halted, +1; rest skipped; by value +1
-    EXAMINE_RULE(ct_aaa, MULTIPLY_BODY(p_match, 10), 5);
-    // #1..#10 nmy, +10; copy elision
+    EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_match, 10), 2);
+    // #1..#3 nmy, +3; #4 halted, +1
+    EXAMINE_RULE(ct_aaa, MULTIPLY_BODY(p_match, 10), 4);
+    // #1..#10 nmy, +10
     EXAMINE_RULE(ct_a10, MULTIPLY_BODY(p_match, 10), 10);
 
     // body #1 return final, +1
-    // rest bodies skipped
-    // multiply forwards to value, +1
-    EXAMINE_RULE(ct_dot, MULTIPLY_BODY(p_final, 10), 2);
+    EXAMINE_RULE(ct_dot, MULTIPLY_BODY(p_final, 10), 1);
 }
 
 // test body with logarithmic depth
@@ -275,22 +257,22 @@ TEST(ctors, repeat_body_10_2_limit_1_to_10) {
     EXAMINE_RULE(ct_dot, REPEAT_BODY_10_2(p_final, 1), 1);
 
     // 2:
-    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_miss, 2), 2);
+    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_miss, 2), 1);
     EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_match, 2), 2);
     EXAMINE_RULE(ct_aaa, REPEAT_BODY_10_2(p_match, 2), 2);
-    EXAMINE_RULE(ct_dot, REPEAT_BODY_10_2(p_final, 2), 2);
+    EXAMINE_RULE(ct_dot, REPEAT_BODY_10_2(p_final, 2), 1);
 
     // 3:
-    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_miss, 3), 2);
-    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_match, 3), 3);
+    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_miss, 3), 1);
+    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_match, 3), 2);
     EXAMINE_RULE(ct_aaa, REPEAT_BODY_10_2(p_match, 3), 3);
-    EXAMINE_RULE(ct_dot, REPEAT_BODY_10_2(p_final, 3), 2);
+    EXAMINE_RULE(ct_dot, REPEAT_BODY_10_2(p_final, 3), 1);
     // 10:
-    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_miss, 10), 2);
-    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_match, 10), 3);
-    EXAMINE_RULE(ct_aaa, REPEAT_BODY_10_2(p_match, 10), 5);
+    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_miss, 10), 1);
+    EXAMINE_RULE(ct_a, REPEAT_BODY_10_2(p_match, 10), 2);
+    EXAMINE_RULE(ct_aaa, REPEAT_BODY_10_2(p_match, 10), 4);
     EXAMINE_RULE(ct_a10, REPEAT_BODY_10_2(p_match, 10), 10);
-    EXAMINE_RULE(ct_dot, REPEAT_BODY_10_2(p_final, 10), 2);
+    EXAMINE_RULE(ct_dot, REPEAT_BODY_10_2(p_final, 10), 1);
 }
 
 // repeat<body,10> = (multiply<body,10>) + repeat<multiply<body,2>,5>
@@ -298,29 +280,29 @@ constexpr auto rep20 = REPEAT_BODY_10_2(p_match, 20);
 
 TEST(ctors, repeat_body_10_2_limit_20_first_part) {
     // halted inside first multiply<body,10>...
-    EXAMINE_RULE(ct_repa<0>, rep20, 3); // mult10(halted +1, skip, return +1), skip, return +1
-    EXAMINE_RULE(ct_repa<1>, rep20, 4); // mult10(nmy +1, halted +1, skip, return +1), skip, return +1
-    EXAMINE_RULE(ct_repa<2>, rep20, 5); // mult10(nmy*2 = +2, halted +1, skip, return +1), skip, return +1
+    EXAMINE_RULE(ct_repa<0>, rep20, 1); // mult10(halted +1, skip, return +1), skip, return +1
+    EXAMINE_RULE(ct_repa<1>, rep20, 2); // mult10(nmy +1, halted +1, skip, return +1), skip, return +1
+    EXAMINE_RULE(ct_repa<2>, rep20, 3); // mult10(nmy*2 = +2, halted +1, skip, return +1), skip, return +1
     // etc up to 8
-    EXAMINE_RULE(ct_repa<8>, rep20, 11); // mult10(nmy*8 = +8, halted +1, skip, return +1), skip, return +1
+    EXAMINE_RULE(ct_repa<8>, rep20, 9); // mult10(nmy*8 = +8, halted +1, skip, return +1), skip, return +1
     // 9
-    EXAMINE_RULE(ct_repa<9>, rep20, 11); // mult10(nmy*9 = +9, halted +1, copy elision), skip, return +1
+    EXAMINE_RULE(ct_repa<9>, rep20, 10); // mult10(nmy*9 = +9, halted +1, copy elision), skip, return +1
 }
 TEST(ctors, repeat_body_10_2_limit_20_second_part) {
     // halted inside second repeat<multiply<body,2>>...
-    EXAMINE_RULE(ct_repa<10>, rep20, 13); // mult10(nmy*10 = +10), rep5(mult2(halted +1, ret +1), ret +1)
-    EXAMINE_RULE(ct_repa<11>, rep20, 13); // mult10(nmy*10 = +10), rep5(mult2(nmy +1, halted +1), ret +1)
+    EXAMINE_RULE(ct_repa<10>, rep20, 11); // mult10(nmy*10 = +10), rep5(mult2(halted +1, ret +1), ret +1)
+    EXAMINE_RULE(ct_repa<11>, rep20, 12); // mult10(nmy*10 = +10), rep5(mult2(nmy +1, halted +1), ret +1)
 
-    EXAMINE_RULE(ct_repa<12>, rep20, 15); // mult10(nmy*10 = +10), rep5(mult2(+2)*2, ret +1)
-    EXAMINE_RULE(ct_repa<13>, rep20, 15); // mult10(nmy*10 = +10), rep5(mult2(+2)*2, ret +1)
+    EXAMINE_RULE(ct_repa<12>, rep20, 13); // mult10(nmy*10 = +10), rep5(mult2(+2)*2, ret +1)
+    EXAMINE_RULE(ct_repa<13>, rep20, 14); // mult10(nmy*10 = +10), rep5(mult2(+2)*2, ret +1)
 
-    EXAMINE_RULE(ct_repa<14>, rep20, 17); // mult10(nmy*10 = +10), rep5(mult2(+2)*3, ret +1)
-    EXAMINE_RULE(ct_repa<15>, rep20, 17); // mult10(nmy*10 = +10), rep5(mult2(+2)*3, ret +1)
+    EXAMINE_RULE(ct_repa<14>, rep20, 15); // mult10(nmy*10 = +10), rep5(mult2(+2)*3, ret +1)
+    EXAMINE_RULE(ct_repa<15>, rep20, 16); // mult10(nmy*10 = +10), rep5(mult2(+2)*3, ret +1)
 
-    EXAMINE_RULE(ct_repa<16>, rep20, 19); // mult10(nmy*10 = +10), rep5(mult2(+2)*4, ret +1)
-    EXAMINE_RULE(ct_repa<17>, rep20, 19); // mult10(nmy*10 = +10), rep5(mult2(+2)*4, ret +1)
+    EXAMINE_RULE(ct_repa<16>, rep20, 17); // mult10(nmy*10 = +10), rep5(mult2(+2)*4, ret +1)
+    EXAMINE_RULE(ct_repa<17>, rep20, 18); // mult10(nmy*10 = +10), rep5(mult2(+2)*4, ret +1)
 
-    EXAMINE_RULE(ct_repa<18>, rep20, 20); // mult10(nmy*10 = +10), rep5(mult2(+2)*5)
+    EXAMINE_RULE(ct_repa<18>, rep20, 19); // mult10(nmy*10 = +10), rep5(mult2(+2)*5)
     EXAMINE_RULE(ct_repa<19>, rep20, 20); // mult10(nmy*10 = +10), rep5(mult2(+2)*5)
     // not halted yet
     EXAMINE_RULE(ct_repa<20>, rep20, 20); // mult10(nmy*10 = +10), rep5(mult2(+2)*5)
@@ -335,15 +317,15 @@ constexpr auto rep50 = REPEAT_BODY_10_2(p_match, 50);
 
 TEST(ctors, repeat_body_10_2_limit_50_first_part) {
     // first part (0..9) behaves as above
-    EXAMINE_RULE(ct_repa<0>, rep50, 3);
-    EXAMINE_RULE(ct_repa<9>, rep50, 11);
+    EXAMINE_RULE(ct_repa<0>, rep50, 1);
+    EXAMINE_RULE(ct_repa<9>, rep50, 10);
 }
 TEST(ctors, repeat_body_10_2_limit_50_second_part) {
     // second part behaves as above, +1 ret
     // 10 + (0..19)
-    EXAMINE_RULE(ct_repa<10>, rep50, 14); // 10 + 2*1 + ret 1 + ret 1
-    EXAMINE_RULE(ct_repa<17>, rep50, 20); // 10 + 2*4 + ret 1 + ret 1
-    EXAMINE_RULE(ct_repa<29>, rep50, 31); // 10 + 2*10 + elision + ret 1
+    EXAMINE_RULE(ct_repa<10>, rep50, 11); // 10 + 2*1 + ret 1 + ret 1
+    EXAMINE_RULE(ct_repa<17>, rep50, 18); // 10 + 2*4 + ret 1 + ret 1
+    EXAMINE_RULE(ct_repa<29>, rep50, 30); // 10 + 2*10 + elision + ret 1
 }
 TEST(ctors, repeat_body_10_2_limit_50_third_part) {
     // third part (30..50)
@@ -352,17 +334,17 @@ TEST(ctors, repeat_body_10_2_limit_50_third_part) {
     // 2: (nmy,halt),ret = 3
     // 3: (nmy,nmy),(halt,ret) = 4
     // 4: (nmy,nmy),(nmy,halt) = 4
-    EXAMINE_RULE(ct_repa<30>, rep50, 34); // 10 + 2*10 + mul4{+3}*1 + ret 1
-    EXAMINE_RULE(ct_repa<31>, rep50, 34); // 10 + 2*10 + mul4{+3}*1 + ret 1
-    EXAMINE_RULE(ct_repa<32>, rep50, 35); // 10 + 2*10 + mul4{+4}*1 + ret 1
-    EXAMINE_RULE(ct_repa<33>, rep50, 35); // 10 + 2*10 + mul4{+4}*1 + ret 1
+    EXAMINE_RULE(ct_repa<30>, rep50, 31); // 10 + 2*10 + mul4{+3}*1 + ret 1
+    EXAMINE_RULE(ct_repa<31>, rep50, 32); // 10 + 2*10 + mul4{+3}*1 + ret 1
+    EXAMINE_RULE(ct_repa<32>, rep50, 33); // 10 + 2*10 + mul4{+4}*1 + ret 1
+    EXAMINE_RULE(ct_repa<33>, rep50, 34); // 10 + 2*10 + mul4{+4}*1 + ret 1
     // etc up to 45
-    EXAMINE_RULE(ct_repa<44>, rep50, 47); // 10 + 2*10 + mul4{+4}*4 + ret 1
-    EXAMINE_RULE(ct_repa<45>, rep50, 47); // 10 + 2*10 + mul4{+4}*4 + ret 1
+    EXAMINE_RULE(ct_repa<44>, rep50, 45); // 10 + 2*10 + mul4{+4}*4 + ret 1
+    EXAMINE_RULE(ct_repa<45>, rep50, 46); // 10 + 2*10 + mul4{+4}*4 + ret 1
     // last 4 - copy elision
-    EXAMINE_RULE(ct_repa<46>, rep50, 49); // 10 + 2*10 + mul4{+4}*4 + mul4{+3}
-    EXAMINE_RULE(ct_repa<47>, rep50, 49); // 10 + 2*10 + mul4{+4}*4 + mul4{+3}
-    EXAMINE_RULE(ct_repa<48>, rep50, 50); // 10 + 2*10 + mul4{+4}*4 + mul4{+4}
+    EXAMINE_RULE(ct_repa<46>, rep50, 47); // 10 + 2*10 + mul4{+4}*4 + mul4{+3}
+    EXAMINE_RULE(ct_repa<47>, rep50, 48); // 10 + 2*10 + mul4{+4}*4 + mul4{+3}
+    EXAMINE_RULE(ct_repa<48>, rep50, 49); // 10 + 2*10 + mul4{+4}*4 + mul4{+4}
     EXAMINE_RULE(ct_repa<49>, rep50, 50); // 10 + 2*10 + mul4{+4}*4 + mul4{+4}
     // 50 - returns nmy
     EXAMINE_RULE(ct_repa<50>, rep50, 50); // 10 + 2*10 + mul4{+4}*4 + mul4{+4}
@@ -373,14 +355,14 @@ TEST(ctors, repeat_body_10_2_limit_50_third_part) {
 constexpr auto loop = RULE_LOOP(p_match);
 
 TEST(ctors, loop) {
-    EXAMINE_RULE(ct_repa<0>, loop, 3);
-    EXAMINE_RULE(ct_repa<9>, loop, 12);
+    EXAMINE_RULE(ct_repa<0>, loop, 1);
+    EXAMINE_RULE(ct_repa<9>, loop, 10);
 
-    EXAMINE_RULE(ct_repa<10>, loop, 13);
-    EXAMINE_RULE(ct_repa<29>, loop, 32);
+    EXAMINE_RULE(ct_repa<10>, loop, 11);
+    EXAMINE_RULE(ct_repa<29>, loop, 30);
 
-    EXAMINE_RULE(ct_repa<30>, loop, 33);
-    EXAMINE_RULE(ct_repa<49>, loop, 51);
+    EXAMINE_RULE(ct_repa<30>, loop, 31);
+    EXAMINE_RULE(ct_repa<49>, loop, 50);
 }
 
 ////////
@@ -411,26 +393,22 @@ TEST(moves, count) {
     // 10n iterations make
     // - 10n moves with applying regular rule
     // - 1 move with halting
-    // - 1 move with return by value from the middle of multiply_body
-    // - 1 move with return by value instead of recursion
-    // totally, 10n + 3
+    // totally, 10n + 1
     auto table10 = steps_and_moves<
         0, 10, 20, 30, 40,
         50, 60, 70, 80, 90,
         100, 200, 300, 400, 500>;
     for (auto [num_steps, num_move_ctors] : table10) {
-        EXPECT_EQ(num_steps + 3, num_move_ctors);
+        EXPECT_EQ(num_steps + 1, num_move_ctors);
     }
 
     // 50n-1 iterations make
     // - 50n-1 moves with applying regular rule
     // - 1 move with halting
-    // copy elision from the end of multiply_body
-    // - 1 move with return by value instead of recursion
-    // totally, 50n-1 + 2
+    // totally, 50n-1 + 1
     auto table49 = steps_and_moves<49, 99, 149, 199>;
     for (auto [num_steps, num_move_ctors] : table49) {
-        EXPECT_EQ(num_steps + 2, num_move_ctors);
+        EXPECT_EQ(num_steps + 1, num_move_ctors);
     }
 }
 
