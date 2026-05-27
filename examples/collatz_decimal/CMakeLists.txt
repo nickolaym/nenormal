@@ -1,0 +1,4 @@
+add_test_executable(example_collatz_decimal collatz_decimal.cpp)
+add_test_executable(example_collatz_decimal_inplace collatz_decimal_inplace.cpp)
+
+add_all_above(examples_collatz_decimal)

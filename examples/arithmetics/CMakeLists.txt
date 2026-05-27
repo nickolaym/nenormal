@@ -1,0 +1,5 @@
+add_test_executable(example_arithmetics arithmetics.cpp)
+add_test_executable(example_arithmetics_runtime arithmetics_runtime.cpp)
+add_test_executable(example_arithmetics_inplace arithmetics_inplace.cpp)
+
+add_all_above(examples_arithmetics)
