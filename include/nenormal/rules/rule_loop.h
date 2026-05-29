@@ -27,7 +27,7 @@ namespace rule_loop_helpers_ns {
 template<Rule auto p> struct rule_loop_body {
     REPRESENTS(Rule)
 
-    constexpr RuleOutput decltype(auto) operator()(RuleInput auto&& nmy) const {
+    constexpr RuleOutput auto operator()(RuleInput auto&& nmy) const {
         DEBUG_CALL_PAIR(CTSTR("body"));
         return p(FWD(nmy)).commit_loop();
     }
@@ -66,6 +66,20 @@ template<Rule auto p> struct rule_loop_body {
 // - unroll = 50
 // - multiply = 1
 
+constexpr auto chain(NotMatchedYet auto&& nmy)
+{ return FWD(nmy); }
+
+constexpr auto chain(NotMatchedYet auto&& nmy, Rule auto&& p, Rule auto&&... ps)
+{
+    // constexpr size_t N = (sizeof...(ps))+1;
+    // DEBUG_CALL_PAIR(concat_ctstr(CTSTR("chain:"), size_to_ctstr(ct_size_v<N>)));
+
+    if constexpr ((sizeof...(ps) == 0) || Matched<decltype(p(FWD(nmy)))>)
+        return p(FWD(nmy));
+    else
+        return chain(p(FWD(nmy)), FWD(ps)...);
+}
+
 template<Rule auto body, size_t N>
 struct multiply_body {
     REPRESENTS(Rule)
@@ -74,45 +88,44 @@ struct multiply_body {
         if constexpr (N == 0)
             return FWD(nmy);
         else if constexpr (N == 1)
-            return FWD(nmy)
-                >> body;
+            return chain(FWD(nmy),
+                body);
         else if constexpr (N == 2)
-            return FWD(nmy)
-                >> body >> body;
+            return chain(FWD(nmy),
+                body, body);
         else if constexpr (N == 3)
-            return FWD(nmy)
-                >> body >> body >> body;
+            return chain(FWD(nmy),
+                body, body, body);
         else if constexpr (N == 4)
-            return FWD(nmy)
-                >> body >> body >> body >> body;
+            return chain(FWD(nmy),
+                body, body, body, body);
         else if constexpr (N == 5)
-            return FWD(nmy)
-                >> body >> body >> body >> body >> body;
+            return chain(FWD(nmy),
+                body, body, body, body, body);
         else if constexpr (N == 6)
-            return FWD(nmy)
-                >> body >> body >> body >> body >> body
-                >> body;
+            return chain(FWD(nmy),
+                body, body, body, body, body,
+                body);
         else if constexpr (N == 7)
-            return FWD(nmy)
-                >> body >> body >> body >> body >> body
-                >> body >> body;
+            return chain(FWD(nmy),
+                body, body, body, body, body,
+                body, body);
         else if constexpr (N == 8)
-            return FWD(nmy)
-                >> body >> body >> body >> body >> body
-                >> body >> body >> body;
+            return chain(FWD(nmy),
+                body, body, body, body, body,
+                body, body, body);
         else if constexpr (N == 9)
-            return FWD(nmy)
-                >> body >> body >> body >> body >> body
-                >> body >> body >> body >> body;
+            return chain(FWD(nmy),
+                body, body, body, body, body,
+                body, body, body, body);
         else if constexpr (N == 10)
-            return FWD(nmy)
-                >> body >> body >> body >> body >> body
-                >> body >> body >> body >> body >> body;
+            return chain(FWD(nmy),
+                body, body, body, body, body,
+                body, body, body, body, body);
         else
-            return FWD(nmy)
-                >> body >> body >> body >> body >> body
-                >> body >> body >> body >> body >> body
-                >> multiply_body<body, N - 10>{};
+            return chain(FWD(nmy),
+                multiply_body<body, 10>{},
+                multiply_body<body, N - 10>{});
     }
 };
 
@@ -128,25 +141,25 @@ struct repeat_body {
         if constexpr (Limit == 0) {
             return FWD(nmy);
         } else if constexpr (Limit <= Unroll) {
-            return FWD(nmy)
-                >> multiply_body<body, Limit>{};
+            return chain(FWD(nmy),
+                multiply_body<body, Limit>{});
         } else if constexpr (Multiply == 1) {
             constexpr auto LimitRest = (Limit == rule_loop_unlimited_v) ? Limit : Limit - Unroll;
-            return FWD(nmy)
-                >> multiply_body<body, Unroll>{}
-                >> repeat_body<body, LimitRest, Unroll, Multiply>{};
+            return chain(FWD(nmy),
+                multiply_body<body, Unroll>{},
+                repeat_body<body, LimitRest, Unroll, Multiply>{});
         } else if constexpr (Limit == rule_loop_unlimited_v) {
-            return FWD(nmy)
-                >> multiply_body<body, Unroll>{}
-                >> repeat_body<multiply_body<body, Multiply>{}, Limit, Unroll, Multiply>{};
+            return chain(FWD(nmy),
+                multiply_body<body, Unroll>{},
+                repeat_body<multiply_body<body, Multiply>{}, Limit, Unroll, Multiply>{});
         } else {
             constexpr auto R = (Limit - Unroll) % Multiply;
             constexpr auto UnrollRound = Unroll + R;
             constexpr auto LimitRest = Limit - UnrollRound; // Lrest % Multiply == 0
             constexpr auto LimitRestM = LimitRest / Multiply;
-            return FWD(nmy)
-                >> multiply_body<body, UnrollRound>{}
-                >> repeat_body<multiply_body<body, Multiply>{}, LimitRestM, Unroll, Multiply>{};
+            return chain(FWD(nmy),
+                multiply_body<body, UnrollRound>{},
+                repeat_body<multiply_body<body, Multiply>{}, LimitRestM, Unroll, Multiply>{});
         }
     }
 };
