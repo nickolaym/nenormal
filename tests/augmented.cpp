@@ -219,6 +219,16 @@ TEST(augmented_debug, debug_augmentation_inappropriate) {
 
 /// inplace
 
+TEST(inplace_augmentation, comparison) {
+    static_assert(inplace_empty{} == inplace_empty{});
+    static_assert(inplace_passed{1} == inplace_passed{1.});
+
+    constexpr auto inc = [](auto x, auto...) { return x+1; };
+    static_assert(inplace_cumulative_effect{1, inc} == inplace_cumulative_effect{1, inc});
+    static_assert(inplace_cumulative_effect{1, inc} == inplace_passed{1.});
+    static_assert(inplace_passed{1} == inplace_cumulative_effect{1., inc});
+}
+
 TEST(inplace_augmented, empty) {
     inplace_augmented_text t{"foo", inplace_empty{}};
     EXPECT_EQ(&inplace_extract_text(t), &t.text);
