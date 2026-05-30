@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "nenormal/nenormal.h"
+#include "../utils.h"
 
 namespace nn {
 
@@ -450,63 +451,63 @@ TEST(inplace, simple_check) {
     };
 
     // single step
-    EXPECT_EQ(
+    STATIC_EXPECT_EQ(
         run_inplace("zzz", p),
         (inplace_argument{"zzz", tristate_kind::not_matched_yet})
     );
-    EXPECT_EQ(
+    STATIC_EXPECT_EQ(
         run_inplace("aaa", p),
         (inplace_argument{"baa", tristate_kind::matched_regular})
     );
-    EXPECT_EQ(
+    STATIC_EXPECT_EQ(
         run_inplace("ccc", p),
         (inplace_argument{"dcc", tristate_kind::matched_final})
     );
-    EXPECT_EQ(
+    STATIC_EXPECT_EQ(
         run_inplace("eee", p),
         (inplace_argument{"fee", tristate_kind::matched_regular})
     );
 
     // loop
-    EXPECT_EQ(
+    STATIC_EXPECT_EQ(
         run_inplace("zzz", rl),
         (inplace_argument{"zzz", tristate_kind::matched_final_halted})
     );
-    EXPECT_EQ(
+    STATIC_EXPECT_EQ(
         run_inplace("aaa", rl),
         (inplace_argument{"bbb", tristate_kind::matched_final_halted})
     );
-    EXPECT_EQ(
+    STATIC_EXPECT_EQ(
         run_inplace("ccc", rl),
         (inplace_argument{"dcc", tristate_kind::matched_final})
     );
-    EXPECT_EQ(
+    STATIC_EXPECT_EQ(
         run_inplace("eee", rl),
         (inplace_argument{"fff", tristate_kind::matched_final_halted})
     );
-    EXPECT_EQ(
+    STATIC_EXPECT_EQ(
         run_inplace("aec", rl),
         (inplace_argument{"bed", tristate_kind::matched_final})
     );
 
     // machine
-    EXPECT_EQ(
+    STATIC_EXPECT_EQ(
         m(std::string{"zzz"}),
         "zzz"
     );
-    EXPECT_EQ(
+    STATIC_EXPECT_EQ(
         m(std::string{"aaa"}),
         "bbb"
     );
-    EXPECT_EQ(
+    STATIC_EXPECT_EQ(
         m(std::string{"ccc"}),
         "dcc"
     );
-    EXPECT_EQ(
+    STATIC_EXPECT_EQ(
         m(std::string{"eee"}),
         "fff"
     );
-    EXPECT_EQ(
+    STATIC_EXPECT_EQ(
         m(std::string{"aec"}),
         "bed"
     );
@@ -514,8 +515,10 @@ TEST(inplace, simple_check) {
 
 TEST(inplace, empty) {
     constexpr auto m = MACHINE(RULES(RULE("a","b"), FINAL_RULE("c","d"), RULE("e","f")));
-    auto result = m(inplace_augmented_text{"aec", inplace_empty{}});
-    EXPECT_EQ(result.text, "bed");
+    STATIC_EXPECT_EQ(
+        m(inplace_augmented_text{"aec", inplace_empty{}}).text,
+        "bed"
+    );
 }
 
 TEST(inplace, side_effect) {
@@ -531,22 +534,24 @@ TEST(inplace, side_effect) {
 
 TEST(inplace, cumulative_effect) {
     constexpr auto m = MACHINE(RULES(RULE("a","b"), FINAL_RULE("c","d"), RULE("e","f")));
-    auto result = m(inplace_augmented_text{
-        "aec",
-        inplace_cumulative_effect{0, [](int c, auto, std::string const&) { return c + 1; }}
-    });
-    EXPECT_EQ(result.text, "bed");
-    EXPECT_EQ(result.aux.a, 2);
+    STATIC_EXPECT_EQ(
+        m(inplace_augmented_text{
+            "aec",
+            inplace_cumulative_effect{0, [](int c, auto, std::string const&) { return c + 1; }}
+        }),
+        (inplace_augmented_text("bed", inplace_passed{2}))
+    );
 }
 
 TEST(inplace, modification_effect) {
     constexpr auto m = MACHINE(RULES(RULE("a","b"), FINAL_RULE("c","d"), RULE("e","f")));
-    auto result = m(inplace_augmented_text{
-        "aec",
-        inplace_modification_effect{[](int& c, auto, std::string const&) { ++c; }, 0}
-    });
-    EXPECT_EQ(result.text, "bed");
-    EXPECT_EQ(result.aux.a, 2);
+    STATIC_EXPECT_EQ(
+        m(inplace_augmented_text{
+            "aec",
+            inplace_modification_effect{0, [](int& c, auto, std::string const&) { ++c; }}
+        }),
+        (inplace_augmented_text("bed", inplace_passed{2}))
+    );
 }
 
 TEST(inplace, hidden_rule) {
@@ -556,12 +561,13 @@ TEST(inplace, hidden_rule) {
         HIDDEN_RULE(FINAL_RULE("c","d")),
         HIDDEN_RULE(RULE("e","f"))
     ));
-    auto result = m(inplace_augmented_text{
-        "aec",
-        inplace_modification_effect{0, [](int& c, auto, std::string const&) { ++c; }}
-    });
-    EXPECT_EQ(result.text, "bed");
-    EXPECT_EQ(result.aux.a, 0);
+    STATIC_EXPECT_EQ(
+        m(inplace_augmented_text{
+            "aec",
+            inplace_modification_effect{0, [](int& c, auto, std::string const&) { static_assert(false); }}
+        }),
+        (inplace_augmented_text("bed", inplace_passed{0}))
+    );
 }
 
 TEST(inplace, facade_rule) {
@@ -571,12 +577,13 @@ TEST(inplace, facade_rule) {
         FACADE_RULE("r2", FINAL_RULE("c","d")),
         FACADE_RULE("r3", RULE("e","f"))
     ));
-    auto result = m(inplace_augmented_text{
-        "aec",
-        inplace_modification_effect{0, [](int& c, FacadeRule auto rule, std::string const&) { ++c; }}
-    });
-    EXPECT_EQ(result.text, "bed");
-    EXPECT_EQ(result.aux.a, 2);
+    STATIC_EXPECT_EQ(
+        m(inplace_augmented_text{
+            "aec",
+            inplace_modification_effect{0, [](int& c, auto, std::string const&) { ++c; }}
+        }),
+        (inplace_augmented_text("bed", inplace_passed{2}))
+    );
 }
 
 } // namespace nn
