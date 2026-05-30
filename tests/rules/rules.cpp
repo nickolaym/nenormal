@@ -558,7 +558,7 @@ TEST(inplace, hidden_rule) {
     ));
     auto result = m(inplace_augmented_text{
         "aec",
-        inplace_modification_effect{[](int& c, auto, std::string const&) { ++c; }, 0}
+        inplace_modification_effect{0, [](int& c, auto, std::string const&) { ++c; }}
     });
     EXPECT_EQ(result.text, "bed");
     EXPECT_EQ(result.aux.a, 0);
@@ -573,7 +573,7 @@ TEST(inplace, facade_rule) {
     ));
     auto result = m(inplace_augmented_text{
         "aec",
-        inplace_modification_effect{[](int& c, FacadeRule auto rule, std::string const&) { ++c; }, 0}
+        inplace_modification_effect{0, [](int& c, FacadeRule auto rule, std::string const&) { ++c; }}
     });
     EXPECT_EQ(result.text, "bed");
     EXPECT_EQ(result.aux.a, 2);

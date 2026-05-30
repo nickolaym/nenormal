@@ -227,6 +227,11 @@ TEST(inplace_augmentation, comparison) {
     static_assert(inplace_cumulative_effect{1, inc} == inplace_cumulative_effect{1, inc});
     static_assert(inplace_cumulative_effect{1, inc} == inplace_passed{1.});
     static_assert(inplace_passed{1} == inplace_cumulative_effect{1., inc});
+
+    constexpr auto autoinc = [](auto& x, auto...) { ++x; };
+    static_assert(inplace_modification_effect{1, autoinc} == inplace_modification_effect{1, autoinc});
+    static_assert(inplace_modification_effect{1, autoinc} == inplace_passed{1.});
+    static_assert(inplace_passed{1} == inplace_modification_effect{1., autoinc});
 }
 
 TEST(inplace_augmented, empty) {
@@ -266,7 +271,7 @@ TEST(inplace_augmented, modification_effect) {
     auto f = [](int& counter, auto p, std::string const& t) {
         ++counter;
     };
-    inplace_augmented_text t{"foo", inplace_modification_effect{f, 0}};
+    inplace_augmented_text t{"foo", inplace_modification_effect{0, f}};
     EXPECT_EQ(&inplace_extract_text(t), &t.text);
     inplace_update_text(t, "rule goes here");
     EXPECT_EQ(t.text, "foo"); // stays unchanged
