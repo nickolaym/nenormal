@@ -11,6 +11,19 @@ template<class T> struct foo {
     auto rebind(auto u) const { return foo<decltype(u)>{u}; }
 };
 
+TEST(augmentation, comparison) {
+    static_assert(empty{} == empty{});
+    static_assert(passed{123} == passed{123.});
+
+    // type of function must match
+    constexpr auto inc = [](auto x, auto...){return x+1;};
+    static_assert(cumulative_effect{123, inc} == cumulative_effect{123., inc});
+    // can compare with a function-less object
+    static_assert(passed{123} == cumulative_effect{123., inc});
+    static_assert(cumulative_effect{123, inc} == passed{123.});
+}
+
+
 TEST(augmented, no_augmentation) {
     constexpr auto a = "aaa"_cts;
     constexpr auto b = update_text(a, "rule_goes_here", "bbb"_cts);
@@ -21,13 +34,21 @@ TEST(augmented, no_augmentation) {
 }
 
 TEST(augmented, empty) {
-    auto a = augmented_text{"aaa"_cts, empty{}};
-    auto b = update_text(a, "rule_goes_here", "bbb"_cts);
-    static_assert(b.text == "bbb"_cts);
-    empty e = b.aux;
+    constexpr auto a = augmented_text{"aaa"_cts, empty{}};
+    constexpr auto b = update_text(a, "rule_goes_here", "bbb"_cts);
+    static_assert(b == augmented_text{"bbb"_cts, empty{}});
 
     constexpr auto r = rebind_text(b, "rrr"_cts);
-    static_assert(r.text == "rrr"_cts);
+    static_assert(r == augmented_text{"rrr"_cts, empty{}});
+}
+
+TEST(augmented, passed) {
+    constexpr auto a = augmented_text{"aaa"_cts, passed{123}};
+    constexpr auto b = update_text(a, "rule_goes_here", "bbb"_cts);
+    static_assert(b == augmented_text{"bbb"_cts, passed{123}});
+
+    constexpr auto r = rebind_text(b, "rrr"_cts);
+    static_assert(r == augmented_text{"rrr"_cts, passed{123}});
 }
 
 TEST(augmented, side_effect) {
@@ -85,28 +106,24 @@ TEST(augmented, pure_cumulative_effect) {
     };
 
     constexpr auto a = augmented_text{"aaa"_cts, cumulative_effect{0, f}};
-    EXPECT_EQ(a.aux.a, 0);
+    static_assert(a.aux.a == 0);
     constexpr auto b = update_text(a, "rule_goes_here", "bbb"_cts);
-    static_assert(b.text == "bbb"_cts);
-    EXPECT_EQ(b.aux.a, 1);
+    static_assert(b == augmented_text{"bbb"_cts, cumulative_effect{1, f}});
     constexpr auto c = update_text(b, "rule_goes_here", "ccc"_cts);
-    static_assert(c.text == "ccc"_cts);
-    EXPECT_EQ(c.aux.a, 2);
-    static_assert(c.aux.a == 2);
+    static_assert(c == augmented_text{"ccc"_cts, cumulative_effect{2, f}});
 
     constexpr auto r = rebind_text(c, "rrr"_cts);
-    static_assert(r.text == "rrr"_cts);
-    static_assert(r.aux.a == 2);
+    static_assert(r == augmented_text{"rrr"_cts, cumulative_effect{2, f}});
 }
 
 TEST(augmented_move, empty) {
     auto a = augmented_text{"a"_cts, empty{}};
 
     auto b = std::move(a).update("rule goes here", "b"_cts);
-    static_assert(b.text == "b"_cts);
+    static_assert(b == augmented_text{"b"_cts, empty{}});
 
     auto c = std::move(b).rebind("c"_cts);
-    static_assert(c.text == "c"_cts);
+    static_assert(c == augmented_text{"c"_cts, empty{}});
 }
 
 TEST(augmented_move, side_effect) {
