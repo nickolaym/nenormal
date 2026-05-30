@@ -36,7 +36,7 @@ struct inplace_argument {
     constexpr bool updated_by(auto&& f) {
         if (kind != tristate_kind::not_matched_yet)
             throw std::runtime_error("unexpected update of already matched value");
-        kind = f(value);
+        kind = f.update(value);
         return *this;
     }
 

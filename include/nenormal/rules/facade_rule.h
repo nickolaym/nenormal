@@ -28,8 +28,8 @@ template<Str auto n, Rule auto p> struct facade_rule {
             return bare_out.rebind(update_text(FWD(nmy).value, *this, bare_out.value));
         }
     }
-    constexpr auto operator()(RuleFixedInput auto& t) const {
-        auto res = p(inplace_extract_text(t));
+    constexpr auto update(RuleFixedInput auto& t) const {
+        auto res = p.update(inplace_extract_text(t));
         if (res != tristate_kind::not_matched_yet) {
             inplace_update_text(t, *this);
         }

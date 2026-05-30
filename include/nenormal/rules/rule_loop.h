@@ -31,7 +31,7 @@ template<Rule auto p> struct rule_loop_body {
         DEBUG_CALL_PAIR(CTSTR("body"));
         return p(FWD(nmy)).commit_loop();
     }
-    constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
+    constexpr tristate_kind update(RuleFixedInput auto& t) const {
         inplace_argument<decltype(t)> a{t}; // reference to input
         a.updated_by(p);
         a.commit();
@@ -177,7 +177,7 @@ template<Rule auto p, size_t Limit = rule_loop_limit_v> struct rule_loop {
         constexpr auto body = rule_loop_helpers_ns::rule_loop_body<p>{};
         return FWD(nmy) >> rule_loop_helpers_ns::repeat_body<body, Limit, Unroll, Multiply>{};
     }
-    constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
+    constexpr tristate_kind update(RuleFixedInput auto& t) const {
         constexpr auto body = rule_loop_helpers_ns::rule_loop_body<p>{};
         inplace_argument<decltype(t)> a{t};
         size_t limit = Limit;

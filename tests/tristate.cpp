@@ -1,6 +1,7 @@
 #include "nenormal/tristate.h"
 #include "nenormal/inplace/inplace_tristate.h"
 #include "nenormal/str.h"
+#include "nenormal/utility.h"
 #include <gtest/gtest.h>
 
 namespace nn {
@@ -124,8 +125,13 @@ constexpr auto inplace_mismatch    = [](int& x) constexpr { return tristate_kind
 constexpr auto inplace_regular_inc = [](int& x) constexpr { x += 1; return tristate_kind::matched_regular; };
 constexpr auto inplace_final_inc   = [](int& x) constexpr { x += 10; return tristate_kind::matched_final; };
 
+template<class F> struct updater {
+    const F& f;
+    constexpr decltype(auto) update(auto&& z) const { return f(FWD(z)); }
+};
+
 constexpr auto run_inplace(Inplace auto z, auto&& ... fs) {
-    (z || ... || z.updated_by(fs));
+    (z || ... || z.updated_by(updater{fs}));
     return z;
 }
 constexpr auto inplace_not_matched_yet(auto x) { return inplace_argument{x, tristate_kind::not_matched_yet}; }

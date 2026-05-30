@@ -38,7 +38,7 @@ template<Rule auto... ps> struct rules {
         // return (FWD(nmy) >> ... >> ps).commit_alts();
         return FWD(nmy) >> (rules_helper::will_match_to<decltype(nmy)>{} | ... | ps).p;
     }
-    constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
+    constexpr tristate_kind update(RuleFixedInput auto& t) const {
         inplace_argument<decltype(t)> a{t}; // reference to input
         (a || ... || a.updated_by(ps));
         return a.kind;

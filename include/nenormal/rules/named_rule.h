@@ -14,7 +14,7 @@ struct name { \
         operator()(::nn::RuleInput auto&& nmy) const { return impl(FWD(nmy)); } \
     constexpr ::nn::RuleOutput auto \
         operator()(::nn::MachineData auto&& t) const { return impl(FWD(t)); } \
-    constexpr auto operator()(::nn::RuleFixedInput auto& t) const { return impl(t); } \
+    constexpr auto update(::nn::RuleFixedInput auto& t) const { return impl.update(t); } \
 }
 
 #define NAMED_RULE(name, p) ( (NAMED_RULE_TYPE(name, p)) {} )

@@ -70,7 +70,7 @@ template<Str auto s, Str auto r, rule_kind k> struct rule {
             }
         }
     }
-    constexpr tristate_kind operator()(RuleFixedInput auto& t) const {
+    constexpr tristate_kind update(RuleFixedInput auto& t) const {
         if (!try_substitute_inplace(ct_search, ct_replace, inplace_extract_text(t))) {
             return tristate_kind::not_matched_yet;
         } else {

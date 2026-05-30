@@ -18,7 +18,7 @@ template<Rule auto p> struct machine_fun {
     }
     // rvalue input because inside it works as a variable
     constexpr RuleFixedInput auto operator()(RuleFixedInput auto t) const {
-        p(t);
+        p.update(t);
         return std::move(t);
     }
 };
