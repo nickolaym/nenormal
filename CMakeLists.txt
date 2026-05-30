@@ -8,9 +8,6 @@ include(cmake/utilities.cmake)
 add_library(nenormal_headers INTERFACE)
 target_include_directories(nenormal_headers INTERFACE ${CMAKE_SOURCE_DIR}/include)
 
-# Link to all executables automatically (must be before add_executable)
-link_libraries(nenormal_headers)
-
 # Source directories
 add_subdirectory(tests)
 add_subdirectory(examples)

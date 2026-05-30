@@ -2,7 +2,10 @@
 function(add_test_executable name)
     set(sources ${ARGN})
     add_executable(${name} ${sources})
-    target_link_libraries(${name} GTest::gtest_main)
+    target_link_libraries(${name}
+        nenormal_headers
+        GTest::gtest_main
+    )
     include(GoogleTest)
     gtest_discover_tests(${name})
 endfunction()
