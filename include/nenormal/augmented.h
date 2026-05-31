@@ -18,6 +18,29 @@ struct empty {
     constexpr bool operator == (empty const&) const = default;
 };
 
+template<class A>
+struct passed {
+    REPRESENTS(Augmentation)
+    A a;
+
+    constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) const& {
+        return *this;
+    }
+    constexpr auto operator()(CtStr auto i, auto p, CtStr auto o) && {
+        return FWD(*this);
+    }
+
+    constexpr bool operator == (passed const&) const = default;
+
+    constexpr bool operator == (Augmentation auto const& other) const
+        requires requires { a == other.a; }
+    { return a == other.a; }
+
+    friend constexpr bool operator == (Augmentation auto const& lhs, passed const& rhs)
+        requires requires { lhs.a == rhs.a; }
+    { return lhs.a == rhs.a; }
+};
+
 template<class F>
 struct side_effect {
     REPRESENTS(Augmentation)

@@ -13,7 +13,7 @@ struct empty_rule {
     constexpr RuleOutput decltype(auto) operator()(RuleInput auto&& nmy) const {
         return FWD(nmy);
     }
-    constexpr auto operator()(RuleFixedInput auto& t) const {
+    constexpr auto update(RuleFixedInput auto& t) const {
         return tristate_kind::not_matched_yet;
     }
 };

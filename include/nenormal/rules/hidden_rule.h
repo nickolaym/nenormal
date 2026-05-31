@@ -20,8 +20,8 @@ template<Rule auto p> struct hidden_rule {
             return bare_out.rebind(rebind_text(FWD(nmy).value, bare_out.value));
         }
     }
-    constexpr auto operator()(RuleFixedInput auto& t) const {
-        return p(inplace_extract_text(t));
+    constexpr auto update(RuleFixedInput auto& t) const {
+        return p.update(inplace_extract_text(t));
     }
 };
 

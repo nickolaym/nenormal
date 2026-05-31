@@ -15,9 +15,9 @@ struct inplace_argument {
     T value; // rewriteable
     tristate_kind kind = tristate_kind::not_matched_yet;
 
-    bool operator == (const inplace_argument&) const = default;
+    constexpr bool operator == (const inplace_argument&) const = default;
     template<class U>
-    bool operator == (const inplace_argument<U>& other) const {
+    constexpr bool operator == (const inplace_argument<U>& other) const {
         return value == other.value && kind == other.kind;
     }
 
@@ -36,7 +36,7 @@ struct inplace_argument {
     constexpr bool updated_by(auto&& f) {
         if (kind != tristate_kind::not_matched_yet)
             throw std::runtime_error("unexpected update of already matched value");
-        kind = f(value);
+        kind = f.update(value);
         return *this;
     }
 

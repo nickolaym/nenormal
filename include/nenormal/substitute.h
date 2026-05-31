@@ -46,7 +46,7 @@ constexpr MaybeCtStr auto try_substitute(CtStr auto cts, CtStr auto ctr, CtStr a
     }
 }
 
-bool try_substitute_inplace(CtStr auto cts, CtStr auto ctr, std::string& text) {
+constexpr bool try_substitute_inplace(CtStr auto cts, CtStr auto ctr, std::string& text) {
     constexpr Str auto const& s = cts.value;
     constexpr Str auto const& r = ctr.value;
 
@@ -58,7 +58,9 @@ bool try_substitute_inplace(CtStr auto cts, CtStr auto ctr, std::string& text) {
     } else if (s.empty() && r.empty()) {
         return true;
     } else {
-        size_t pos = text.find(s.view());
+        // size_t pos = text.find(s.view()); // not a constexpr!
+        auto fbegin = std::search(text.begin(), text.end(), s.begin(), s.end());
+        size_t pos = (fbegin == text.end()) ? std::string::npos : fbegin - text.begin();
         if (pos == std::string::npos) {
             return false;
         } else {
