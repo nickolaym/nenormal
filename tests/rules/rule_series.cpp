@@ -1,5 +1,6 @@
 #include "nenormal/nenormal.h"
 #include <gtest/gtest.h>
+#include "../utils.h"
 
 namespace nn {
 
@@ -18,18 +19,18 @@ constexpr auto mismatched_rule_testcase = [](Rule auto p) {
 
     // rvalue-ref on input, rvalue-ref on output
     {
-        static_assert(std::is_same_v<
+        STATIC_ASSERT_EQ_TYPE(
             decltype( p(NMY(t)) ),
             not_matched_yet<t_t>&&
-        >);
+        );
     }
     // const ref on input, const ref on output
     {
         constexpr auto nmy = NMY(t);
-        static_assert(std::is_same_v<
+        STATIC_ASSERT_EQ_TYPE(
             decltype( p(nmy) ),
             not_matched_yet<t_t> const&
-        >);
+        );
     }
     // values unchanged
     {
@@ -92,18 +93,18 @@ constexpr auto matched_rule_testcase = [](Rule auto p) {
 
     // rvalue-ref on input, rvalue on output
     {
-        static_assert(std::is_same_v<
+        STATIC_ASSERT_EQ_TYPE(
             decltype( p(NMY(t)) ),
             matched_regular<e_t>
-        >);
+        );
     }
     // const ref on input, const ref on output
     {
         constexpr auto nmy = NMY(t);
-        static_assert(std::is_same_v<
+        STATIC_ASSERT_EQ_TYPE(
             decltype( p(nmy) ),
             matched_regular<e_t>
-        >);
+        );
     }
 
     // values updated

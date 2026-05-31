@@ -3,6 +3,7 @@
 #include "nenormal/str.h"
 #include "nenormal/utility.h"
 #include <gtest/gtest.h>
+#include "utils.h"
 
 namespace nn {
 
@@ -43,7 +44,7 @@ TEST(tristate, not_matched_yet) {
     constexpr auto z = not_matched_yet{0};
 
     // conventional mismatch function returns reference to its arg
-    static_assert(std::is_same_v< decltype(z >> mismatch), not_matched_yet<int> const& >);
+    STATIC_ASSERT_EQ_TYPE( decltype(z >> mismatch), not_matched_yet<int> const& );
     static_assert(&(z >> mismatch) == &z);
     static_assert(z >> regular_inc == matched_regular{1});
     static_assert(z >> final_inc == matched_final{10});
@@ -66,7 +67,7 @@ TEST(tristate, matched_regular) {
 
     // commit_alt returns value (because z itself is temporary)
     static_assert(z.commit_alts() == z);
-    static_assert(std::is_same_v< decltype(z.commit_alts()), matched_regular<int> >);
+    STATIC_ASSERT_EQ_TYPE( decltype(z.commit_alts()), matched_regular<int> );
 
     static_assert(z.commit_loop() == not_matched_yet{0});
 
@@ -83,11 +84,11 @@ TEST(tristate, matched_final) {
 
     // commit_alt returns value (because z itself is temporary)
     static_assert(z.commit_alts() == z);
-    static_assert(std::is_same_v< decltype(z.commit_alts()), matched_final<int> >);
+    STATIC_ASSERT_EQ_TYPE( decltype(z.commit_alts()), matched_final<int> );
 
     // commit_loop returns value (because z itself is temporary)
     static_assert(z.commit_loop() == z);
-    static_assert(std::is_same_v< decltype(z.commit_loop()), matched_final<int> >);
+    STATIC_ASSERT_EQ_TYPE( decltype(z.commit_loop()), matched_final<int> );
 
     static_assert(z.rebind(""_ss) == matched_final{""_ss});
 }
@@ -102,11 +103,11 @@ TEST(tristate, matched_final_halted) {
 
     // commit_alt returns value (because z itself is temporary)
     static_assert(z.commit_alts() == z);
-    static_assert(std::is_same_v< decltype(z.commit_alts()), matched_final_halted<int> >);
+    STATIC_ASSERT_EQ_TYPE( decltype(z.commit_alts()), matched_final_halted<int> );
 
     // commit_loop returns value (because z itself is temporary)
     static_assert(z.commit_loop() == z);
-    static_assert(std::is_same_v< decltype(z.commit_loop()), matched_final_halted<int> >);
+    STATIC_ASSERT_EQ_TYPE( decltype(z.commit_loop()), matched_final_halted<int> );
 
     static_assert(z.rebind(""_ss) == matched_final_halted{""_ss});
 }
