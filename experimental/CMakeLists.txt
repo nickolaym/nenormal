@@ -2,4 +2,6 @@ add_test_executable(experiment_compose compose.cpp)
 add_test_executable(experiment_either either.cpp)
 add_test_executable(experiment_monadic monadic.cpp)
 
+add_test_executable(experiment_std_string_in_ct std_string_in_ct.cpp)
+
 add_all_above(experimental)
