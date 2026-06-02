@@ -51,7 +51,7 @@ template<size_t N> struct str {
     template<size_t M> constexpr bool operator == (const str<M>& rhs) const { return false; }
 };
 // CTAD
-template<size_t N> str(const charbuf<N>&) -> str<N - 1>;
+template<size_t N> requires (N > 0) str(const charbuf<N>&) -> str<N - 1>;
 
 namespace literals {
 
