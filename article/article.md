@@ -956,11 +956,11 @@ struct ohoho {
 ```cpp
 static_assert(FooBar<foo> && !FooBar<int>);
 
-Foo f();
+foo f();
 static_assert(requires{ {f()} -> FooBar; });
-// нельзя потребовать, что f возвращает именно Foo, но можно - "тип, такой же, как Foo"
+// нельзя потребовать, что f возвращает именно foo, но можно - "тип, такой же, как foo"
 // вот зачем нужен same_as наряду с is_same_v
-static_assert(requires{ {f()} -> std::same_as<Foo>; });
+static_assert(requires{ {f()} -> std::same_as<foo>; });
 
 template<FooBar T> struct foobarwrapper {};
 // эквивалентно
