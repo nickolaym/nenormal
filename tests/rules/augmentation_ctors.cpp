@@ -189,11 +189,11 @@ TEST(ctors, multiply_body_1) {
 TEST(ctors, multiply_body_2) {
     // multiply 2
 
-    // body #1 return halted, +1
+    // body #1 return matched_final (halt), +1
     EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_miss, 2), 1);
 
     // body #1 return not_matched_yet (from regular), +1
-    // body #2 return halted, +1
+    // body #2 return matched_final (halt), +1
     EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_match, 2), 2);
     // #1 return not_matched_yet, +1
     // #2 return not_matched_yet, +1
@@ -205,11 +205,11 @@ TEST(ctors, multiply_body_2) {
 TEST(ctors, multiply_body_3) {
     // multiply 3
 
-    // body #1 return halted, +1
+    // body #1 return matched_final (halt), +1
     EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_miss, 3), 1);
 
     // body #1 return not_matched_yet (from regular), +1
-    // body #2 return halted, +1
+    // body #2 return matched_final (halt), +1
     EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_match, 3), 2);
     // #1 nmy +1; #2 nmy +1; #3 nmy +1; copy elision
     EXAMINE_RULE(ct_aaa, MULTIPLY_BODY(p_match, 3), 3);
@@ -220,13 +220,13 @@ TEST(ctors, multiply_body_3) {
 TEST(ctors, multiply_body_10) {
     // multiply 10
 
-    // body #1 return halted, +1
+    // body #1 return matched_final (halt), +1
     EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_miss, 10), 1);
 
     // body #1 return not_matched_yet (from regular), +1
-    // body #2 return halted, +1
+    // body #2 return matched_final (halt), +1
     EXAMINE_RULE(ct_a, MULTIPLY_BODY(p_match, 10), 2);
-    // #1..#3 nmy, +3; #4 halted, +1
+    // #1..#3 nmy, +3; #4 matched_final (halt), +1
     EXAMINE_RULE(ct_aaa, MULTIPLY_BODY(p_match, 10), 4);
     // #1..#10 nmy, +10
     EXAMINE_RULE(ct_a10, MULTIPLY_BODY(p_match, 10), 10);
@@ -279,19 +279,19 @@ TEST(ctors, repeat_body_10_2_limit_1_to_10) {
 constexpr auto rep20 = REPEAT_BODY_10_2(p_match, 20);
 
 TEST(ctors, repeat_body_10_2_limit_20_first_part) {
-    // halted inside first multiply<body,10>...
-    EXAMINE_RULE(ct_repa<0>, rep20, 1); // mult10(halted +1, skip, return +1), skip, return +1
-    EXAMINE_RULE(ct_repa<1>, rep20, 2); // mult10(nmy +1, halted +1, skip, return +1), skip, return +1
-    EXAMINE_RULE(ct_repa<2>, rep20, 3); // mult10(nmy*2 = +2, halted +1, skip, return +1), skip, return +1
+    // matched_final (halt) inside first multiply<body,10>...
+    EXAMINE_RULE(ct_repa<0>, rep20, 1); // mult10(matched_final (halt) +1, skip, return +1), skip, return +1
+    EXAMINE_RULE(ct_repa<1>, rep20, 2); // mult10(nmy +1, matched_final (halt) +1, skip, return +1), skip, return +1
+    EXAMINE_RULE(ct_repa<2>, rep20, 3); // mult10(nmy*2 = +2, matched_final (halt) +1, skip, return +1), skip, return +1
     // etc up to 8
-    EXAMINE_RULE(ct_repa<8>, rep20, 9); // mult10(nmy*8 = +8, halted +1, skip, return +1), skip, return +1
+    EXAMINE_RULE(ct_repa<8>, rep20, 9); // mult10(nmy*8 = +8, matched_final (halt) +1, skip, return +1), skip, return +1
     // 9
-    EXAMINE_RULE(ct_repa<9>, rep20, 10); // mult10(nmy*9 = +9, halted +1, copy elision), skip, return +1
+    EXAMINE_RULE(ct_repa<9>, rep20, 10); // mult10(nmy*9 = +9, matched_final (halt) +1, copy elision), skip, return +1
 }
 TEST(ctors, repeat_body_10_2_limit_20_second_part) {
-    // halted inside second repeat<multiply<body,2>>...
-    EXAMINE_RULE(ct_repa<10>, rep20, 11); // mult10(nmy*10 = +10), rep5(mult2(halted +1, ret +1), ret +1)
-    EXAMINE_RULE(ct_repa<11>, rep20, 12); // mult10(nmy*10 = +10), rep5(mult2(nmy +1, halted +1), ret +1)
+    // matched_final (halt) inside second repeat<multiply<body,2>>...
+    EXAMINE_RULE(ct_repa<10>, rep20, 11); // mult10(nmy*10 = +10), rep5(mult2(matched_final (halt) +1, ret +1), ret +1)
+    EXAMINE_RULE(ct_repa<11>, rep20, 12); // mult10(nmy*10 = +10), rep5(mult2(nmy +1, matched_final (halt) +1), ret +1)
 
     EXAMINE_RULE(ct_repa<12>, rep20, 13); // mult10(nmy*10 = +10), rep5(mult2(+2)*2, ret +1)
     EXAMINE_RULE(ct_repa<13>, rep20, 14); // mult10(nmy*10 = +10), rep5(mult2(+2)*2, ret +1)
@@ -304,7 +304,7 @@ TEST(ctors, repeat_body_10_2_limit_20_second_part) {
 
     EXAMINE_RULE(ct_repa<18>, rep20, 19); // mult10(nmy*10 = +10), rep5(mult2(+2)*5)
     EXAMINE_RULE(ct_repa<19>, rep20, 20); // mult10(nmy*10 = +10), rep5(mult2(+2)*5)
-    // not halted yet
+    // not matched_final (halt) yet
     EXAMINE_RULE(ct_repa<20>, rep20, 20); // mult10(nmy*10 = +10), rep5(mult2(+2)*5)
 }
 

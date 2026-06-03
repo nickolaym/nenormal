@@ -7,7 +7,6 @@ namespace nn {
 #define NOT_MATCHED(s) (not_matched_yet{CTSTR(s)})
 #define REGULAR(s) (matched_regular{CTSTR(s)})
 #define FINAL(s) (matched_final{CTSTR(s)})
-#define HALTED(s) (matched_final_halted{CTSTR(s)})
 
 TEST(rule_concepts, acceptance) {
     constexpr auto bare_str = CTSTR("");
@@ -145,32 +144,32 @@ TEST(rule_loop, step_by_step) {
     };
     expect(
         NOT_MATCHED(""),
-        HALTED(""),
-        HALTED(""),
-        HALTED(""),
-        HALTED(""),
-        HALTED(""));
+        FINAL(""),
+        FINAL(""),
+        FINAL(""),
+        FINAL(""),
+        FINAL(""));
     expect(
         NOT_MATCHED("a"),
         NOT_MATCHED("b"),
-        HALTED("b"),
-        HALTED("b"),
-        HALTED("b"),
-        HALTED("b"));
+        FINAL("b"),
+        FINAL("b"),
+        FINAL("b"),
+        FINAL("b"));
     expect(
         NOT_MATCHED("aa"),
         NOT_MATCHED("ba"),
         NOT_MATCHED("bb"),
-        HALTED("bb"),
-        HALTED("bb"),
-        HALTED("bb"));
+        FINAL("bb"),
+        FINAL("bb"),
+        FINAL("bb"));
     expect(
         NOT_MATCHED("aaa"),
         NOT_MATCHED("baa"),
         NOT_MATCHED("bba"),
         NOT_MATCHED("bbb"),
-        HALTED("bbb"),
-        HALTED("bbb"));
+        FINAL("bbb"),
+        FINAL("bbb"));
     expect(
         NOT_MATCHED("aaae"),
         NOT_MATCHED("baae"),
@@ -178,7 +177,7 @@ TEST(rule_loop, step_by_step) {
         NOT_MATCHED("bbbe"),
         FINAL("bbbf"),
         FINAL("bbbf"));
-    static_assert(rl(NOT_MATCHED("aaaaaaaaaaaaaaaa")) == HALTED("bbbbbbbbbbbbbbbb"));
+    static_assert(rl(NOT_MATCHED("aaaaaaaaaaaaaaaa")) == FINAL("bbbbbbbbbbbbbbbb"));
     static_assert(rl(NOT_MATCHED("eaaaaaaaaaaaaaaa")) == FINAL("fbbbbbbbbbbbbbbb"));
 }
 
@@ -432,11 +431,11 @@ TEST(inplace, simple_check) {
     // loop
     STATIC_ASSERT_EQ(
         run_inplace("zzz", rl),
-        (inplace_argument{"zzz", tristate_kind::matched_final_halted})
+        (inplace_argument{"zzz", tristate_kind::matched_final})
     );
     STATIC_ASSERT_EQ(
         run_inplace("aaa", rl),
-        (inplace_argument{"bbb", tristate_kind::matched_final_halted})
+        (inplace_argument{"bbb", tristate_kind::matched_final})
     );
     STATIC_ASSERT_EQ(
         run_inplace("ccc", rl),
@@ -444,7 +443,7 @@ TEST(inplace, simple_check) {
     );
     STATIC_ASSERT_EQ(
         run_inplace("eee", rl),
-        (inplace_argument{"fff", tristate_kind::matched_final_halted})
+        (inplace_argument{"fff", tristate_kind::matched_final})
     );
     STATIC_ASSERT_EQ(
         run_inplace("aec", rl),

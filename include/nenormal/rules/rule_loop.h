@@ -9,7 +9,7 @@ namespace nn {
 
 // rule loop repeatedly applies its body until reached some final state.
 // to provide that, special wrapper rule_loop_body translates result of nested rule:
-// - not_matched_yet - to matched_final_halted (to prevent endless loop)
+// - not_matched_yet - to matched_final (to prevent endless loop)
 // - matched_regular - to not_matched_yet (to retry with new text)
 
 #define DEBUG_CALL_PAIR(name_cts) \

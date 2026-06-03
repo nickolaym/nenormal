@@ -97,14 +97,14 @@ auto           matched_final  <T>::commit_alts() && { return std::move(*this); }
 В цикл передаётся (по rvalue-ссылке) not_matched_yet.
 
 Внутри выполняется (или не выполняется) преобразование, и мы получаем
-- ссылку на исходный not_matched_yet - превращаем в значение matched_final_halted
+- ссылку на исходный not_matched_yet - превращаем в значение matched_final
 - значение matched_regular - превращаем в значение not_matched_yet
 - значение matched_final
 
 При разматывании цикла (`FWD(nmy) >> body >> body >> ... >> rule_loop{}`)
 (где body инкапсулирует выполнение одной итерации с последующей заменой типа)
 результат выражения может оказаться
-- ссылкой на промежуточный `matched_final` или `matched_final_halted` (из `>> body`)
+- ссылкой на промежуточный `matched_final` (из `>> body`)
 - окончательным значением (из рекурсии `>> rule_loop{}`)
 - новым значением `not_matched_yet` (из рекурсии), если достигнута предельная длительность цикла
 

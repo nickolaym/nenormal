@@ -114,7 +114,7 @@ TEST(rule_loop, limited_loops) {
         if constexpr(L <= D) {
             static_assert(output == ::nn::not_matched_yet{dots<D - L>});
         } else {
-            static_assert(output == ::nn::matched_final_halted{dots<0>});
+            static_assert(output == ::nn::matched_final{dots<0>});
         }
     };
 

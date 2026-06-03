@@ -15,7 +15,6 @@ enum class tristate_kind {
     not_matched_yet,
     matched_regular,
     matched_final,
-    matched_final_halted,
 };
 
 template<tristate_kind kind, class T> struct tristate {
@@ -64,8 +63,8 @@ template<tristate_kind kind, class T> struct tristate {
     constexpr auto           commit_alts() const& requires MAT { return *this; }
 
     // not_matched_yet breaks the loop
-    constexpr auto commit_loop() &&     requires NMY { return tristate<tristate_kind::matched_final_halted, T>{std::move(value)}; }
-    constexpr auto commit_loop() const& requires NMY { return tristate<tristate_kind::matched_final_halted, T>{value}; }
+    constexpr auto commit_loop() &&     requires NMY { return tristate<tristate_kind::matched_final, T>{std::move(value)}; }
+    constexpr auto commit_loop() const& requires NMY { return tristate<tristate_kind::matched_final, T>{value}; }
     // matched_regular restarts the loop
     constexpr auto commit_loop() &&     requires REG { return tristate<tristate_kind::not_matched_yet, T>{std::move(value)}; }
     constexpr auto commit_loop() const& requires REG { return tristate<tristate_kind::not_matched_yet, T>{value}; }
@@ -81,7 +80,6 @@ template<tristate_kind kind, class T> struct tristate {
 template<class T> using not_matched_yet = tristate<tristate_kind::not_matched_yet, T>;
 template<class T> using matched_regular = tristate<tristate_kind::matched_regular, T>;
 template<class T> using matched_final = tristate<tristate_kind::matched_final, T>;
-template<class T> using matched_final_halted = tristate<tristate_kind::matched_final_halted, T>; // special case of final
 
 static_assert(Tristate<not_matched_yet<int>>);
 static_assert(NotMatchedYet<not_matched_yet<int>>);
