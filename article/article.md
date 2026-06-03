@@ -1188,3 +1188,92 @@ CtStr auto concat_ct(CtStr auto ctx, CtStr auto cty) {
 
 Тем не менее, монада Tristate оказалась достаточно живучей, чтоб не выкидывать её
 после оптимизации.
+
+#### MachineData
+
+Состояние машины - то, что мы преобразуем на каждом шаге, - это, очевидно, строка.
+
+Но я уже упомянул аугментацию, поэтому введу для этого некоторое обобщение.
+
+```cpp
+// CtStr - концепт компайлтаймовой строки
+// AugmentedText - аугментерованная строка
+
+template<class T> concept MachineData = CtStr<T> || AugmentedText<T>;
+```
+
+Почему так, а не использовать всегда только аугментированный текст с пустой аугментацией?
+
+Ну, отчасти исторически сложилось. Отчасти это уменьшает нагрузку на компилятор,
+потому что ему не нужно воплощать и вызвать функции, которые ничего не делают.
+
+#### Tristate
+
+Внезапно, - но исторически у монады из трёх состояний - четыре состояния.
+
+Потому что НАМ-машина должна остановиться, если ни одно из правил не подошло.
+
+Расщепив финальное состояние на два (после правила и после неуспеха) мы можем
+как-то дополнительно диагностировать и обрабатывать это.
+
+```cpp
+enum class tristate_kind {
+    not_matched_yet,
+    matched_regular,
+    matched_final,
+    matched_final_halted,
+};
+
+template<tristate_kind kind, class T>
+struct tristate {
+    REPRESENTS(Tristate);
+    T value;
+    // и всякие полезности
+};
+
+template<class T> using not_matched_yet      = tristate<tristate_kind::not_matched_yet,      T>;
+template<class T> using matched_regular      = tristate<tristate_kind::matched_regular,      T>;
+template<class T> using matched_final        = tristate<tristate_kind::matched_final,        T>;
+template<class T> using matched_final_halted = tristate<tristate_kind::matched_final_halted, T>;
+```
+
+### Правила
+
+Правило - это функция, которая принимает `MachineData` и отдаёт `Tristate MachineData`.
+(в случае неудачи - отдаёт аргумент).
+
+```cpp
+template<class T> concept RuleOutput = TristateOfTraits<is_MachineData>;
+```
+
+
+
+### Циклы
+
+В НАМ-машине есть два цикла:
+- перебор правил на одном шаге
+- цикл шагов
+
+Логика их такая:
+```cpp
+string text;
+for (auto rule : rules) {
+    result = rule(text);
+    if (result is success) return result;
+}
+return final(text);
+```
+и
+```cpp
+string text;
+while (true) {
+    result = all_rules(text);
+    if (result is final) return result.value;
+    text = result.value;
+}
+```
+
+Но цикл for требует, чтобы набор элементов был однотипный (какой тип у переменной цикла?),
+а цикл while - чтобы однотипными были значения переменной состояния.
+
+В нашем же случае, с полиморфными строками, и с правилами
