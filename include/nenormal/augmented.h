@@ -84,12 +84,12 @@ struct cumulative_effect {
     }
 
     constexpr bool operator == (cumulative_effect const& v) const
-        requires std::equality_comparable<A>
+        requires requires { a == v.a; }
     { return a == v.a; }
 
     template<class A1>
     constexpr bool operator == (cumulative_effect<A1, F> const& v) const
-        requires std::equality_comparable_with<A, A1>
+        requires requires { a == v.a; }
     { return a == v.a; }
 };
 
@@ -145,7 +145,7 @@ struct augmented_text {
         = default;
     template<CtStr T1, Augmentation A1>
     constexpr bool operator == (augmented_text<T1,A1> const& v) const
-        requires std::equality_comparable_with<A, A1>
+        requires requires { aux == v.aux; }
     {
         return text == v.text && aux == v.aux;
     }
@@ -233,3 +233,16 @@ constexpr auto get_debug_callback(const Augmented auto& i) {
 }
 
 } // namespace nn
+
+
+namespace std {
+
+template<
+    ::nn::Augmentation T,
+    ::nn::Augmentation U,
+    template<class>class TQual,
+    template<class>class UQual >
+    requires (!std::same_as<T, U>)
+struct basic_common_reference<T, U, TQual, UQual> : std::type_identity<void> {};
+
+} // namespace std

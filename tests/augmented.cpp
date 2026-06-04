@@ -21,6 +21,16 @@ TEST(augmentation, comparison) {
     // can compare with a function-less object
     static_assert(passed{123} == cumulative_effect{123., inc});
     static_assert(cumulative_effect{123, inc} == passed{123.});
+
+    static_assert(
+        augmented_text{"aaa"_cts, empty{}} ==
+        augmented_text{"aaa"_cts, empty{}});
+    static_assert(
+        augmented_text{"aaa"_cts, passed{123}} ==
+        augmented_text{"aaa"_cts, passed{123}});
+    static_assert(
+        augmented_text{"aaa"_cts, cumulative_effect{123, inc}} ==
+        augmented_text{"aaa"_cts, passed{123}});
 }
 
 

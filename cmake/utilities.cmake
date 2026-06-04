@@ -10,6 +10,17 @@ function(add_test_executable name)
     gtest_discover_tests(${name})
 endfunction()
 
+function(add_test_executables_here prefix)
+    file(GLOB SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
+    foreach(SOURCE_FILE ${SOURCES})
+        get_filename_component(FILE_NAME ${SOURCE_FILE} NAME_WE)
+        set(TARGET_NAME "${prefix}${FILE_NAME}")
+        add_test_executable(${TARGET_NAME} ${SOURCE_FILE})
+        message(STATUS "Created executable target: ${TARGET_NAME} from ${SOURCE_FILE}")
+    endforeach()
+endfunction()
+
+
 # Macro to collect all targets above in the file
 macro(add_all_above name)
     get_property(_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
