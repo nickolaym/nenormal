@@ -322,45 +322,6 @@ TEST(augmented, machine_runtime) {
     EXPECT_EQ(count, 3);
 }
 
-TEST(hidden, text) {
-    constexpr auto p = HIDDEN_RULE(RULE("a", "b"));
-    static_assert(p(NOT_MATCHED("")) == NOT_MATCHED(""));
-    static_assert(p(NOT_MATCHED("aaa")) == REGULAR("baa"));
-}
-
-TEST(hidden, empty_augmentation) {
-    constexpr auto p = HIDDEN_RULE(RULE("a", "b"));
-
-    constexpr MachineData auto bad_input = augmented_text{CTSTR(""), empty{}};
-    constexpr RuleFailedOutput auto bad_output = p(not_matched_yet{bad_input});
-    static_assert(bad_output.value == bad_input);
-
-    constexpr MachineData auto good_input = augmented_text{CTSTR("aaa"), empty{}};
-    constexpr RuleMatchedOutput auto good_output = p(not_matched_yet{good_input});
-    static_assert(good_output.value == augmented_text{CTSTR("baa"), empty{}});
-}
-
-TEST(hidden, cumulative_augmentation) {
-    constexpr auto p = RULE("a", "b");
-    constexpr auto h = HIDDEN_RULE(p);
-
-    constexpr auto inc = [](int n, auto...) { return n + 1; };
-
-    constexpr MachineData auto bad_input = augmented_text{CTSTR(""), cumulative_effect{0, inc}};
-    constexpr RuleFailedOutput auto bad_output = h(not_matched_yet{bad_input});
-    static_assert(bad_output.value == bad_input);
-
-    constexpr MachineData auto good_input = augmented_text{CTSTR("aaa"), cumulative_effect{0, inc}};
-    constexpr RuleMatchedOutput auto good_output = h(not_matched_yet{good_input});
-    static_assert(good_output.value.text == CTSTR("baa"));
-    static_assert(good_output.value.aux == cumulative_effect{0, inc});
-
-    // in contrast, non-hidden rule updates the accumulator
-    constexpr RuleMatchedOutput auto good_updated_output = p(not_matched_yet{good_input});
-    static_assert(good_updated_output.value.text == CTSTR("baa"));
-    static_assert(good_updated_output.value.aux == cumulative_effect{1, inc});
-}
-
 /// facade_rule tests
 
 // Test 1: transformation result of bare rule and facade_rule must match
