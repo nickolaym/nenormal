@@ -35,7 +35,9 @@ template<class T> concept RuleFinalOutput   = MatchedFinalOfTraits<T, is_Machine
 
 // inplace in-out arg
 
-template<class T> concept RuleFixedInput = std::same_as<T, std::string> || InplaceAugmented<T>;
+template<class T> concept RuleFixedInput =
+    std::same_as<std::remove_cvref_t<T>, std::string> ||
+    InplaceAugmented<T>;
 CONCEPT_TYPECHECKER(RuleFixedInput);
 template<class T> concept RuleInplaceArg = InplaceOfTraits<T, is_RuleFixedInput>;
 

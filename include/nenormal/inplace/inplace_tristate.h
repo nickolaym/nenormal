@@ -15,9 +15,13 @@ struct inplace_argument {
     T value; // rewriteable
     tristate_kind kind = tristate_kind::not_matched_yet;
 
-    constexpr bool operator == (const inplace_argument&) const = default;
+    constexpr bool operator == (const inplace_argument&) const
+        requires ::std::equality_comparable<T>
+        = default;
     template<class U>
-    constexpr bool operator == (const inplace_argument<U>& other) const {
+    constexpr bool operator == (const inplace_argument<U>& other) const
+        requires requires { value == other.value; }
+    {
         return value == other.value && kind == other.kind;
     }
 
