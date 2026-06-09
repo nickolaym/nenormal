@@ -1307,6 +1307,92 @@ template<class T> concept RuleOutput = TristateOfTraits<T, is_MachineData>;
 ```
 где NotMatchedYet - субкласс Tristate. (в терминах Барбары Лисков, конечно).
 
+### Диаграмма переходов
+
+## Схема переходов
+
+### В одной итерации
+
+```mermaid
+graph TD
+
+START((start))
+START ~~~ LOOP_BODY
+subgraph LOOP_BODY[тело цикла]
+    subgraph FOR_RULES[цикл перебора правил]
+        subgraph INPUT[исходные данные]
+            NMY([not_matched_yet])
+        end
+        subgraph RULES[правила]
+            MISMATCHED_RULE[правило не подошло]
+            RULE[RULE]
+            FINAL_RULE[FINAL_RULE]
+        end
+    end
+    subgraph RESULTS[результаты итерации]
+        MR([matched_regular])
+        MF([matched_final])
+    end
+end
+LOOP_BODY ~~~ END
+END((end))
+
+%%%%%%%%
+
+START --> NMY
+
+NMY ==> RULES
+
+MISMATCHED_RULE --> NMY
+RULE ----> MR
+FINAL_RULE ----> MF
+
+NMY --|commit_loop|--> MF
+MR --|commit_loop|--> START
+
+MF --> END
+```
+
+### Запуск (с прерыванием по длительности)
+
+```mermaid
+graph TD
+
+START((start))
+
+subgraph RUN[запуск]
+    NMY([not_matched_yet])
+
+    ITERATION[итерация]
+
+    subgraph IT[результаты итерации]
+        IT_NMY([новое not_matched_yet])
+        IT_MF([matched_final])
+    end
+end
+
+subgraph RESULTS[результаты запуска]
+    RES_NMY([not_matched_yet])
+    RES_MF([matched_final])
+end
+
+END((end))
+
+START --> NMY
+NMY --> ITERATION
+
+ITERATION -->|matched_regular| IT_NMY
+ITERATION -->|not_matched_yet| IT_MF
+ITERATION -->|matched_final| IT_MF
+
+IT_NMY -->|на следующую итерацию| NMY
+IT_NMY -->|предел по количеству| RES_NMY
+IT_MF --> RES_MF
+
+RESULTS --> END
+```
+
+
 ### Циклы
 
 В НАМ-машине есть два цикла:
@@ -1495,3 +1581,57 @@ struct while_loop {
 
 Нужно ли ради этого делать прогрессивный цикл? Скорее нет, чем да, потому что
 каждое укрупнение - это новая работа по спуску и подъёму по лесенке умножений.
+
+### Tristate в чистом виде или ad-hoc?
+
+На самом деле, это вопрос: написать один раз красиво и затем превозмогать
+сопутствующие трудности, или же каждый раз написать наиболее эффективно,
+но не переиспользовать код.
+
+Выше я уже сказал про fold expression. И действительно, - всё, что мне нужно,
+это определить `operator >> (RuleOutput, Rule)`
+- для `not_ready_yet` он вызывает правый операнд над левым
+- для `matched_regular` и `matched_final` - немедленно возращает левый операнд.
+
+Тело цикла, формально будучи функцией `RuleInput -> RuleOutput`, - не просто
+вызывает вложенное правило (набор правил), но затем меняет тип результата,
+чтобы уйти на следующий такт с обновлённым `not_ready_yet`.
+
+Если мы всегда возвращаем результат (или левый операнд) по значению, то для
+fold expression длиной N мы сделаем N копирований или перемещений.
+
+Для экономии - пусть неуспешное правило возвращает операнд по ссылке
+(это наше требование: not_matched_yet на выходе идентичен тому, что на входе),
+и пусть оператор >> для успешного левого операнда тоже возвращает его по ссылке.
+
+Тогда составное правило будет устроено вот так
+```cpp
+template<Rule auto... ps> struct rules {
+
+    constexpr
+    RuleOutput decltype(auto) // по ссылке или значению - решим внутри
+    operator()(RuleInput auto&& input) const // принимаем операнд по ссылке
+    {
+        return (input >> ... >> ps).commit();
+    }
+};
+```
+Что это за commit?
+
+А дело в том, что результат свёртки - это
+- или `not_matched_yet &&` - так ничего и не подошло
+- или `matched_regular` / `matched_final` - последнее правило вернуло значение
+- или `matched_regular&&` / `matched_final&&` - значение возникло где-то посреди
+
+И мы обязаны пере-приземлить ссылку на временный объект в значение. Но при этом
+сохранить ссылку на `not_matched_yet`.
+
+Это плюс один move-конструктор на каждый уровень вложенности.
+
+А в случае с циклом - в конце свёртки будет
+- или новое значение `not_matched_yet` (тело цикла выполнило замену)
+- или старая ссылка на `not_matched_yet` (достигли отсечки по длительности)
+- или значение либо ссылка на `matched_final` (достигли финального состояния)
+
+и нам в любом случае нужно приземлить его в значение.
+
