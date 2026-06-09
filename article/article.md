@@ -1371,7 +1371,7 @@ auto for_each(auto seed, auto... items) {
 Хорошо. Но если у нас цикл с прерыванием (а нам нужен именно такой - после сработавшего
 правила остальные надо проигнорировать), то на рекурсии мы бы сделали так
 ```cpp
-for_loop(auto seed, auto item, auto... items) {
+auto for_loop(auto seed, auto item, auto... items) {
     auto result = do_something(seed, item);
     if constexpr (result is LoopBreaker)
         return result;
@@ -1399,3 +1399,99 @@ Seed auto operator & (Seed auto seed, Item auto item) {
 Тут-то и становится понятно, зачем нужно Either или Tristate!
 
 #### Цикл while
+
+Если for - это цикл пусть и произвольной, но определённой длительности,
+то while может выполняться заведомо неизвестное количество раз.
+
+И, поскольку на каждом шаге возникает значение нового уникального типа, нам уже
+никак не обойтись без рекурсии. И к сожалению, это не концевая рекурсия...
+
+Поэтому будем решать проблему - как уменьшить глубину.
+
+Выход всё тот же: развёртывание цикла.
+
+Наивный код
+```cpp
+auto while_loop(auto seed, auto body) {
+    auto next = body(seed);
+    if constexpr (next is LoopBreaker)
+        return next;
+    else
+        return while_loop(next, body);
+}
+```
+Во-первых, снова перепишем с помощью двуместного оператора.
+```cpp
+template<class B>
+struct while_loop {
+    B body;
+    auto operator()(auto seed) const {
+        return seed & body & *this;
+    }
+};
+```
+Во-вторых, заметим, что теперь развёртывание становится проще:
+```cpp
+template<class B>
+struct while_loop {
+    B body;
+    auto operator()(auto seed) const {
+        return seed & body & body & body & body & ..... & *this;
+    }
+};
+```
+При этом глубина рекурсии уменьшается кратно количеству повторений.
+
+В-третьих, разнесём фиксированные повторения и зацикливание
+```cpp
+template<size_t U, class B>
+struct multiply_body {
+    B body;
+    auto operator()(auto seed) const {
+        return seed & body & body & ..... & body; // U (unroll) раз
+    }
+};
+
+template<class B>
+struct while_loop {
+    B body;
+    auto operator()(auto seed) const {
+        return seed & multiply_body{body} & *this;
+    }
+};
+```
+Тем не менее, - если длительность цикла до останова занимает N шагов,
+то глубина рекурсии всё ещё O(N), а именно, N/U.
+
+На самом деле, мы можем добиться логарифмической глубины, - заменяя на очередном
+витке рекурсии тело на его степень.
+```cpp
+template<class B>
+struct while_loop {
+    B body;
+    auto operator()(auto seed) const {
+        auto next_body = multiply_body<M>{body};
+        auto next_loop = while_loop<decltype(next_body)>{next_body};
+        return seed & multiply_body<U>{body} & next_loop;
+    }
+};
+```
+Причём мы даже можем изощриться, введя два коэффициента:
+- величину размотки U
+- величину умножения M
+
+Тогда
+- первые `U` шагов проходят на глубине 1+1=2 (while_loop и multiply_body<U>)
+- следующие `M*U` - на глубине 2+2=4 (вторая итерация, и multiply над multiply)
+- следующие `M*M*U` - на глубине 3+3=6 (третья итерация и тройное умножение)
+- и так далее
+Что асимптотически даёт `2 * log(N/U) / log(M)` глубины.
+
+Но на практике, если мы заставим компилятор родить примерно 3-5 тысяч строковых типов,
+то это займёт очень много времени и памяти. У меня WSL убивал Windows с 16 ГБ.
+
+Поэтому, если введём коэффициент размотки 50, то получим максимальную глубину
+всего лишь 100.
+
+Нужно ли ради этого делать прогрессивный цикл? Скорее нет, чем да, потому что
+каждое укрупнение - это новая работа по спуску и подъёму по лесенке умножений.
