@@ -1223,19 +1223,31 @@ template<class T> concept MachineData = CtStr<T> || AugmentedText<T>;
 
 #### Tristate
 
-Внезапно, - но исторически у монады из трёх состояний - четыре состояния.
+Внезапно, - но исторически у монады из трёх состояний - было четыре состояния.
 
 Потому что НАМ-машина должна остановиться, если ни одно из правил не подошло.
 
 Расщепив финальное состояние на два (после правила и после неуспеха) мы можем
 как-то дополнительно диагностировать и обрабатывать это.
 
+А по хорошему, надо расщеплять вообще на три:
+- сработало финальное правило
+- не сработало ни одно правило, диагностировано мгновенное зацикливание
+- сработало обычное правило, но по ряду признаков диагностировано зацикливание
+  (либо достигнут предел времени работы)
+
+Но потом я решил, что это переусложнение будет вызывать больше вопросов, чем пользы.
+
+Поэтому - три значит три. Внутренние состояния
+- ещё не сопоставлено
+- сопоставлено с обычным правилом
+- сопоставлено с финальным правилом
+
 ```cpp
 enum class tristate_kind {
     not_matched_yet,
     matched_regular,
     matched_final,
-    matched_final_halted,
 };
 
 template<tristate_kind kind, class T>
@@ -1248,7 +1260,6 @@ struct tristate {
 template<class T> using not_matched_yet      = tristate<tristate_kind::not_matched_yet,      T>;
 template<class T> using matched_regular      = tristate<tristate_kind::matched_regular,      T>;
 template<class T> using matched_final        = tristate<tristate_kind::matched_final,        T>;
-template<class T> using matched_final_halted = tristate<tristate_kind::matched_final_halted, T>;
 ```
 
 ### Правила
