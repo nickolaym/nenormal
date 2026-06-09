@@ -1268,10 +1268,44 @@ template<class T> using matched_final        = tristate<tristate_kind::matched_f
 (в случае неудачи - отдаёт аргумент).
 
 ```cpp
-template<class T> concept RuleOutput = TristateOfTraits<is_MachineData>;
+template<class T> concept RuleOutput = TristateOfTraits<T, is_MachineData>;
 ```
 
+Однако, если организовывать цепочку вычислений вида
+```cpp
+MachineData auto d0 = .....;
+RuleOutput auto t1 = p0(d0);
+if constexpr (t1 is matched) return t1;
+MachindData auto&& d1 = t1.value;
+RuleOutput auto t2 = p1(t1);
+if constexpr (t2 is matched) return t2;
+// и так далее
+```
+то выясняется, что мы только и делаем, что распаковываем и обратно упаковываем
+`not_matched_yet{d0}`
 
+Собственно говоря, в хаскелле с монадой Either происходит то же самое
+```haskell
+(Right data) >>= f1 >>= f2 >>= ...
+-- где
+f1 :: data -> Either data result
+f1 the_data = if success(the_data) then Left the_result(the_data) else Right the_data
+```
+что, в случае с аугментацией, означает кучу ненужных конструирований.
+
+Поэтому вместо тотальных функций `MachineData -> Tristate MachineData`
+перешёл к дизайну с частичными функциями `Tristate MachineData -> Tristate MachineData`,
+где аргумент - это всегда `NotMatchedYet MachineData`.
+
+C++ позволяет ещё и передавать и возвращать ссылки, что даёт экономию на конструкторах.
+(Но об этом позже).
+
+Просто зафиксируем, что
+```cpp
+template<class T> concept RuleInput  = NotMatchedYetOfTraits<T, is_MachineData>;
+template<class T> concept RuleOutput = TristateOfTraits<T, is_MachineData>;
+```
+где NotMatchedYet - субкласс Tristate. (в терминах Барбары Лисков, конечно).
 
 ### Циклы
 
@@ -1301,4 +1335,67 @@ while (true) {
 Но цикл for требует, чтобы набор элементов был однотипный (какой тип у переменной цикла?),
 а цикл while - чтобы однотипными были значения переменной состояния.
 
-В нашем же случае, с полиморфными строками, и с правилами
+В нашем же случае, с полиморфными строками, и с полиморфными же правилами, - этого нет.
+
+#### Цикл for
+
+Зачастую цикл определяют рекурсивно. Примерно так (псевдокод):
+```cpp
+auto for_each(auto seed, auto item, auto... items) {
+    auto next_seed = do_something(seed, item);
+    return for_each(next_seed, items...);
+}
+auto for_each(auto seed) {
+    return seed;
+}
+```
+Но для количества элементов, измеряемого сотнями, это ужасно неэффективно.
+Оно приводит к инстанцированию O(N) шаблонов с O(N^2) параметрами (все типы элементов,
+все без первого, все без первых двух...) и создаёт вызов constexpr-функции
+и-или рекурсивное инстанцирование шаблона на большую глубину.
+Обычно у компилятора есть отсечка внутренней рекурсии, также измеряемая несколькими
+сотнями. Поэтому такой подход не работает.
+
+Однако есть трюк, позволяющий избежать этой проблемы! Это fold expression.
+```cpp
+// определяем любой красивый двуместный оператор
+Seed auto operator & (Seed auto seed, Item auto item) {
+    return do_something(seed, item);
+}
+// и выполняем свёртку
+auto for_each(auto seed, auto... items) {
+    return (seed & ... & items);
+}
+```
+
+Хорошо. Но если у нас цикл с прерыванием (а нам нужен именно такой - после сработавшего
+правила остальные надо проигнорировать), то на рекурсии мы бы сделали так
+```cpp
+for_loop(auto seed, auto item, auto... items) {
+    auto result = do_something(seed, item);
+    if constexpr (result is LoopBreaker)
+        return result;
+    else
+        return for_loop(seed, items...);
+}
+```
+Тогда как свёртка всегда развёртывается на всю длину.
+
+Не проблема!
+```cpp
+Seed auto operator & (Seed auto seed, Item auto item) {
+    if constexpr (seed is LoopBreaker)
+        return seed;
+    else
+        return do_something(seed, item);
+}
+```
+(можно делать constexpr-проверку в виде двух перегрузок для NotLoopBreakerYet и LoopBreaker).
+
+Да, мы инстанцируем O(N) операторов - по числу элементов цикла.
+Но хвост цикла при этом - тривиальные функции, просто return левого аргумента.
+И количество параметров там не улетело в космос.
+
+Тут-то и становится понятно, зачем нужно Either или Tristate!
+
+#### Цикл while
