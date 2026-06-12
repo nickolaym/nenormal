@@ -294,7 +294,7 @@ constexpr auto cleanup = RULES(
 );
 
 constexpr auto program = NAMED_RULE(program_t, RULES(
-    FACADE_RULE("carry        x^    : ^y  ", add_carry),
+    FACADE_RULE("carry        y^    : ^u  ", add_carry),
     FACADE_RULE("add digits   [x]y= : ^=z ", add_digits),
     FACADE_RULE("move digit   [x]y  : y[x]", move_digit_to_the_right),
     FACADE_RULE("plus nothing +=    :     ", plus_nothing),
