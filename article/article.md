@@ -38,36 +38,22 @@
 
 ### Первое и самое главное. Строки.
 
-Хотя std::string можно использовать в compile-time, но с интересными оговорками.
+Хотя std::string можно использовать в compile-time, но с оговорками.
+Выделение памяти не может пересекать границу compile-time - run-time.
 
 ```cpp
-constexpr std::string s = "short";
-constexpr std::string l = "very very very very long string needs allocation";
-
-static_assert(!s.empty()); // труъ constexpr-константа, можно втащить в compile-time
-static_assert(!l.empty()); // ОШИБКА: был new в рантайме, поэтому уже не труъ
-
-constexpr size_t l_size() {
-    // внутри контекста compile-time свой аллокатор, там можно всё
-    std::string l = "very very very very long string needs allocation";
-    return !l.size();
+constexpr std::string make(bool s) {
+  if (s)
+    return "short"; // small object optimization
+  else
+    return "long enough string that needs allocation"; // new char[]
 }
-static_assert(l_size() > 0); // труъ
-using T = char[l_size()]; // труъ
 
-constexpr std::string string_itself(bool s) {
-    if (s)
-        return "short";
-    else
-        return "very very very very long string needs allocation";
-}
-// внутри одного контекста всё хорошо
-static_assert(string_itself(false) == "very very very very long string needs allocation");
-void test() {
-    assert(string_itself(false) == "very very very very long string needs allocation");
-}
-constexpr std::string s1 = string_itself(true); // труъ
-constexpr std::string s2 = string_itself(false); // ОШИБКА: не труъ, сменили контекст
+constexpr auto s = make(true);
+constexpr auto l = make(false); // ошибка компиляции
+
+static_assert(make(true) != "");
+static_assert(make(false) != ""); // ок. внутри контекста КТ есть свой менеджер кучи
 ```
 
 Запихнуть решение целиком внутрь гигантской compile-time-функции мне не хотелось,
@@ -167,18 +153,18 @@ constexpr int d = deep_call(1000);
 
 Ну и комментарии в классическом стиле `# .....`
 ```
-abc = {
+abc:
     "a" -> "b"
     "b" -> "c"
-}
-cde = {
+
+cde:
     "c" -> "d"
     "d" -> "e"
-}
-main = { # если уж завели подпрограммы, то заведём и главную среди них
+
+main: # если уж завели подпрограммы, то заведём и главную среди них
     cde
     abc
-}
+
 # общий список
 main
 ```
@@ -373,9 +359,10 @@ div_start:    ""        ->  "[div]"
 ```
 Но вот незадача:
 - если мы поместим stop перед div_start, то получим старое доброе `"STOP111111"одинодинодин!`
-- а если наоборот, то получим осцилляцию между правилами
-  - div_start: "11111" -> "[div]11111"
-  - div_end: "[div]11111" -> "11111"
+- а если наоборот, то получим зацикливание 1-4-2-1
+  - "1" -> "[div]1" -> "[mul]1111" -> "1111"
+  - "1111" -> "[div]1111" -> "1[div]11" -> "11[div]" -> "11"
+  - "11" -> "[div]11" -> "1[div]" -> "1"
 
 Решение - запускать деление не с 0, а с 2.
 ```
