@@ -69,6 +69,15 @@ template<Rule auto p> struct rule_loop_body {
 constexpr auto chain(NotMatchedYet auto&& nmy)
 { return FWD(nmy); }
 
+constexpr auto repeat(NotMatchedYet auto&& nmy, Rule auto&& p, CtSize auto ctn)
+requires (ctn.value > 0)
+{
+    if constexpr (ctn.value == 1 || Matched<decltype(p(FWD(nmy)))>)
+        return p(FWD(nmy));
+    else
+        return repeat(p(FWD(nmy)), FWD(p), ct_size_v<ctn.value - 1>);
+}
+
 constexpr auto chain(NotMatchedYet auto&& nmy, Rule auto&& p, Rule auto&&... ps)
 {
     // constexpr size_t N = (sizeof...(ps))+1;
@@ -88,40 +97,9 @@ struct multiply_body {
         if constexpr (N == 0)
             return FWD(nmy);
         else if constexpr (N == 1)
-            return chain(FWD(nmy),
-                body);
-        else if constexpr (N == 2)
-            return chain(FWD(nmy),
-                body, body);
-        else if constexpr (N == 3)
-            return chain(FWD(nmy),
-                body, body, body);
-        else if constexpr (N == 4)
-            return chain(FWD(nmy),
-                body, body, body, body);
-        else if constexpr (N == 5)
-            return chain(FWD(nmy),
-                body, body, body, body, body);
-        else if constexpr (N == 6)
-            return chain(FWD(nmy),
-                body, body, body, body, body,
-                body);
-        else if constexpr (N == 7)
-            return chain(FWD(nmy),
-                body, body, body, body, body,
-                body, body);
-        else if constexpr (N == 8)
-            return chain(FWD(nmy),
-                body, body, body, body, body,
-                body, body, body);
-        else if constexpr (N == 9)
-            return chain(FWD(nmy),
-                body, body, body, body, body,
-                body, body, body, body);
-        else if constexpr (N == 10)
-            return chain(FWD(nmy),
-                body, body, body, body, body,
-                body, body, body, body, body);
+            return body(FWD(nmy));
+        else if constexpr (N <= 10)
+            return repeat(FWD(nmy), body, ct_size_v<N>);
         else
             return chain(FWD(nmy),
                 multiply_body<body, 10>{},
