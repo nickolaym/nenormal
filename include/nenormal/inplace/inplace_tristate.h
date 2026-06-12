@@ -30,7 +30,6 @@ struct inplace_argument {
             "inplace_not_matched_yet",
             "inplace_matched_regular",
             "inplace_matched_final",
-            "inplace_matched_final_halted",
         };
         return os << names[(int)v.kind] << "{" << v.value << "}";
     }
@@ -47,13 +46,12 @@ struct inplace_argument {
     constexpr bool commit() {
         switch (kind) {
         case tristate_kind::not_matched_yet:
-            kind = tristate_kind::matched_final_halted;
+            kind = tristate_kind::matched_final;
             break;
         case tristate_kind::matched_regular:
             kind = tristate_kind::not_matched_yet;
             break;
         case tristate_kind::matched_final:
-        case tristate_kind::matched_final_halted:
             break;
         default:
             std::unreachable();

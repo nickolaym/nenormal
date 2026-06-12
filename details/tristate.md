@@ -1,13 +1,14 @@
-# Троичная (четверичная) монада
+# Троичная монада
 
 ## Немножко корявого теорката
 
-Удобно (и выгодно для компилятора) рассматривать НАМ-машину в категории RuleOutput с 3 (4) объектами:
+Удобно (и выгодно для компилятора) рассматривать НАМ-машину в категории RuleOutput с 3 объектами:
 
 - `not_matched_yet <T>` - ещё не нашли совпадений (а возможно, и не начинали)
 - `matched_regular <U>` - нашли совпадение и выполнили замену с помощью обычного правила
-- `matched_final <U>` - ... с помощью финального правила
-- `matched_final_halted <U>` - УЖЕ не нашли совпадений и остановились, чтобы не зациклиться
+- `matched_final <U>`
+  - ... с помощью финального правила,
+  - либо УЖЕ не нашли совпадений и остановились, чтобы не зациклиться
 
 где T и U - объекты из категории MachineData строк (обычных или с аугментацией).
 
@@ -15,17 +16,21 @@
 
 - обычное правило - в `not_matched_yet` или `matched_regular`
 - финальное правило - в `not_matched_yet` или `matched_final`
-- цикл - в `matched_final` или `matched_final_halted`
+- цикл - в `matched_final`
 
 Кажется, что `matched_regular` - тупиковый объект, но нет, это внутренний объект цикла.
 
 Если мы введём ещё морфизм(ы) "перезапуск цикла" (`commit_loop`), который определяет, что делать по итогам одной итерации:
-- `not_matched_yet` - в `matched_final_halted` (чтобы машина не зависла в бездействии)
+- `not_matched_yet` - в `matched_final` (чтобы машина не зависла в бездействии)
 - `matched_regular` - в `not_matched_yet` (уходим на следующую итерацию)
 - `matched_final` - в `matched_final` (достигли финального состояния)
-- `matched_final_halted` - в `matched_final_halted` для полноты и единообразия
 
-В принципе, необязательно различать обычный финал и аварийный останов. Но для отладки полезно.
+В принципе, можно отличать обычный финал от аварийного останова.
+Добавить ещё одно состояние `matched_final_halted`, которое обрабатывается идентично
+состоянию `matched_final`.
+
+Ранее так и было сделано, но сейчас мне это кажется лишним усложнением и алогичностью,
+поскольку тогда троичная монада содержит четыре объекта.
 
 Если цикл прерван по достижению предельного времени работы - для НАМ-машины это
 неестественное поведение, поэтому тут мы вольны делать что угодно.
@@ -41,18 +46,19 @@ graph TD
 START((start))
 START ~~~ LOOP_BODY
 subgraph LOOP_BODY[тело цикла]
-    subgraph INPUT[исходные данные]
-        NMY([not_matched_yet])
-    end
-    subgraph RULES[правила]
-        MISMATCHED_RULE[правило не подошло]
-        RULE[RULE]
-        FINAL_RULE[FINAL_RULE]
+    subgraph FOR_RULES[цикл перебора правил]
+        subgraph INPUT[исходные данные]
+            NMY([not_matched_yet])
+        end
+        subgraph RULES[правила]
+            MISMATCHED_RULE[правило не подошло]
+            RULE[RULE]
+            FINAL_RULE[FINAL_RULE]
+        end
     end
     subgraph RESULTS[результаты итерации]
         MR([matched_regular])
         MF([matched_final])
-        MFH([matched_final_halted])
     end
 end
 LOOP_BODY ~~~ END
@@ -68,12 +74,10 @@ MISMATCHED_RULE --> NMY
 RULE ----> MR
 FINAL_RULE ----> MF
 
-
+NMY --|commit_loop|--> MF
 MR --|commit_loop|--> START
-NMY --|commit_loop|--> MFH
 
 MF --> END
-MFH --> END
 ```
 
 ### Запуск (с прерыванием по длительности)
@@ -91,14 +95,12 @@ subgraph RUN[запуск]
     subgraph IT[результаты итерации]
         IT_NMY([новое not_matched_yet])
         IT_MF([matched_final])
-        IT_MFH([matched_final_halted])
     end
 end
 
 subgraph RESULTS[результаты запуска]
     RES_NMY([not_matched_yet])
     RES_MF([matched_final])
-    RES_MFH([matched_final_halted])
 end
 
 END((end))
@@ -107,13 +109,12 @@ START --> NMY
 NMY --> ITERATION
 
 ITERATION -->|matched_regular| IT_NMY
-ITERATION --> IT_MF
-ITERATION --> IT_MFH
+ITERATION -->|not_matched_yet| IT_MF
+ITERATION -->|matched_final| IT_MF
 
 IT_NMY -->|на следующую итерацию| NMY
 IT_NMY -->|предел по количеству| RES_NMY
 IT_MF --> RES_MF
-IT_MFH --> RES_MFH
 
 RESULTS --> END
 ```
@@ -131,7 +132,7 @@ RESULTS --> END
 
 ## Получается монада
 
-... очень похожая на Either, но с 3-4 вариантами.
+... очень похожая на Either, но с 3 вариантами.
 
 ```haskell
 instance Monad Tristate where
@@ -155,9 +156,9 @@ rules ks = \m -> commit_alts (foldl (>>) m ks)
 -- тело цикла
 
 commit_loop m = case m of
-    not_matched_yet i -> matched_final_halted i
+    not_matched_yet i -> matched_final i
     matched_regular o -> not_matched_yet o
-    otherwise         -> m
+    matched_final   o -> matched_final o
 
 loop_body k = \m -> commit_loop (m >> k)
 
@@ -188,12 +189,12 @@ rule_loop k = \m -> m >> body >> body >> ... >> body >> the_loop
 
 ## Таблица свойств
 
-| тип `T`             | `not_matched_yet`      | `matched_regular`      | `matched_final`        | `matched_final_halted` |
-|---------------------|------------------------|------------------------|------------------------|------------------------|
-| Either              | `Right input`          | `Left (Left temp)`     | `Left (Right final)`   | `Left (Right last)`    |
-| Си                  | `switch()...`          | `switch{ ... break;}`  | `while(){... break;}`  | `while(false)`         |
-| временный?          | не обязательно         | да                     | да                     | да                     |
-| создаётся           | перед итерацией        | в правиле              | в правиле              | в конце итерации       |
-| `t >> p`            | `p(t)` : `T&&` / `U`   | `t` : `T&&`            | `t` : `T&&`            | `t` : `T&&`            |
-| `t.commit_alts()`   | `T&&` / `T const&`     | `t` : `T`              | `t` : `T`              | `t` : `T`              |
-| `t.commit_loop()`   | `matched_final_halted` | `not_matched_yet`      | `t` : `T`              | `t` : `T`              |
+| тип `T`            | `not_matched_yet`     | `matched_regular`     | `matched_final`       |
+|--------------------|-----------------------|-----------------------|-----------------------|
+| Either             | `Right input`         | `Left (Left temp)`    | `Left (Right final)`  |
+| Си                 | `switch()...`         | `switch{ ... break;}` | `while(){... break;}` |
+| временный?         | не обязательно        | да                    | да                    |
+| создаётся          | перед итерацией       | в правиле             | в правиле             |
+| `t >> p`           | `p(t)` : `T&&` / `U`  | `t` : `T&&`           | `t` : `T&&`           |
+| `t.commit_alts()`  | `T&&` / `T const&`    | `t` : `T`             | `t` : `T`             |
+| `t.commit_loop()`  | `matched_final`       | `not_matched_yet`     | `t` : `T`             |
